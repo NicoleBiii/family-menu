@@ -10,14 +10,27 @@ import { fileURLToPath } from 'node:url';
 import { APP_CONFIG, type AppConfig } from './config.js';
 import { DatabaseService } from './database.service.js';
 import { HealthController } from './health.controller.js';
+import { AuthController } from './auth.controller.js';
+import { SessionGuard } from './auth.guard.js';
+import { AuthService } from './auth.service.js';
+import { HouseholdsController, InvitationsController } from './households.controller.js';
+import { HouseholdsService } from './households.service.js';
+import { SupabaseIdentityProvider } from './identity-provider.js';
 
 @Module({})
 class AppModule {
   static configure(config: AppConfig): DynamicModule {
     return {
       module: AppModule,
-      controllers: [HealthController],
-      providers: [{ provide: APP_CONFIG, useValue: config }, DatabaseService],
+      controllers: [HealthController, AuthController, HouseholdsController, InvitationsController],
+      providers: [
+        { provide: APP_CONFIG, useValue: config },
+        DatabaseService,
+        SupabaseIdentityProvider,
+        AuthService,
+        HouseholdsService,
+        SessionGuard,
+      ],
     };
   }
 }
@@ -55,9 +68,10 @@ export async function createApplication(config: AppConfig, quiet = false) {
     new DocumentBuilder()
       .setTitle('Family Menu API')
       .setDescription(
-        'Foundation endpoints. Household authentication and business APIs are not implemented yet.',
+        'Session-authenticated household API. Sign-in uses Google through Supabase Auth; the API keeps its own HttpOnly session cookie and requires X-CSRF-Token on state-changing requests.',
       )
-      .setVersion('0.1.0')
+      .setVersion('0.2.0')
+      .addCookieAuth('fm_session')
       .build(),
   );
   app.getHttpAdapter().get('/api/openapi.json', (_request: Request, response: Response) => {

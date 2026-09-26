@@ -536,6 +536,152 @@ dialog ul {
 .skip-link:focus {
   top: 12px;
 }
+a.primary-button {
+  text-decoration: none;
+}
+.primary-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+select:focus-visible {
+  outline: 3px solid #9e672d;
+  outline-offset: 4px;
+}
+.account-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.account-bar .preview-label {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sign-in-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 22px;
+  border: 1px solid #bdc8b6;
+  color: #283b2e;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+}
+.alert-banner {
+  max-width: 1080px;
+  margin: 0 auto 16px;
+  padding: 6px 6px 6px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 12px;
+  background: #fbeee2;
+  border: 1px solid #e7c4a3;
+  font-size: 14px;
+}
+.household-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.card-panel {
+  padding: 22px;
+  border: 1px solid #dedfce;
+  border-radius: 18px;
+  background: #fffef7;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.card-panel h2 {
+  margin: 0;
+  font-size: 24px;
+}
+.card-panel h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0 0;
+  font-size: 15px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 420px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.field input,
+.field select {
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #c9d0c0;
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  font-weight: 400;
+  color: inherit;
+  width: 100%;
+}
+.form-error {
+  color: #9b3b1f;
+  font-size: 14px;
+  margin: 4px 0 0;
+}
+.muted {
+  color: #707969;
+  font-size: 13px;
+  margin: 0;
+  line-height: 1.6;
+}
+.member-list {
+  list-style: none;
+  padding: 0;
+  margin: 4px 0 0;
+  width: 100%;
+  max-width: 520px;
+}
+.member-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 48px;
+  border-bottom: 1px solid #ecede2;
+  overflow-wrap: anywhere;
+}
+.role-tag {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #edf0e7;
+  font-size: 11px;
+}
+.icon-button.small {
+  width: 44px;
+  height: 44px;
+  flex: none;
+}
+.invite-link {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+  margin-top: 8px;
+}
+.invite-link .field {
+  flex: 1 1 220px;
+}
 @media (max-width: 900px) {
   .recipe-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -698,5 +844,13 @@ dialog ul {
   *::after {
     scroll-behavior: auto !important;
     transition: none !important;
+  }
+}
+@media (max-width: 600px) {
+  .account-bar .preview-label {
+    max-width: 120px;
+  }
+  .card-panel {
+    padding: 18px 16px;
   }
 }

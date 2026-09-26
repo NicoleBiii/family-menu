@@ -7,7 +7,9 @@ interface Database {
   'app.user_profiles': {
     id: string;
     display_name: string;
+    email: string | null;
     created_at: Generated<Date>;
+    updated_at: Generated<Date>;
   };
   'app.households': {
     id: Generated<string>;
@@ -21,7 +23,37 @@ interface Database {
     role: 'owner' | 'member';
     created_at: Generated<Date>;
   };
+  'app.oauth_states': {
+    state_hash: Buffer;
+    code_verifier: string;
+    return_to: string;
+    expires_at: Date;
+    created_at: Generated<Date>;
+  };
+  'app.sessions': {
+    id: Generated<string>;
+    token_hash: Buffer;
+    user_id: string;
+    csrf_token: string;
+    created_at: Generated<Date>;
+    last_seen_at: Generated<Date>;
+    expires_at: Date;
+    revoked_at: Date | null;
+  };
+  'app.household_invitations': {
+    id: Generated<string>;
+    household_id: string;
+    token_hash: Buffer;
+    created_by: string;
+    created_at: Generated<Date>;
+    expires_at: Date;
+    revoked_at: Date | null;
+    accepted_by: string | null;
+    accepted_at: Date | null;
+  };
 }
+
+export type { Database };
 
 @Injectable()
 export class DatabaseService implements OnModuleDestroy {
@@ -44,7 +76,9 @@ export class DatabaseService implements OnModuleDestroy {
   async isReady(): Promise<boolean> {
     const result = await sql<{ ready: boolean }>`
       select to_regclass('app.households') is not null
-        and to_regclass('app.household_members') is not null as ready
+        and to_regclass('app.household_members') is not null
+        and to_regclass('app.sessions') is not null
+        and to_regclass('app.household_invitations') is not null as ready
     `.execute(this.db);
     return result.rows[0]?.ready === true;
   }

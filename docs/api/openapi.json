@@ -31,17 +31,493 @@
           "Health"
         ]
       }
+    },
+    "/api/auth/login": {
+      "get": {
+        "operationId": "AuthController_login",
+        "parameters": [
+          {
+            "name": "returnTo",
+            "required": false,
+            "in": "query",
+            "description": "Same-site path to open after sign-in.",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Redirects to Google sign-in through Supabase Auth."
+          },
+          "503": {
+            "description": "Sign-in is not configured on this server."
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/callback": {
+      "get": {
+        "operationId": "AuthController_callback",
+        "parameters": [],
+        "responses": {
+          "302": {
+            "description": "Completes sign-in and redirects to the requested page, or to /?authError=<reason> on failure."
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/session": {
+      "get": {
+        "operationId": "AuthController_session",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The signed-in user, CSRF token for state-changing requests, and household memberships; or {authenticated:false}."
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "The session is revoked and its cookie cleared."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/households": {
+      "get": {
+        "operationId": "HouseholdsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Households the caller belongs to."
+          },
+          "401": {
+            "description": "No valid session."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Households"
+        ]
+      },
+      "post": {
+        "operationId": "HouseholdsController_create",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "Required on state-changing requests; returned by GET /api/auth/session.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "timezone": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Household created with the caller as owner."
+          },
+          "400": {
+            "description": "Invalid name or time zone."
+          },
+          "401": {
+            "description": "No valid session."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Households"
+        ]
+      }
+    },
+    "/api/households/{householdId}": {
+      "get": {
+        "operationId": "HouseholdsController_detail",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Household details and members."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Not found or the caller is not a member."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Households"
+        ]
+      }
+    },
+    "/api/households/{householdId}/members/{userId}": {
+      "delete": {
+        "operationId": "HouseholdsController_removeMember",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "Required on state-changing requests; returned by GET /api/auth/session.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Member removed, or the caller left the household."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "403": {
+            "description": "Only the owner can remove other members."
+          },
+          "409": {
+            "description": "The owner cannot leave."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Households"
+        ]
+      }
+    },
+    "/api/households/{householdId}/invitations": {
+      "post": {
+        "operationId": "HouseholdsController_createInvitation",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "Required on state-changing requests; returned by GET /api/auth/session.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Single-use invitation link, valid for 7 days. The token is shown only once."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "403": {
+            "description": "Only the owner can invite."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Households"
+        ]
+      },
+      "get": {
+        "operationId": "HouseholdsController_listInvitations",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Active (unused, unexpired, unrevoked) invitations."
+          },
+          "401": {
+            "description": "No valid session."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Households"
+        ]
+      }
+    },
+    "/api/households/{householdId}/invitations/{invitationId}": {
+      "delete": {
+        "operationId": "HouseholdsController_revokeInvitation",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "invitationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "Required on state-changing requests; returned by GET /api/auth/session.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Invitation revoked."
+          },
+          "401": {
+            "description": "No valid session."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Households"
+        ]
+      }
+    },
+    "/api/invitations/preview": {
+      "post": {
+        "operationId": "InvitationsController_preview",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "Required on state-changing requests; returned by GET /api/auth/session.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Household name and expiry for a usable invitation."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Unknown invitation."
+          },
+          "410": {
+            "description": "Expired, revoked or already used invitation."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Invitations"
+        ]
+      }
+    },
+    "/api/invitations/accept": {
+      "post": {
+        "operationId": "InvitationsController_accept",
+        "parameters": [
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "Required on state-changing requests; returned by GET /api/auth/session.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Joined (or already a member of) the household."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Unknown invitation."
+          },
+          "410": {
+            "description": "Expired, revoked or already used invitation."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Invitations"
+        ]
+      }
     }
   },
   "info": {
     "title": "Family Menu API",
-    "description": "Foundation endpoints. Household authentication and business APIs are not implemented yet.",
-    "version": "0.1.0",
+    "description": "Session-authenticated household API. Sign-in uses Google through Supabase Auth; the API keeps its own HttpOnly session cookie and requires X-CSRF-Token on state-changing requests.",
+    "version": "0.2.0",
     "contact": {}
   },
   "tags": [],
   "servers": [],
   "components": {
+    "securitySchemes": {
+      "cookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "fm_session"
+      }
+    },
     "schemas": {}
   }
 }

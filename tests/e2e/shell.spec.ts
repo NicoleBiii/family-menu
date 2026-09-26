@@ -19,7 +19,7 @@ test('sample recipes can be filtered, inspected and closed with focus restored',
   await expect(page.getByRole('button', { name: /^View / })).toHaveCount(4);
 });
 
-test('navigation honestly describes unavailable account features and fits the viewport', async ({
+test('navigation honestly describes unavailable meal features and fits the viewport', async ({
   page,
 }) => {
   await page.goto('/');
@@ -27,7 +27,7 @@ test('navigation honestly describes unavailable account features and fits the vi
   await expect(page.getByRole('heading', { name: 'Shopping', exact: true })).toBeVisible();
   await expect(
     page.getByText(
-      'This is a sample preview. Accounts and saved meal plans are not available yet.',
+      'Meal orders and shopping lists are not available yet. Households and invitations are.',
     ),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Browse sample recipes' }).click();

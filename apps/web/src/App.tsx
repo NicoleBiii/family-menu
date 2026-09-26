@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ArrowRight,
   CalendarDays,
@@ -7,12 +7,17 @@ import {
   CookingPot,
   House,
   Leaf,
+  LogIn,
+  LogOut,
   Search,
   ShoppingBasket,
   Users,
   Utensils,
   X,
 } from 'lucide-react';
+import { api, authErrorMessages, setCsrfToken, signInUrl, type Session } from './api';
+import { HouseholdPage } from './HouseholdPage';
+import { JoinPage } from './JoinPage';
 
 const recipes = [
   {
@@ -72,10 +77,33 @@ const navigation = [
   { label: 'Shopping', icon: ShoppingBasket },
   { label: 'Household', icon: House },
 ] as const;
-type Page = (typeof navigation)[number]['label'];
+type Page = (typeof navigation)[number]['label'] | 'Join';
+const ACTIVE_KEY = 'family-menu.active-household';
+
+function initialPage(): Page {
+  if (window.location.pathname === '/join') return 'Join';
+  if (window.location.pathname === '/household') return 'Household';
+  return 'Menu';
+}
+function readAuthError() {
+  const code = new URLSearchParams(window.location.search).get('authError');
+  if (!code) return '';
+  history.replaceState(null, '', window.location.pathname);
+  return authErrorMessages[code] ?? 'Sign-in failed. Please try again.';
+}
+function storedActive() {
+  try {
+    return localStorage.getItem(ACTIVE_KEY);
+  } catch {
+    return null;
+  }
+}
 
 export function App() {
-  const [page, setPage] = useState<Page>('Menu');
+  const [page, setPageState] = useState<Page>(initialPage);
+  const [session, setSession] = useState<Session | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(storedActive);
+  const [authError, setAuthError] = useState(readAuthError);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All recipes');
   const [selected, setSelected] = useState<Recipe | null>(null);
@@ -91,6 +119,55 @@ export function App() {
   useEffect(() => {
     if (selected) dialog.current?.showModal();
   }, [selected]);
+
+  const refreshSession = useCallback(async () => {
+    try {
+      const next = await api<Session>('/auth/session');
+      if (next.authenticated) {
+        setCsrfToken(next.csrfToken);
+        setActiveId((current) =>
+          next.households.some((household) => household.id === current)
+            ? current
+            : (next.households[0]?.id ?? null),
+        );
+      }
+      setSession(next);
+    } catch {
+      setSession({ authenticated: false, signInAvailable: false });
+    }
+  }, []);
+  useEffect(() => {
+    void refreshSession();
+  }, [refreshSession]);
+  useEffect(() => {
+    const onPop = () => setPageState(initialPage());
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  useEffect(() => {
+    try {
+      if (activeId) localStorage.setItem(ACTIVE_KEY, activeId);
+    } catch {
+      // Remembering the household is a convenience only.
+    }
+  }, [activeId]);
+
+  function setPage(next: Page) {
+    setPageState(next);
+    const path = next === 'Household' ? '/household' : next === 'Join' ? '/join' : '/';
+    if (window.location.pathname !== path) history.pushState(null, '', path);
+  }
+  async function signOut() {
+    try {
+      await api('/auth/logout', { method: 'POST' });
+    } finally {
+      setCsrfToken('');
+      await refreshSession();
+    }
+  }
+  const activeHousehold = session?.authenticated
+    ? session.households.find((household) => household.id === activeId)
+    : undefined;
   function closeRecipe() {
     dialog.current?.close();
     setSelected(null);
@@ -109,12 +186,57 @@ export function App() {
           </span>
           family menu<span className="brand-dot">.</span>
         </a>
-        <span className="preview-label">
-          <span /> Sample household
-        </span>
+        <div className="account-bar">
+          {session?.authenticated ? (
+            <>
+              <span className="preview-label" title={session.user.email ?? undefined}>
+                <span /> {activeHousehold ? activeHousehold.name : session.user.displayName}
+              </span>
+              <button className="icon-button" aria-label="Sign out" onClick={signOut}>
+                <LogOut size={18} />
+              </button>
+            </>
+          ) : session?.signInAvailable ? (
+            <a className="sign-in-link" href={signInUrl(window.location.pathname)}>
+              <LogIn size={16} /> Sign in
+            </a>
+          ) : (
+            <span className="preview-label">
+              <span /> Sample household
+            </span>
+          )}
+        </div>
       </header>
+      {authError && (
+        <div className="alert-banner" role="alert">
+          <span>{authError}</span>
+          <button className="text-button" onClick={() => setAuthError('')}>
+            Dismiss
+          </button>
+        </div>
+      )}
       <main id="main">
-        {page === 'Menu' ? (
+        {page === 'Join' ? (
+          <JoinPage
+            session={session}
+            onJoined={async (household) => {
+              await refreshSession();
+              setActiveId(household.id);
+              setPage('Household');
+            }}
+          />
+        ) : page === 'Household' ? (
+          <section className="page-panel">
+            <p className="eyebrow">YOUR SHARED TABLE</p>
+            <h1>Household</h1>
+            <HouseholdPage
+              session={session}
+              activeId={activeId}
+              onSelect={setActiveId}
+              onChanged={refreshSession}
+            />
+          </section>
+        ) : page === 'Menu' ? (
           <>
             <section className="hero" aria-labelledby="welcome-title">
               <div className="hero-copy">
@@ -244,29 +366,20 @@ export function App() {
             <p className="eyebrow">YOUR SHARED TABLE</p>
             <h1>{page}</h1>
             <div className="empty-state">
-              {page === 'Meals' ? (
-                <CalendarDays size={36} />
-              ) : page === 'Shopping' ? (
-                <ShoppingBasket size={36} />
-              ) : (
-                <House size={36} />
-              )}
+              {page === 'Meals' ? <CalendarDays size={36} /> : <ShoppingBasket size={36} />}
               <h2>
                 {page === 'Meals'
                   ? 'Good meals start with a plan.'
-                  : page === 'Shopping'
-                    ? 'A clearer list. An easier shop.'
-                    : 'A place for your favourite people.'}
+                  : 'A clearer list. An easier shop.'}
               </h2>
               <p>
                 {page === 'Meals'
                   ? 'Your household’s planned meals will live here.'
-                  : page === 'Shopping'
-                    ? 'Ingredients from your meal orders will come together here.'
-                    : 'Your shared recipes and meal plans will belong to your household.'}
+                  : 'Ingredients from your meal orders will come together here.'}
               </p>
               <p className="sample-note">
-                This is a sample preview. Accounts and saved meal plans are not available yet.
+                Meal orders and shopping lists are not available yet. Households and invitations
+                are.
               </p>
               <button className="primary-button" onClick={() => setPage('Menu')}>
                 Browse sample recipes <ArrowRight size={18} />
@@ -277,7 +390,7 @@ export function App() {
         <footer className="page-footer">
           <ChefHat size={18} />
           <p>A shared menu for the people you call home.</p>
-          <span>Sample preview · Recipes are not saved</span>
+          <span>Sample recipes · Saved recipes are coming next</span>
         </footer>
       </main>
       <nav className="main-nav" aria-label="Main navigation">
