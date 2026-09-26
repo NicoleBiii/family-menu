@@ -1,0 +1,53 @@
+{
+  "name": "family-menu",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/api",
+    "apps/web"
+  ],
+  "engines": {
+    "node": ">=24.19.0 <25",
+    "npm": ">=10 <12"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n api,web \"npm:dev:api\" \"npm:dev:web\"",
+    "dev:api": "npm run dev --workspace @family-menu/api",
+    "dev:web": "npm run dev --workspace @family-menu/web",
+    "build": "npm run build --workspaces",
+    "start": "node --env-file-if-exists=.env apps/api/dist/main.js",
+    "typecheck": "npm run typecheck --workspaces",
+    "lint": "eslint . --max-warnings 0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:migrate": "node --env-file-if-exists=.env scripts/migrate.mjs",
+    "db:local": "node scripts/local-db.mjs start",
+    "db:stop": "node scripts/local-db.mjs stop",
+    "test:integration": "npm run build --workspace @family-menu/api && node --env-file-if-exists=.env --test --test-concurrency=1 tests/integration/*.test.mjs",
+    "test:e2e": "playwright test",
+    "openapi": "npm run build --workspace @family-menu/api && node --env-file-if-exists=.env apps/api/dist/openapi.js",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run build && npm run test:integration && npm run test:e2e",
+    "handoff:status": "node scripts/handoff.mjs status",
+    "handoff:claim": "node scripts/handoff.mjs claim",
+    "handoff:release": "node scripts/handoff.mjs release"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@playwright/test": "1.63.0",
+    "@types/express": "5.0.6",
+    "@types/node": "24.13.6",
+    "@types/pg": "8.23.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "concurrently": "10.0.5",
+    "eslint": "10.11.0",
+    "globals": "17.12.0",
+    "prettier": "3.9.9",
+    "tsc-watch": "7.2.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.70.1",
+    "vite": "8.3.1"
+  }
+}
