@@ -2,14 +2,16 @@
 
 A mobile-first shared menu for the people you call home: collect recipes, coordinate meals, and turn your plans into a shopping list.
 
-**Status: local engineering foundation, not a released service.** The current UI is an explicitly labeled sample preview. Google sign-in, saved recipes, household business APIs, ordering, shopping calculations, and AI generation are next milestones, not working features yet.
+**Status: early development, not a released service.** Google sign-in (through Supabase Auth), households, invitations and membership work locally and are tested against a provider stub; the real Google/Supabase smoke test is still pending ([setup](docs/SETUP_AUTH.md)). The menu cards are still sample content. Saved recipes, ordering, shopping calculations and AI generation are next milestones.
 
 ## What works today
 
+- Google sign-in via server-side PKCE, HttpOnly app sessions with expiry/logout, CSRF protection.
+- Create households, invite with single-use 7-day links, join, remove members or leave. All household routes are authorized on the server.
 - Responsive React sample menu with search/category filters, recipe dialogs, keyboard focus restoration, and navigation empty states.
 - NestJS application serving the production frontend and API from one origin.
 - Separate liveness and database/schema readiness checks, request IDs, security headers, and a generated OpenAPI contract.
-- PostgreSQL migrations for profiles, households, and membership constraints in a private schema.
+- PostgreSQL migrations for profiles, households, membership, sessions, login state and invitations in a private schema.
 - Real-database integration tests and desktop/mobile browser tests.
 - Versioned dependency lockfile, static checks, and a prepared GitHub Actions workflow.
 - Shared instructions and an explicit handover workflow for alternating Codex and Claude Code.
@@ -56,9 +58,9 @@ npm audit --omit=dev --audit-level=high
 
 `check` runs format checks, lint, type checks, production builds, real PostgreSQL integration tests, and browser tests. Tests refuse to use a non-loopback database or a database not named `family_menu_test`. They do not silently skip database verification. The browser tests need port 4173 free; they start/stop their own built application.
 
-Integration coverage currently checks migration repeatability, membership uniqueness/role/foreign-key constraints, health/contract endpoints, redacted database failure, and invalid configuration. It does **not** prove household authorization: authenticated business endpoints have not been implemented yet.
+Integration coverage checks migrations and constraints, health/contract endpoints, redacted database failure, configuration, and the AUTH-001 boundary: login state/PKCE failures, session expiry/revocation, CSRF, cross-household access (404), and invitation expiry/revocation/single use. The Supabase Auth endpoints are replaced by a local stub in tests; the real provider needs the manual smoke test in [SETUP_AUTH.md](docs/SETUP_AUTH.md).
 
-Browser coverage exercises search/empty results, recipe dialogs and focus, navigation, a 360 px mobile layout, and API-versus-SPA fallback behavior. A browser viewport is not a physical-device test.
+Browser coverage exercises search/empty results, recipe dialogs and focus, navigation, a 360 px mobile layout, API-versus-SPA fallback, and a two-user sign-in → invite → join → remove flow through the provider stub (`tests/e2e/provider-stub.mjs`, started only by Playwright). A browser viewport is not a physical-device test.
 
 ## Useful endpoints
 
@@ -67,6 +69,8 @@ Browser coverage exercises search/empty results, recipe dialogs and focus, navig
 | `/api/health/live`  | Process liveness; remains available if the database fails                   |
 | `/api/health/ready` | Database and foundation schema readiness; returns a redacted 503 on failure |
 | `/api/openapi.json` | Current API contract                                                        |
+| `/api/auth/*`       | Google sign-in start/callback, current session + CSRF token, logout         |
+| `/api/households`   | Session-authenticated households, members and invitations                   |
 
 `docs/api/openapi.json` is generated. Regenerate it after API changes rather than editing it by hand.
 
@@ -113,5 +117,7 @@ Before any cloud release, follow [deployment setup](docs/DEPLOYMENT.md). A workf
 - [Operating budget](docs/BUDGET.md)
 - [Work log](docs/WORK_LOG.md)
 - [Foundation verification evidence](docs/verification/2026-09-26-foundation.md)
+- [AUTH-001 verification evidence](docs/verification/2026-09-26-auth-001.md)
+- [Google sign-in setup](docs/SETUP_AUTH.md)
 
 This repository is now the authoritative working copy. The sibling `service-website-planning` directory and dated ZIP files are historical planning snapshots. Project content is English-first; recipe input will support Unicode. No public software licence has been selected yet.

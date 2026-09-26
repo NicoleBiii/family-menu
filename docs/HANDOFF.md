@@ -1,16 +1,15 @@
 # Current State and Handoff
 
-Updated: 2026-09-26. Branch: main.
-Current owner after planned closeout: none; run `npm run handoff:status` to verify.
-Latest implementation checkpoint: see the foundation commit in `git log`; the final closeout will record its identifier.
+Updated: 2026-09-26 by Claude. Branch: main.
+Latest implementation commit: `33a01a7` (AUTH-001). HEAD is the documentation commit after it; check `git log`.
+Checkout claim after closeout: none; verify with `npm run handoff:status`.
 
-## Completed local scope
+## Completed scope
 
-ENG-001's local foundation is implemented: npm workspaces, Node 24.19.0, NestJS 12, React/Vite, TypeScript 6, Kysely/PostgreSQL, migrations, health/readiness/OpenAPI, an English mobile sample menu, local test commands, prepared CI/container configuration, and shared agent handover tooling.
+- ENG-001 local foundation (`570d2c7`): npm workspaces, Node 24.19.0, NestJS 12, React/Vite, TypeScript 6, Kysely/PostgreSQL, migrations, health/readiness/OpenAPI, prepared CI/container config, handover tooling.
+- AUTH-001 implementation (`33a01a7`), locally verified: Google sign-in through Supabase Auth using server-side PKCE, HttpOnly app sessions (hashed, 30-day absolute/14-day idle, logout, rotation), CSRF token + Origin check, households, owner-only single-use invitations, join, removal/leave, and the mobile UI. See [ADR 0002](decisions/0002-auth-sessions.md).
 
-The repository root is the `family-menu` directory. It is a separate Git repository inside the parent local ChatGPT-project workspace. The sibling `service-website-planning` folder is archived. Open this repository directly in Codex or Claude Code; do not maintain two active source copies.
-
-There is no remote repository or cloud deployment. This local Git history is not an off-machine backup.
+There is no remote repository or cloud deployment. Local Git history is not an off-machine backup.
 
 ## Confirmed product constraints
 
@@ -24,30 +23,30 @@ There is no remote repository or cloud deployment. This local Git history is not
 
 ## Verified state
 
-After a clean lockfile installation, `npm run check` passed in full on 2026-09-26: formatting, lint, type checks, builds, 5 PostgreSQL/API integration tests, and 6 desktop/mobile browser tests. OpenAPI generation succeeded; runtime dependency audit reported zero known vulnerabilities at query time. A second agent claim and a wrong-agent release were both refused. See [verification evidence](verification/2026-09-26-foundation.md).
+Full `npm run check` passed after AUTH-001: 17 PostgreSQL/API integration tests and 12 desktop/mobile browser cases, plus format/lint/types/builds; runtime audit reported 0 known vulnerabilities. This ran in Claude's Linux cloud workspace (Node 24.19.0, PostgreSQL 16.13), not on the owner's Mac. Evidence: [AUTH-001 verification](verification/2026-09-26-auth-001.md); earlier: [foundation verification](verification/2026-09-26-foundation.md).
 
-The host used PostgreSQL 14.18. CI and Compose target 17 but have not run. Docker is absent. GitHub CI, branch protection and secret scanning are not activated merely by the workflow file. No authenticated business behavior, real model calls, cloud cost measurements, or recovery drill has been performed.
+Not verified: real Google/Supabase (tests use a local stub of the Supabase Auth HTTP endpoints), this change on the Mac, hosted CI, Docker, rate limiting, physical phone.
 
-## Running local services at handover
+## Owner-side setup outstanding
 
-- Built preview: http://127.0.0.1:3000, started by the outgoing agent for inspection.
-- Project-only PostgreSQL: 127.0.0.1:55432, with dev/test databases and data under ignored `.local/pgdata`.
-- Browser-test server at port 4173 has stopped after tests.
-- These processes may end with the environment; check before starting duplicates. Stop the preview process when needed; stop only the project database with `npm run db:stop`.
-- This machine's default Node is 23, so select Node 24.19.0 before running npm. The outgoing agent used the bundled runtime described in ignored `.local/MACHINE.md`; standard Node 24 setup is documented in README.
+1. Create a Supabase dev project and a Google OAuth client, then fill `.env` — follow [SETUP_AUTH.md](SETUP_AUTH.md). Never commit or paste keys.
+2. On the Mac, apply migration 002: `npm run db:local` (if stopped) then `npm run db:migrate`. No dependency changes, so `npm ci` is not required.
+3. Run the smoke test in SETUP_AUTH.md and record it under `docs/verification/`. Then mark AUTH-001 Done in PLAN.md.
+
+## Local services
+
+None left running by Claude on the owner's machine. The Mac's project PostgreSQL (127.0.0.1:55432, data in ignored `.local/pgdata`) and any preview started earlier by Codex may or may not still be running; check before starting duplicates. The Mac's default Node is 23; use Node 24.19.0 (see ignored `.local/MACHINE.md`).
 
 ## Next exact work
 
-1. Follow [AGENT_HANDOVER.md](AGENT_HANDOVER.md), inspect Git status/diff and claim AUTH-001.
-2. Read [ADR 0001](decisions/0001-foundation.md) and the access criteria in MVP_SPEC.md.
-3. Implement the selected Google/Supabase session boundary and household membership/invitation API. Keep authorization server-side, with cross-household, revoked membership, CSRF, callback and expiry tests. Do not expose current tables directly to a browser or add a production fake-login bypass.
-4. Provider-backed verification requires the owner's selected Supabase project and Google OAuth configuration. Continue local implementation and deterministic boundary tests where possible; clearly separate those from real-provider checks.
-5. INFRA-001 separately needs remote repository destination/visibility and provider setup before hosted CI/staging. Do not buy services or publish code solely because a configuration file exists.
+1. If the owner has completed setup: run and record the real-provider smoke test; fix any provider mismatch (e.g. token response shape) with a test.
+2. Otherwise start REC-001 (manual/preset recipes, private images): claim it, read MVP_SPEC recipe semantics and AC-05/AC-12, and scope every new table and route by `HouseholdsService.requireMember`. Extend the AC-02 cross-household test to recipes.
+3. INFRA-001 still needs the remote repository destination/visibility decision before hosted CI/staging.
 
 ## Switching agents
 
-AGENTS.md is canonical; CLAUDE.md imports it. Stop the current agent before starting another writer. If a limit stops the outgoing agent unexpectedly, preserve uncommitted changes, inspect actual state, and confirm the previous agent is stopped before releasing a stale claim. Plain Claude web chat needs explicitly supplied repository access or a source archive.
+AGENTS.md is canonical; CLAUDE.md imports it. Stop the current agent before starting another writer. If a limit stops the outgoing agent unexpectedly, preserve uncommitted changes, inspect actual state, and confirm the previous agent is stopped before releasing a stale claim.
 
 ## Reusable continuation prompt
 
-> Continue Family Menu with AUTH-001. Read AGENTS.md, docs/HANDOFF.md, docs/PLAN.md, docs/MVP_SPEC.md and docs/decisions/0001-foundation.md. Verify the Git branch, latest commit, working diff and checkout claim before editing. Keep maintained content in English and discuss with me in Chinese. Use the locked toolchain and existing scripts. Preserve all-member editing of pending household orders and the confirmed MVP deferrals. Implement real session and household boundaries, with negative tests; distinguish local verification from provider-backed verification. Update the work log, plan and handoff with actual evidence before yielding.
+> Continue Family Menu. Read AGENTS.md, docs/HANDOFF.md, docs/PLAN.md, docs/MVP_SPEC.md and docs/decisions/. Verify the Git branch, latest commit, working diff and checkout claim before editing. Keep maintained content in English and discuss with me in Chinese. Use the locked toolchain and existing scripts. Preserve all-member editing of pending household orders and the confirmed MVP deferrals. Every household-scoped route must use the existing membership check and gain cross-household negative tests. Update the work log, plan and handoff with actual evidence before yielding.

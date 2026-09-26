@@ -22,6 +22,8 @@ The owner authorized the engineering foundation and plans to alternate Codex and
 
 Use Supabase Auth's Google OAuth flow to establish identity, while NestJS owns household authorization. The intended session pattern is a same-origin backend-for-frontend with HttpOnly, Secure-in-production cookies, validated OAuth state/PKCE and allowed callbacks, explicit CSRF protection for state-changing requests, and logout/revocation handling. Store any provider refresh credential server-side with an appropriate protected session store rather than exposing service-role keys or trusting client-supplied user IDs.
 
+Update 2026-09-26: implemented and refined in [ADR 0002](0002-auth-sessions.md), which supersedes the refresh-credential storage allowance below. Original text follows.
+
 This is a recorded design direction, not implemented authentication. AUTH-001 must validate current provider SDK behavior and test expired sessions, CSRF, callback failures, removed membership, and cross-household requests. Do not add a fake login or insecure development identity shortcut to production routes.
 
 ## Consequences

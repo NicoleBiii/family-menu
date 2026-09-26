@@ -128,3 +128,20 @@ Use dates in YYYY-MM-DD format, with America/Toronto as the reporting timezone. 
 
 - After correcting documentation formatting, the full `npm run check` passed: format, lint, type checks, production builds, 5 integration tests and 6 browser cases. No checks were skipped.
 - Local document links were verified. Remaining external setup is tracked separately as INFRA-001.
+
+## 2026-09-26 — Codex → Claude handover and AUTH-001
+
+- Codex stopped on a usage limit after staging the ENG-001 closeout but before committing. The owner confirmed the switch to Claude. Claude inspected the staged tree (no unstaged changes), committed it unchanged as `570d2c7`, released Codex's stale claim and claimed AUTH-001 (recovery path in AGENT_HANDOVER.md).
+- Owner decisions this session: continue with AUTH-001 only; no Supabase project or Google OAuth client exists yet, so implement locally and provide setup guidance (docs/SETUP_AUTH.md).
+- Claude worked in a Linux cloud workspace cloned from a Git bundle of this repository, because the owner-side shell had no Node 24/PostgreSQL. Commits were transferred back as a bundle and fast-forwarded; no files were edited in two places.
+- Baseline `npm run check` passed there before changes (PostgreSQL 16.13; Chromium revision mapped as noted in the verification record).
+- Implemented AUTH-001 (`33a01a7`): server-side PKCE sign-in, hashed sessions with expiry/rotation/logout, CSRF token + Origin check, household create/list/detail, owner-only single-use invitations, join, member removal and leaving, and the mobile UI for these.
+- A new test found nothing wrong in production code but did expose a test-harness race (parallel sign-ins shared the stub's pending identity); sign-ins in that test are now sequential. A mutation check showed the concurrency test did not fail with the row lock removed, so acceptance now also uses a conditional claim update; this limitation is recorded in ADR 0002.
+- Verification: full `npm run check` passed (17 integration, 12 browser cases); audit 0 known vulnerabilities; OpenAPI regenerated. See verification/2026-09-26-auth-001.md.
+- Not done: real Google/Supabase smoke test, rate limiting, hosted CI. Next: owner creates accounts per SETUP_AUTH.md and runs the smoke test; then REC-001.
+
+### DEC-010 — App sessions instead of provider tokens
+
+- Status: implemented. See `docs/decisions/0002-auth-sessions.md`.
+- Supabase Auth establishes identity only; the API issues its own HttpOnly session and discards provider tokens. This supersedes ADR 0001's allowance to store a provider refresh credential.
+- Invitations are single-use, 7-day, owner-created links; the token travels in the URL fragment and only its hash is stored.
