@@ -1240,12 +1240,515 @@
           "Recipes"
         ]
       }
+    },
+    "/api/households/{householdId}/orders": {
+      "get": {
+        "operationId": "OrdersController_list",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "view",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "pending",
+                "history"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pending orders by meal time (default), or the 100 most recently completed/cancelled."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Not found, or the caller is not a member of the household."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Meal orders"
+        ]
+      },
+      "post": {
+        "operationId": "OrdersController_create",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "Required on state-changing requests; returned by GET /api/auth/session.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "requestId",
+                  "when",
+                  "items"
+                ],
+                "properties": {
+                  "requestId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Client-generated per submission; a retry returns the same order."
+                  },
+                  "when": {
+                    "type": "object",
+                    "required": [
+                      "type"
+                    ],
+                    "description": "Household-local meal time. A time skipped by a daylight-saving change is rejected (code nonexistent_time); a repeated one needs disambiguation (code ambiguous_time lists the options).",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "now",
+                          "scheduled"
+                        ]
+                      },
+                      "date": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2026-10-03"
+                      },
+                      "time": {
+                        "type": "string",
+                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                        "example": "18:30"
+                      },
+                      "disambiguation": {
+                        "type": "string",
+                        "enum": [
+                          "earlier",
+                          "later"
+                        ]
+                      }
+                    }
+                  },
+                  "notes": {
+                    "type": "string",
+                    "maxLength": 1000
+                  },
+                  "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 20,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "recipeId",
+                        "servings"
+                      ],
+                      "properties": {
+                        "recipeId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "servings": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Pending order with a snapshot of each recipe."
+          },
+          "400": {
+            "description": "Invalid input, unknown recipe, or unusable local time."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Not found, or the caller is not a member of the household."
+          },
+          "409": {
+            "description": "A recipe is archived, or too many pending orders."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Meal orders"
+        ]
+      }
+    },
+    "/api/households/{householdId}/orders/{orderId}": {
+      "get": {
+        "operationId": "OrdersController_get",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order with full item snapshots (ingredients and steps)."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Not found, or the caller is not a member of the household."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Meal orders"
+        ]
+      },
+      "put": {
+        "operationId": "OrdersController_update",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "Required on state-changing requests; returned by GET /api/auth/session.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedRevision",
+                  "when",
+                  "items"
+                ],
+                "properties": {
+                  "expectedRevision": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "when": {
+                    "type": "object",
+                    "required": [
+                      "type"
+                    ],
+                    "description": "Household-local meal time. A time skipped by a daylight-saving change is rejected (code nonexistent_time); a repeated one needs disambiguation (code ambiguous_time lists the options).",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "now",
+                          "scheduled"
+                        ]
+                      },
+                      "date": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "2026-10-03"
+                      },
+                      "time": {
+                        "type": "string",
+                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                        "example": "18:30"
+                      },
+                      "disambiguation": {
+                        "type": "string",
+                        "enum": [
+                          "earlier",
+                          "later"
+                        ]
+                      }
+                    }
+                  },
+                  "notes": {
+                    "type": "string",
+                    "maxLength": 1000
+                  },
+                  "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 20,
+                    "description": "Full list in order. Keep an item (and its snapshot) with itemId; add a dish with recipeId (fresh snapshot). Omitted items are removed.",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "servings"
+                      ],
+                      "properties": {
+                        "itemId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "recipeId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "servings": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 100
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Order updated; revision incremented."
+          },
+          "400": {
+            "description": "Invalid input or unusable local time."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Not found, or the caller is not a member of the household."
+          },
+          "409": {
+            "description": "Stale revision, or the order is no longer pending."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Meal orders"
+        ]
+      }
+    },
+    "/api/households/{householdId}/orders/{orderId}/complete": {
+      "post": {
+        "operationId": "OrdersController_complete",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "Required on state-changing requests; returned by GET /api/auth/session.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedRevision"
+                ],
+                "properties": {
+                  "expectedRevision": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Completed (or already completed: no second effect)."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Not found, or the caller is not a member of the household."
+          },
+          "409": {
+            "description": "Stale revision, or the order was cancelled."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Meal orders"
+        ]
+      }
+    },
+    "/api/households/{householdId}/orders/{orderId}/cancel": {
+      "post": {
+        "operationId": "OrdersController_cancel",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "Required on state-changing requests; returned by GET /api/auth/session.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedRevision"
+                ],
+                "properties": {
+                  "expectedRevision": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cancelled (or already cancelled: no second effect)."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Not found, or the caller is not a member of the household."
+          },
+          "409": {
+            "description": "Stale revision, or the order was completed."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Meal orders"
+        ]
+      }
     }
   },
   "info": {
     "title": "Family Menu API",
     "description": "Session-authenticated household API. Sign-in uses Google through Supabase Auth; the API keeps its own HttpOnly session cookie and requires X-CSRF-Token on state-changing requests.",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "contact": {}
   },
   "tags": [],

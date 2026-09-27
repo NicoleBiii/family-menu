@@ -4,6 +4,7 @@ import {
   ArchiveRestore,
   ArrowRight,
   BookOpen,
+  CalendarPlus,
   Camera,
   ChefHat,
   ImageOff,
@@ -43,12 +44,13 @@ interface Props {
   session: Session | null;
   household: HouseholdSummary | undefined;
   onGoHousehold: () => void;
+  onOrder: (recipeId: string, servings: number) => void;
   searchRef: RefObject<HTMLInputElement | null>;
   /** Shown above the menu, hidden while the editor is open. */
   hero: ReactNode;
 }
 
-export function MenuPage({ session, household, onGoHousehold, searchRef, hero }: Props) {
+export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef, hero }: Props) {
   const [presets, setPresets] = useState<RecipePreset[] | null>(null);
   const [recipes, setRecipes] = useState<RecipeSummary[] | null>(null);
   const [query, setQuery] = useState('');
@@ -349,6 +351,10 @@ export function MenuPage({ session, household, onGoHousehold, searchRef, hero }:
               })
             }
             onEdit={(recipe) => startEditor({ mode: 'edit', recipe })}
+            onOrder={(recipe) => {
+              closeDialog();
+              onOrder(recipe.id, recipe.servings);
+            }}
             onArchive={setArchived}
             imageUrl={
               selected.kind === 'recipe'
@@ -461,6 +467,7 @@ function RecipeView({
   onClose,
   onUsePreset,
   onEdit,
+  onOrder,
   onArchive,
   imageUrl,
   photo,
@@ -472,6 +479,7 @@ function RecipeView({
   onClose: () => void;
   onUsePreset: (preset: RecipePreset) => void;
   onEdit: (recipe: RecipeDetail) => void;
+  onOrder: (recipe: RecipeDetail) => void;
   onArchive: (recipe: RecipeDetail, archived: boolean) => Promise<void>;
   imageUrl?: string;
   photo: { busy: boolean; error: string };
@@ -581,8 +589,11 @@ function RecipeView({
           ))}
         {recipe && !recipe.archived && (
           <>
-            <button className="primary-button" onClick={() => onEdit(recipe)}>
-              <Pencil size={18} /> Edit
+            <button className="primary-button" onClick={() => onOrder(recipe)}>
+              <CalendarPlus size={18} /> Order
+            </button>
+            <button className="text-button" onClick={() => onEdit(recipe)}>
+              <Pencil size={16} /> Edit
             </button>
             <button className="text-button" onClick={() => onArchive(recipe, true)}>
               <Archive size={16} /> Archive

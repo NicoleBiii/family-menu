@@ -1,7 +1,7 @@
 # Three-Week Plan and Backlog
 
 Version: 0.1. Updated: 2026-09-26.
-Current phase: REC-001 done (recipes, presets and photos, 2026-09-26). Next: ORD-001. INFRA-001: private GitHub repository, hosted CI and Dependabot triage done; branch protection and preview deployment remain. The repository moved to /Users/bibi/Bibi_Dev/family-menu on 2026-09-26.
+Current phase: ORD-001 done (2026-09-26). Next: SHOP-001. INFRA-001: private GitHub repository, hosted CI and Dependabot triage done; branch protection is unavailable on the free private plan (PR-plus-CI convention instead); preview deployment remains. The repository moved to /Users/bibi/Bibi_Dev/family-menu on 2026-09-26.
 Working window: 2026-09-25 to 2026-10-16, assuming a start on the document date.
 
 ## Planning assumptions
@@ -35,10 +35,10 @@ Days are calendar sequencing slots, not a requirement to work without breaks.
 | DISC-004  | Confirm release priorities and collaboration rules                  | Done           | Owner selected all-member order editing and accepted explicit v1 deferrals                                                                            |
 | DOC-001   | Write product-specific specification, plan, architecture and budget | Done           | v0.1 documents exist; assumptions and sources are marked                                                                                              |
 | ENG-001   | Establish dedicated development repository and local foundation     | Local complete | Reproducible setup, migrations, health/OpenAPI, mobile shell, local checks and prepared CI; see verification record                                   |
-| INFRA-001 | Connect remote repository and isolated cloud preview                | In progress    | Done: private GitHub repo, hosted CI, Dependabot triage. Open: branch protection, isolated preview deployment                                         |
+| INFRA-001 | Connect remote repository and isolated cloud preview                | In progress    | Done: private repo, hosted CI, Dependabot triage, PR convention. Branch protection needs GitHub Pro (owner choice). Open: isolated preview deployment |
 | AUTH-001  | Google authentication and household isolation                       | Done           | Local tests (verification/2026-09-26-auth-001.md) and real-provider smoke (verification/2026-09-26-auth-001-provider-smoke.md); denial path stub-only |
 | REC-001   | Manual/preset recipes and private images                            | Done           | AC-05 and AC-12 (verification/2026-09-26-rec-001.md, ADR 0003); photos in PostgreSQL; presets accepted by the owner                                   |
-| ORD-001   | Orders, scheduling, snapshots and shared editing                    | Not started    | AC-03–04, AC-07–08, AC-11                                                                                                                             |
+| ORD-001   | Orders, scheduling, snapshots and shared editing                    | Done           | AC-03–04, AC-07–08, AC-11 (verification/2026-09-26-ord-001.md, ADR 0004)                                                                              |
 | SHOP-001  | Ingredient calculation and two shopping views                       | Not started    | AC-09–10 with explicit unit incompatibility cases                                                                                                     |
 | AI-001    | Provider evaluation and bounded draft generation                    | Not started    | AC-06, AC-13; measured model choice and cost controls                                                                                                 |
 | UX-001    | Mobile flow, accessibility and error states                         | Not started    | AC-14 plus real-phone check                                                                                                                           |

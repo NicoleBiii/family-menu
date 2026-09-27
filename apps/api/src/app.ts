@@ -19,6 +19,8 @@ import { SupabaseIdentityProvider } from './identity-provider.js';
 import { RecipePresetsController, RecipesController } from './recipes.controller.js';
 import { RecipesService } from './recipes.service.js';
 import { RecipeImagesService } from './recipe-images.service.js';
+import { OrdersController } from './orders.controller.js';
+import { OrdersService } from './orders.service.js';
 
 @Module({})
 class AppModule {
@@ -32,6 +34,7 @@ class AppModule {
         InvitationsController,
         RecipePresetsController,
         RecipesController,
+        OrdersController,
       ],
       providers: [
         { provide: APP_CONFIG, useValue: config },
@@ -41,6 +44,7 @@ class AppModule {
         HouseholdsService,
         RecipesService,
         RecipeImagesService,
+        OrdersService,
         SessionGuard,
       ],
     };
@@ -82,7 +86,7 @@ export async function createApplication(config: AppConfig, quiet = false) {
       .setDescription(
         'Session-authenticated household API. Sign-in uses Google through Supabase Auth; the API keeps its own HttpOnly session cookie and requires X-CSRF-Token on state-changing requests.',
       )
-      .setVersion('0.3.0')
+      .setVersion('0.4.0')
       .addCookieAuth('fm_session')
       .build(),
   );

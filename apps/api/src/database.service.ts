@@ -93,6 +93,51 @@ interface Database {
     created_by: string;
     created_at: Generated<Date>;
   };
+  'app.meal_orders': {
+    id: Generated<string>;
+    household_id: string;
+    status: Generated<'pending' | 'completed' | 'cancelled'>;
+    scheduled_at: Date;
+    /** Write as YYYY-MM-DD; read through to_char to avoid local-midnight Date parsing. */
+    meal_date: string;
+    /** Write as HH:MM; read through to_char. */
+    meal_time: string;
+    timezone: string;
+    notes: string;
+    create_request_id: string;
+    revision: Generated<number>;
+    created_by: string;
+    updated_by: string;
+    created_at: Generated<Date>;
+    updated_at: Generated<Date>;
+    closed_by: string | null;
+    closed_at: Date | null;
+  };
+  'app.meal_order_items': {
+    id: Generated<string>;
+    household_id: string;
+    order_id: string;
+    position: number;
+    recipe_id: string;
+    servings: number;
+    recipe_name: string;
+    recipe_servings: number;
+    price_points: number;
+    steps: string[];
+    ingredients: string; // JSON text on write; parsed jsonb on read
+    recipe_revision: number;
+    snapshot_at: Generated<Date>;
+  };
+  'app.audit_events': {
+    id: Generated<string>;
+    household_id: string;
+    actor_id: string;
+    entity_type: 'meal_order';
+    entity_id: string;
+    action: 'create' | 'update' | 'complete' | 'cancel';
+    revision: number;
+    created_at: Generated<Date>;
+  };
 }
 
 export type { Database };
@@ -123,7 +168,10 @@ export class DatabaseService implements OnModuleDestroy {
         and to_regclass('app.household_invitations') is not null
         and to_regclass('app.recipes') is not null
         and to_regclass('app.recipe_ingredients') is not null
-        and to_regclass('app.recipe_images') is not null as ready
+        and to_regclass('app.recipe_images') is not null
+        and to_regclass('app.meal_orders') is not null
+        and to_regclass('app.meal_order_items') is not null
+        and to_regclass('app.audit_events') is not null as ready
     `.execute(this.db);
     return result.rows[0]?.ready === true;
   }

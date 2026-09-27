@@ -23,6 +23,7 @@
 ## Engineering workflow once implementation begins
 
 - Use Node 24.19.x (see .nvmrc) and npm with the committed lockfile. Start with `npm ci`. Do not introduce another package manager or upgrade framework majors without a recorded reason.
+- Changes reach `main` through a pull request whose CI ("Quality checks") has passed; do not push directly to `main`. Work on a task branch (e.g. `ord-001`), push it, open a PR, and squash-merge once CI is green. GitHub cannot enforce this on the current private free plan (branch protection needs GitHub Pro), so both agents follow it by convention.
 - Standard verification: `npm run check`. Real database tests require a loopback database named family_menu_test; never point them at production or substitute mocks for their constraints.
 - Run migrations with `npm run db:migrate` as a controlled step. Do not edit already-applied migrations or run destructive reset commands to fix a test.
 
