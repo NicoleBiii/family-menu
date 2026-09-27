@@ -51,6 +51,37 @@ interface Database {
     accepted_by: string | null;
     accepted_at: Date | null;
   };
+  'app.recipes': {
+    id: Generated<string>;
+    household_id: string;
+    name: string;
+    description: string;
+    servings: number;
+    price_points: number;
+    steps: string[];
+    source: 'manual' | 'preset';
+    source_preset_id: string | null;
+    source_preset_version: number | null;
+    create_request_id: string;
+    revision: Generated<number>;
+    created_by: string;
+    updated_by: string;
+    created_at: Generated<Date>;
+    updated_at: Generated<Date>;
+    archived_at: Date | null;
+  };
+  'app.recipe_ingredients': {
+    household_id: string;
+    recipe_id: string;
+    position: number;
+    name: string;
+    ingredient_key: string;
+    /** PostgreSQL numeric, kept as a decimal string to avoid binary floating point. */
+    quantity: string | null;
+    unit: string | null;
+    form: string | null;
+    note: string | null;
+  };
 }
 
 export type { Database };
@@ -78,7 +109,9 @@ export class DatabaseService implements OnModuleDestroy {
       select to_regclass('app.households') is not null
         and to_regclass('app.household_members') is not null
         and to_regclass('app.sessions') is not null
-        and to_regclass('app.household_invitations') is not null as ready
+        and to_regclass('app.household_invitations') is not null
+        and to_regclass('app.recipes') is not null
+        and to_regclass('app.recipe_ingredients') is not null as ready
     `.execute(this.db);
     return result.rows[0]?.ready === true;
   }

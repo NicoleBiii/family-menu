@@ -71,3 +71,94 @@ export const authErrorMessages: Record<string, string> = {
   exchange_failed: 'We could not confirm your Google sign-in. Please try again.',
   not_configured: 'Sign-in is not configured on this server yet.',
 };
+
+export const UNITS = [
+  'g',
+  'kg',
+  'oz',
+  'lb',
+  'ml',
+  'l',
+  'tsp',
+  'tbsp',
+  'cup',
+  'piece',
+  'clove',
+  'slice',
+  'can',
+  'bunch',
+  'pinch',
+] as const;
+
+export interface Ingredient {
+  name: string;
+  /** Exact decimal string, or null for "to taste" / unknown amounts. */
+  quantity: string | null;
+  unit: (typeof UNITS)[number] | null;
+  form: string | null;
+  note: string | null;
+}
+
+export interface RecipeContent {
+  name: string;
+  description: string;
+  servings: number;
+  steps: string[];
+  ingredients: Ingredient[];
+}
+
+export interface RecipePreset extends RecipeContent {
+  id: string;
+  version: number;
+}
+
+export interface RecipeSummary {
+  id: string;
+  name: string;
+  description: string;
+  servings: number;
+  pricePoints: number;
+  source: 'manual' | 'preset';
+  presetId: string | null;
+  revision: number;
+  updatedAt: string;
+  archived: boolean;
+  ingredientCount: number;
+}
+
+export interface RecipeDetail extends RecipeContent {
+  id: string;
+  pricePoints: number;
+  source: 'manual' | 'preset';
+  presetId: string | null;
+  presetVersion: number | null;
+  revision: number;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  updatedBy: string;
+  archived: boolean;
+}
+
+const PLURAL_UNITS: Partial<Record<(typeof UNITS)[number], string>> = {
+  cup: 'cups',
+  piece: 'pieces',
+  clove: 'cloves',
+  slice: 'slices',
+  can: 'cans',
+  bunch: 'bunches',
+  pinch: 'pinches',
+};
+
+export function formatIngredient(line: Ingredient) {
+  const unit =
+    line.unit && line.quantity && Number(line.quantity) > 1
+      ? (PLURAL_UNITS[line.unit] ?? line.unit)
+      : line.unit;
+  const amount = [line.quantity, unit].filter(Boolean).join(' ');
+  return [
+    amount ? `${amount} ${line.name}` : line.name,
+    line.form ? `, ${line.form}` : '',
+    line.note ? ` (${line.note})` : '',
+  ].join('');
+}

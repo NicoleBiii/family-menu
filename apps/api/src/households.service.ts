@@ -88,19 +88,26 @@ export class HouseholdsService {
     });
   }
 
-  /** Returns the caller's role or throws 404 when the caller is not a current member. */
+  /**
+   * Returns the caller's role or throws 404 when the caller is not a current member.
+   * With `lock`, the membership row is held FOR SHARE until the surrounding transaction ends, so a
+   * concurrent removal waits for the caller's write (or the write sees the removal) and a removed
+   * member can never complete a mutation after the removal commits.
+   */
   async requireMember(
     userId: string,
     householdId: string,
     executor: Transaction<Database> | DatabaseService['db'] = this.database.db,
+    lock = false,
   ): Promise<Role> {
     if (!isUuid(householdId)) throw new NotFoundException('Household not found.');
-    const row = await executor
+    let query = executor
       .selectFrom('app.household_members')
       .select('role')
       .where('household_id', '=', householdId)
-      .where('user_id', '=', userId)
-      .executeTakeFirst();
+      .where('user_id', '=', userId);
+    if (lock) query = query.forShare();
+    const row = await query.executeTakeFirst();
     if (!row) throw new NotFoundException('Household not found.');
     return row.role;
   }

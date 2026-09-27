@@ -16,19 +16,29 @@ import { AuthService } from './auth.service.js';
 import { HouseholdsController, InvitationsController } from './households.controller.js';
 import { HouseholdsService } from './households.service.js';
 import { SupabaseIdentityProvider } from './identity-provider.js';
+import { RecipePresetsController, RecipesController } from './recipes.controller.js';
+import { RecipesService } from './recipes.service.js';
 
 @Module({})
 class AppModule {
   static configure(config: AppConfig): DynamicModule {
     return {
       module: AppModule,
-      controllers: [HealthController, AuthController, HouseholdsController, InvitationsController],
+      controllers: [
+        HealthController,
+        AuthController,
+        HouseholdsController,
+        InvitationsController,
+        RecipePresetsController,
+        RecipesController,
+      ],
       providers: [
         { provide: APP_CONFIG, useValue: config },
         DatabaseService,
         SupabaseIdentityProvider,
         AuthService,
         HouseholdsService,
+        RecipesService,
         SessionGuard,
       ],
     };
@@ -70,7 +80,7 @@ export async function createApplication(config: AppConfig, quiet = false) {
       .setDescription(
         'Session-authenticated household API. Sign-in uses Google through Supabase Auth; the API keeps its own HttpOnly session cookie and requires X-CSRF-Token on state-changing requests.',
       )
-      .setVersion('0.2.0')
+      .setVersion('0.3.0')
       .addCookieAuth('fm_session')
       .build(),
   );

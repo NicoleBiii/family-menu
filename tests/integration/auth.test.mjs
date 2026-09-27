@@ -1,191 +1,24 @@
 import assert from 'node:assert/strict';
-import { createHash, randomUUID } from 'node:crypto';
-import { createServer } from 'node:http';
-import { before, after, test } from 'node:test';
-import pg from 'pg';
-import { migrate } from '../../scripts/migrate.mjs';
+import { randomUUID } from 'node:crypto';
+import { test } from 'node:test';
 import { createApplication } from '../../apps/api/dist/app.js';
 import { readConfig } from '../../apps/api/dist/config.js';
+import {
+  api,
+  callback,
+  cookiesFrom,
+  createHousehold,
+  databaseUrl,
+  identity,
+  invite,
+  pool,
+  server,
+  signIn,
+  startLogin,
+  stub,
+} from './harness.mjs';
 
-// AUTH-001 boundary tests. The Supabase Auth HTTP endpoints are replaced by a local stub that
-// implements the PKCE contract (authorize → code, token?grant_type=pkce with verifier check).
-// The application code under test is the production code path; no login bypass exists.
-// These tests do NOT prove real Google/Supabase behavior; that needs a provider smoke test.
-
-const databaseUrl = process.env.TEST_DATABASE_URL;
-if (!databaseUrl)
-  throw new Error('TEST_DATABASE_URL is required; integration tests must not silently skip.');
-const parsed = new URL(databaseUrl);
-if (
-  !['localhost', '127.0.0.1', '[::1]'].includes(parsed.hostname) ||
-  parsed.pathname !== '/family_menu_test'
-) {
-  throw new Error('Tests require the dedicated loopback family_menu_test database.');
-}
-
-const PUBLISHABLE_KEY = 'sb_publishable_test_only_not_a_real_key';
-const pool = new pg.Pool({ connectionString: databaseUrl, max: 3 });
-const issuedCodes = new Map();
-let nextIdentity;
-let tokenStatusOverride;
-let provider;
-let providerOrigin;
-let app;
-let origin;
-
-function listen(server) {
-  return new Promise((resolve) =>
-    server.listen(0, '127.0.0.1', () => resolve(server.address().port)),
-  );
-}
-
-before(async () => {
-  await migrate(databaseUrl);
-  provider = createServer(async (request, response) => {
-    const url = new URL(request.url, 'http://stub');
-    if (request.method === 'GET' && url.pathname === '/auth/v1/authorize') {
-      assert.equal(url.searchParams.get('provider'), 'google');
-      assert.equal(url.searchParams.get('code_challenge_method'), 's256');
-      assert.equal(url.searchParams.get('prompt'), 'select_account');
-      const code = randomUUID();
-      issuedCodes.set(code, {
-        challenge: url.searchParams.get('code_challenge'),
-        identity: nextIdentity,
-      });
-      const redirect = new URL(url.searchParams.get('redirect_to'));
-      redirect.searchParams.set('code', code);
-      response.writeHead(302, { Location: redirect.href }).end();
-      return;
-    }
-    if (request.method === 'POST' && url.pathname === '/auth/v1/token') {
-      let raw = '';
-      for await (const chunk of request) raw += chunk;
-      const body = JSON.parse(raw);
-      const issued = issuedCodes.get(body.auth_code);
-      issuedCodes.delete(body.auth_code);
-      const verifierOk =
-        issued &&
-        createHash('sha256').update(body.code_verifier).digest('base64url') === issued.challenge;
-      if (
-        tokenStatusOverride ||
-        url.searchParams.get('grant_type') !== 'pkce' ||
-        request.headers.apikey !== PUBLISHABLE_KEY ||
-        !verifierOk
-      ) {
-        response.writeHead(tokenStatusOverride ?? 400, { 'Content-Type': 'application/json' });
-        response.end(JSON.stringify({ error: 'invalid_grant' }));
-        return;
-      }
-      response.writeHead(200, { 'Content-Type': 'application/json' });
-      response.end(
-        JSON.stringify({
-          access_token: 'provider-access-token-must-not-leak',
-          refresh_token: 'provider-refresh-token-must-not-leak',
-          user: {
-            id: issued.identity.id,
-            email: issued.identity.email,
-            user_metadata: { full_name: issued.identity.name },
-          },
-        }),
-      );
-      return;
-    }
-    response.writeHead(404).end();
-  });
-  providerOrigin = `http://127.0.0.1:${await listen(provider)}`;
-
-  // Reserve a port so APP_ORIGIN (used for callback and Origin checks) is known up front.
-  const probe = createServer();
-  const port = await listen(probe);
-  await new Promise((resolve) => probe.close(resolve));
-  origin = `http://127.0.0.1:${port}`;
-  const config = readConfig({
-    DATABASE_URL: databaseUrl,
-    APP_ORIGIN: origin,
-    SUPABASE_URL: providerOrigin,
-    SUPABASE_PUBLISHABLE_KEY: PUBLISHABLE_KEY,
-  });
-  ({ app } = await createApplication(config, true));
-  await app.listen(port, '127.0.0.1');
-});
-
-after(async () => {
-  await app?.close();
-  await new Promise((resolve) => provider?.close(resolve));
-  await pool.end();
-});
-
-function cookiesFrom(response) {
-  return Object.fromEntries(
-    response.headers.getSetCookie().map((line) => {
-      const [pair] = line.split(';');
-      const index = pair.indexOf('=');
-      return [pair.slice(0, index), decodeURIComponent(pair.slice(index + 1))];
-    }),
-  );
-}
-
-function identity(name = 'Test person') {
-  return { id: randomUUID(), email: `${randomUUID()}@example.test`, name };
-}
-
-/** Walks the real redirect chain: /api/auth/login → provider authorize → /api/auth/callback. */
-async function startLogin(returnTo = '/') {
-  const login = await fetch(`${origin}/api/auth/login?returnTo=${encodeURIComponent(returnTo)}`, {
-    redirect: 'manual',
-  });
-  assert.equal(login.status, 302);
-  const state = cookiesFrom(login).fm_oauth_state;
-  assert.ok(state);
-  const authorize = await fetch(login.headers.get('location'), { redirect: 'manual' });
-  assert.equal(authorize.status, 302);
-  return { state, callbackUrl: authorize.headers.get('location') };
-}
-
-async function callback(callbackUrl, cookie) {
-  return fetch(callbackUrl, { redirect: 'manual', headers: cookie ? { Cookie: cookie } : {} });
-}
-
-async function signIn(person = identity()) {
-  nextIdentity = person;
-  const { state, callbackUrl } = await startLogin('/');
-  const response = await callback(callbackUrl, `fm_oauth_state=${state}`);
-  assert.equal(response.status, 302);
-  assert.equal(response.headers.get('location'), '/');
-  const token = cookiesFrom(response).fm_session;
-  assert.ok(token, 'session cookie is issued');
-  const cookie = `fm_session=${token}`;
-  const session = await (
-    await fetch(`${origin}/api/auth/session`, { headers: { Cookie: cookie } })
-  ).json();
-  assert.equal(session.authenticated, true);
-  return { ...person, token, cookie, csrf: session.csrfToken };
-}
-
-function api(user, path, { method = 'GET', body, csrf = true, headers = {} } = {}) {
-  return fetch(`${origin}/api${path}`, {
-    method,
-    headers: {
-      ...(user ? { Cookie: user.cookie } : {}),
-      ...(csrf && user && method !== 'GET' ? { 'X-CSRF-Token': user.csrf } : {}),
-      ...(body ? { 'Content-Type': 'application/json' } : {}),
-      ...headers,
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-}
-
-async function createHousehold(user, name = 'Household') {
-  const response = await api(user, '/households', { method: 'POST', body: { name } });
-  assert.equal(response.status, 201);
-  return response.json();
-}
-
-async function invite(owner, householdId) {
-  const response = await api(owner, `/households/${householdId}/invitations`, { method: 'POST' });
-  assert.equal(response.status, 201);
-  return response.json();
-}
+// AUTH-001 boundary tests, using the provider stub in harness.mjs.
 
 test('configuration rejects secret keys and partial sign-in settings', () => {
   const base = { DATABASE_URL: databaseUrl, APP_ORIGIN: 'http://127.0.0.1:5173' };
@@ -222,16 +55,18 @@ test('sign-in is unavailable (503) rather than bypassed when the provider is not
 
 test('Google sign-in creates a profile and an HttpOnly session without exposing provider tokens', async () => {
   const person = identity('王小明 Wang');
-  nextIdentity = person;
-  const login = await fetch(`${origin}/api/auth/login?returnTo=/join`, { redirect: 'manual' });
+  stub.nextIdentity = person;
+  const login = await fetch(`${server.origin}/api/auth/login?returnTo=/join`, {
+    redirect: 'manual',
+  });
   const stateCookie = login.headers
     .getSetCookie()
     .find((line) => line.startsWith('fm_oauth_state='));
   assert.match(stateCookie, /HttpOnly/);
   assert.match(stateCookie, /SameSite=Lax/);
   const authorizeUrl = new URL(login.headers.get('location'));
-  assert.equal(authorizeUrl.origin, providerOrigin);
-  assert.equal(authorizeUrl.searchParams.get('redirect_to'), `${origin}/api/auth/callback`);
+  assert.equal(authorizeUrl.origin, server.providerOrigin);
+  assert.equal(authorizeUrl.searchParams.get('redirect_to'), `${server.origin}/api/auth/callback`);
   const authorize = await fetch(authorizeUrl, { redirect: 'manual' });
   const response = await callback(
     authorize.headers.get('location'),
@@ -247,7 +82,7 @@ test('Google sign-in creates a profile and an HttpOnly session without exposing 
 
   const cookie = `fm_session=${cookiesFrom(response).fm_session}`;
   const body = await (
-    await fetch(`${origin}/api/auth/session`, { headers: { Cookie: cookie } })
+    await fetch(`${server.origin}/api/auth/session`, { headers: { Cookie: cookie } })
   ).text();
   assert.ok(!body.includes('provider-'));
   const session = JSON.parse(body);
@@ -265,7 +100,7 @@ test('Google sign-in creates a profile and an HttpOnly session without exposing 
 });
 
 test('login state is browser-bound, single-use and expiring; provider failures create no session', async () => {
-  nextIdentity = identity();
+  stub.nextIdentity = identity();
   let attempt = await startLogin();
   let response = await callback(attempt.callbackUrl); // no state cookie
   assert.equal(response.headers.get('location'), '/?authError=state_invalid');
@@ -290,17 +125,17 @@ test('login state is browser-bound, single-use and expiring; provider failures c
   assert.equal(cookiesFrom(response).fm_session, undefined);
 
   attempt = await startLogin();
-  const denied = new URL(`${origin}/api/auth/callback`);
+  const denied = new URL(`${server.origin}/api/auth/callback`);
   denied.searchParams.set('error', 'access_denied');
   response = await callback(denied.href, `fm_oauth_state=${attempt.state}`);
   assert.equal(response.headers.get('location'), '/?authError=provider_denied');
 
   attempt = await startLogin();
-  tokenStatusOverride = 500;
+  stub.tokenStatusOverride = 500;
   try {
     response = await callback(attempt.callbackUrl, `fm_oauth_state=${attempt.state}`);
   } finally {
-    tokenStatusOverride = undefined;
+    stub.tokenStatusOverride = undefined;
   }
   assert.equal(response.headers.get('location'), '/?authError=exchange_failed');
   assert.equal(cookiesFrom(response).fm_session, undefined);
@@ -313,7 +148,7 @@ test('post-login redirects stay on this site', async () => {
     '/\\evil.example',
     'javascript:alert(1)',
   ]) {
-    nextIdentity = identity();
+    stub.nextIdentity = identity();
     const attempt = await startLogin(target);
     const response = await callback(attempt.callbackUrl, `fm_oauth_state=${attempt.state}`);
     assert.equal(response.headers.get('location'), '/', target);
@@ -323,7 +158,8 @@ test('post-login redirects stay on this site', async () => {
 test('expired, idle, revoked and rotated sessions are rejected', async () => {
   assert.equal((await api(null, '/households')).status, 401);
   assert.equal(
-    (await fetch(`${origin}/api/households`, { headers: { Cookie: 'fm_session=forged' } })).status,
+    (await fetch(`${server.origin}/api/households`, { headers: { Cookie: 'fm_session=forged' } }))
+      .status,
     401,
   );
 
@@ -351,7 +187,7 @@ test('expired, idle, revoked and rotated sessions are rejected', async () => {
 
   const person = identity();
   const first = await signIn(person);
-  nextIdentity = person;
+  stub.nextIdentity = person;
   const attempt = await startLogin();
   const response = await callback(
     attempt.callbackUrl,
@@ -404,7 +240,8 @@ test('state-changing requests require the session CSRF token and same origin', a
     403,
   );
   assert.equal(
-    (await api(user, '/households', { method: 'POST', body, headers: { Origin: origin } })).status,
+    (await api(user, '/households', { method: 'POST', body, headers: { Origin: server.origin } }))
+      .status,
     201,
   );
   const count = await pool.query(
@@ -475,7 +312,7 @@ test('AC-01: owners invite with single-use links; expired, revoked, used and unk
   const joiner = await signIn(identity('Joiner'));
 
   const link = await invite(owner, household.id);
-  assert.equal(link.url, `${origin}/join#${link.token}`);
+  assert.equal(link.url, `${server.origin}/join#${link.token}`);
   const stored = await pool.query('select token_hash from app.household_invitations where id=$1', [
     link.id,
   ]);

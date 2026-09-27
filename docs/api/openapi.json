@@ -500,12 +500,563 @@
           "Invitations"
         ]
       }
+    },
+    "/api/recipe-presets": {
+      "get": {
+        "operationId": "RecipePresetsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Curated, read-only starter recipes. Public: they contain no household data."
+          }
+        },
+        "tags": [
+          "Recipes"
+        ]
+      }
+    },
+    "/api/households/{householdId}/recipes": {
+      "get": {
+        "operationId": "RecipesController_list",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "All household recipes, including archived ones (flagged)."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Not found, or the caller is not a member of the household."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Recipes"
+        ]
+      },
+      "post": {
+        "operationId": "RecipesController_create",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "Required on state-changing requests; returned by GET /api/auth/session.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "requestId",
+                  "name",
+                  "servings"
+                ],
+                "properties": {
+                  "requestId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Client-generated per save; retrying with the same id returns the same recipe."
+                  },
+                  "presetId": {
+                    "type": "string",
+                    "description": "Set when the content started from a preset; records provenance."
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "servings": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "description": "Base yield."
+                  },
+                  "pricePoints": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9999,
+                    "description": "Virtual display points per serving. No cash value."
+                  },
+                  "steps": {
+                    "type": "array",
+                    "maxItems": 30,
+                    "items": {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  },
+                  "ingredients": {
+                    "type": "array",
+                    "maxItems": 60,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "name"
+                      ],
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "maxLength": 100
+                        },
+                        "quantity": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Exact decimal, at most 3 fraction digits. Omit for \"to taste\" or unknown.",
+                          "example": "0.5"
+                        },
+                        "unit": {
+                          "type": "string",
+                          "nullable": true,
+                          "enum": [
+                            "g",
+                            "kg",
+                            "oz",
+                            "lb",
+                            "ml",
+                            "l",
+                            "tsp",
+                            "tbsp",
+                            "cup",
+                            "piece",
+                            "clove",
+                            "slice",
+                            "can",
+                            "bunch",
+                            "pinch"
+                          ]
+                        },
+                        "form": {
+                          "type": "string",
+                          "nullable": true,
+                          "maxLength": 60,
+                          "example": "diced"
+                        },
+                        "note": {
+                          "type": "string",
+                          "nullable": true,
+                          "maxLength": 200,
+                          "example": "to taste"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Recipe saved to the household menu."
+          },
+          "400": {
+            "description": "Invalid recipe."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Not found, or the caller is not a member of the household."
+          },
+          "409": {
+            "description": "The household reached its recipe limit."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Recipes"
+        ]
+      }
+    },
+    "/api/households/{householdId}/recipes/{recipeId}": {
+      "get": {
+        "operationId": "RecipesController_get",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recipeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recipe with ingredient lines in order."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Not found, or the caller is not a member of the household."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Recipes"
+        ]
+      },
+      "put": {
+        "operationId": "RecipesController_update",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recipeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "Required on state-changing requests; returned by GET /api/auth/session.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedRevision",
+                  "name",
+                  "servings"
+                ],
+                "properties": {
+                  "expectedRevision": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "description": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "servings": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100,
+                    "description": "Base yield."
+                  },
+                  "pricePoints": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9999,
+                    "description": "Virtual display points per serving. No cash value."
+                  },
+                  "steps": {
+                    "type": "array",
+                    "maxItems": 30,
+                    "items": {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  },
+                  "ingredients": {
+                    "type": "array",
+                    "maxItems": 60,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "name"
+                      ],
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "maxLength": 100
+                        },
+                        "quantity": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Exact decimal, at most 3 fraction digits. Omit for \"to taste\" or unknown.",
+                          "example": "0.5"
+                        },
+                        "unit": {
+                          "type": "string",
+                          "nullable": true,
+                          "enum": [
+                            "g",
+                            "kg",
+                            "oz",
+                            "lb",
+                            "ml",
+                            "l",
+                            "tsp",
+                            "tbsp",
+                            "cup",
+                            "piece",
+                            "clove",
+                            "slice",
+                            "can",
+                            "bunch",
+                            "pinch"
+                          ]
+                        },
+                        "form": {
+                          "type": "string",
+                          "nullable": true,
+                          "maxLength": 60,
+                          "example": "diced"
+                        },
+                        "note": {
+                          "type": "string",
+                          "nullable": true,
+                          "maxLength": 200,
+                          "example": "to taste"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Recipe replaced; revision incremented."
+          },
+          "400": {
+            "description": "Invalid recipe."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Not found, or the caller is not a member of the household."
+          },
+          "409": {
+            "description": "Stale revision, or the recipe is archived."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Recipes"
+        ]
+      }
+    },
+    "/api/households/{householdId}/recipes/{recipeId}/archive": {
+      "post": {
+        "operationId": "RecipesController_archive",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recipeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "Required on state-changing requests; returned by GET /api/auth/session.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedRevision"
+                ],
+                "properties": {
+                  "expectedRevision": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Archived: hidden from new orders, never deleted."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Not found, or the caller is not a member of the household."
+          },
+          "409": {
+            "description": "Stale revision, or already archived."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Recipes"
+        ]
+      }
+    },
+    "/api/households/{householdId}/recipes/{recipeId}/restore": {
+      "post": {
+        "operationId": "RecipesController_restore",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recipeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "Required on state-changing requests; returned by GET /api/auth/session.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "expectedRevision"
+                ],
+                "properties": {
+                  "expectedRevision": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Restored to the active menu."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Not found, or the caller is not a member of the household."
+          },
+          "409": {
+            "description": "Stale revision, or not archived."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Recipes"
+        ]
+      }
     }
   },
   "info": {
     "title": "Family Menu API",
     "description": "Session-authenticated household API. Sign-in uses Google through Supabase Auth; the API keeps its own HttpOnly session cookie and requires X-CSRF-Token on state-changing requests.",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "contact": {}
   },
   "tags": [],

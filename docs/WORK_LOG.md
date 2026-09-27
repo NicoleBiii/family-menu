@@ -155,3 +155,19 @@ Use dates in YYYY-MM-DD format, with America/Toronto as the reporting timezone. 
 
 - Step 6 re-test: the account chooser now appears every time. Back from the chooser correctly creates no session. Google offered no Cancel/deny screen for basic scopes even after revoking app access, so the denial path stays stub-verified. AUTH-001 marked Done.
 - Owner decisions: move the repository to `/Users/bibi/Bibi_Dev/family-menu` so it is no longer inside the ChatGPT project mirror (whose AGENTS.md warns its files may be replaced), and allow uploading to GitHub (INFRA-001). Codex and Claude Code both open the new path directly; no tool configuration refers to the old path.
+
+## 2026-09-26 — INFRA-001 first hosted CI; REC-001 recipes and presets
+
+- The private repository `NicoleBiii/family-menu` already existed with `main` at `e5bf9c8` pushed. Its first CI run on `main` passed (run 36289153638, 2m26s). GitHub warned that the pinned `actions/checkout` and `actions/setup-node` target the deprecated Node 20 runtime.
+- Dependabot opened five PRs; none were merged. The Actions bumps (#1–#3) pass CI and would clear the Node 20 warning. #4 (`@types/node` 26) passes CI but mismatches the Node 24 runtime. #5 (TypeScript 7) fails `npm ci` on the typescript-eslint peer range, consistent with ADR 0001's TypeScript 6 decision. These need the owner's decision.
+- Claude claimed REC-001 on the owner's Mac. Baseline `npm run check` passed there first (17 integration, 12 browser).
+- Implemented recipes: migration 003 (`app.recipes`, `app.recipe_ingredients`), `RecipesService`/controllers, 12 curated presets as versioned code, OpenAPI update, Menu page with search/archived filter, recipe dialog and a mobile editor. Hardcoded sample recipes are gone; signed-out visitors see the real presets.
+- `HouseholdsService.requireMember` gained an optional `FOR SHARE` lock, used by recipe writes, to close the membership-removal race.
+- Shared integration sign-in helpers moved to `tests/integration/harness.mjs`.
+- Verification: full `npm run check` passed (27 integration, 18 browser); mutation checks confirmed the conflict, isolation and idempotency tests fail when their guard is removed. A browser test found a real UI race (dialog reopening after close) that is now fixed. See verification/2026-09-26-rec-001.md.
+- Not done: recipe images (AC-12), awaiting a storage decision; owner review of preset text.
+
+### DEC-011 — Recipes and presets
+
+- Status: implemented. See `docs/decisions/0003-recipes.md`.
+- Presets are versioned read-only code with a public endpoint, copied into households with provenance; exact decimal quantities with a controlled unit list; full-replacement edits guarded by `expectedRevision`; client `requestId` makes creation idempotent; archive instead of delete.

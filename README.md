@@ -2,13 +2,13 @@
 
 A mobile-first shared menu for the people you call home: collect recipes, coordinate meals, and turn your plans into a shopping list.
 
-**Status: early development, not a released service.** Google sign-in (through Supabase Auth), households, invitations and membership work locally and are tested against a provider stub; the real Google/Supabase smoke test is still pending ([setup](docs/SETUP_AUTH.md)). The menu cards are still sample content. Saved recipes, ordering, shopping calculations and AI generation are next milestones.
+**Status: early development, not a released service.** Google sign-in (through Supabase Auth), households, invitations and membership work and passed a real-provider smoke test ([setup](docs/SETUP_AUTH.md)). Households can save, edit, archive and restore their own recipes, starting from scratch or from 12 starter recipes. Recipe images, ordering, shopping calculations and AI generation are next milestones.
 
 ## What works today
 
 - Google sign-in via server-side PKCE, HttpOnly app sessions with expiry/logout, CSRF protection.
 - Create households, invite with single-use 7-day links, join, remove members or leave. All household routes are authorized on the server.
-- Responsive React sample menu with search/category filters, recipe dialogs, keyboard focus restoration, and navigation empty states.
+- Responsive React menu: starter recipes, the household's own recipes with search, recipe dialogs with focus restoration, a mobile recipe editor with structured ingredients, stale-edit conflict handling, and navigation empty states.
 - NestJS application serving the production frontend and API from one origin.
 - Separate liveness and database/schema readiness checks, request IDs, security headers, and a generated OpenAPI contract.
 - PostgreSQL migrations for profiles, households, membership, sessions, login state and invitations in a private schema.
@@ -60,7 +60,7 @@ npm audit --omit=dev --audit-level=high
 
 Integration coverage checks migrations and constraints, health/contract endpoints, redacted database failure, configuration, and the AUTH-001 boundary: login state/PKCE failures, session expiry/revocation, CSRF, cross-household access (404), and invitation expiry/revocation/single use. The Supabase Auth endpoints are replaced by a local stub in tests; the real provider needs the manual smoke test in [SETUP_AUTH.md](docs/SETUP_AUTH.md).
 
-Browser coverage exercises search/empty results, recipe dialogs and focus, navigation, a 360 px mobile layout, API-versus-SPA fallback, and a two-user sign-in → invite → join → remove flow through the provider stub (`tests/e2e/provider-stub.mjs`, started only by Playwright). A browser viewport is not a physical-device test.
+Browser coverage exercises starter-recipe search/empty results, recipe dialogs and focus, navigation, a 360 px mobile layout, API-versus-SPA fallback, recipe create/edit/archive/restore, saving a starter copy, the stale-edit conflict path, and a two-user sign-in → invite → join → remove flow through the provider stub (`tests/e2e/provider-stub.mjs`, started only by Playwright). A browser viewport is not a physical-device test.
 
 ## Useful endpoints
 
