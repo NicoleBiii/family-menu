@@ -972,6 +972,53 @@ dialog h3 {
   opacity: 0.4;
   cursor: not-allowed;
 }
+/* SHOP-001: shopping list */
+.shopping-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border: 1px solid #dedfce;
+  border-radius: 16px;
+  background: #fffef7;
+}
+.shopping-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #ecede2;
+  overflow-wrap: anywhere;
+}
+.shopping-list li:last-child {
+  border-bottom: 0;
+}
+.shopping-amounts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.shopping-amounts .muted {
+  font-weight: 400;
+  white-space: normal;
+}
+.muted.small {
+  font-size: 12px;
+  margin-top: 2px;
+}
+.shopping-dish h3 {
+  margin-top: 10px;
+}
+.shopping-dish ul {
+  margin: 6px 0 0;
+  padding-left: 20px;
+  font-size: 14px;
+  line-height: 1.8;
+}
 @media (max-width: 900px) {
   .recipe-grid {
     grid-template-columns: repeat(2, 1fr);

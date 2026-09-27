@@ -1,7 +1,7 @@
 # Three-Week Plan and Backlog
 
 Version: 0.1. Updated: 2026-09-26.
-Current phase: ORD-001 done (2026-09-26). Next: SHOP-001. INFRA-001: private GitHub repository, hosted CI and Dependabot triage done; branch protection is unavailable on the free private plan (PR-plus-CI convention instead); preview deployment remains. The repository moved to /Users/bibi/Bibi_Dev/family-menu on 2026-09-26.
+Current phase: SHOP-001 done (2026-09-26); the manual core workflow (recipes → orders → shopping) is complete. Next: AI-001 (needs provider decision) or UX-001. INFRA-001: private GitHub repository, hosted CI and Dependabot triage done; branch protection is unavailable on the free private plan (PR-plus-CI convention instead); preview deployment remains. The repository moved to /Users/bibi/Bibi_Dev/family-menu on 2026-09-26.
 Working window: 2026-09-25 to 2026-10-16, assuming a start on the document date.
 
 ## Planning assumptions
@@ -39,7 +39,7 @@ Days are calendar sequencing slots, not a requirement to work without breaks.
 | AUTH-001  | Google authentication and household isolation                       | Done           | Local tests (verification/2026-09-26-auth-001.md) and real-provider smoke (verification/2026-09-26-auth-001-provider-smoke.md); denial path stub-only |
 | REC-001   | Manual/preset recipes and private images                            | Done           | AC-05 and AC-12 (verification/2026-09-26-rec-001.md, ADR 0003); photos in PostgreSQL; presets accepted by the owner                                   |
 | ORD-001   | Orders, scheduling, snapshots and shared editing                    | Done           | AC-03–04, AC-07–08, AC-11 (verification/2026-09-26-ord-001.md, ADR 0004)                                                                              |
-| SHOP-001  | Ingredient calculation and two shopping views                       | Not started    | AC-09–10 with explicit unit incompatibility cases                                                                                                     |
+| SHOP-001  | Ingredient calculation and two shopping views                       | Done           | AC-09–10 (verification/2026-09-26-shop-001.md, ADR 0005)                                                                                              |
 | AI-001    | Provider evaluation and bounded draft generation                    | Not started    | AC-06, AC-13; measured model choice and cost controls                                                                                                 |
 | UX-001    | Mobile flow, accessibility and error states                         | Not started    | AC-14 plus real-phone check                                                                                                                           |
 | REL-001   | Release, alerting, recovery and budget checks                       | Not started    | AC-15 and release checklist below                                                                                                                     |

@@ -163,7 +163,7 @@ export interface RecipeDetail extends RecipeContent {
   imageId: string | null;
 }
 
-const PLURAL_UNITS: Partial<Record<(typeof UNITS)[number], string>> = {
+export const PLURAL_UNITS: Partial<Record<(typeof UNITS)[number], string>> = {
   cup: 'cups',
   piece: 'pieces',
   clove: 'cloves',
@@ -247,4 +247,54 @@ export function dayLabel(date: string, timeZone: string) {
     day: 'numeric',
     ...(date.slice(0, 4) === localToday(timeZone).slice(0, 4) ? {} : { year: 'numeric' }),
   }).format(new Date(`${date}T12:00:00Z`));
+}
+
+export interface ShoppingAmount {
+  quantity: string;
+  /** null means whole items (no unit). */
+  unit: string | null;
+  /** True when the exact value needed rounding; it was rounded up. */
+  approximate: boolean;
+}
+
+export interface ShoppingEntry {
+  key: string;
+  name: string;
+  form: string | null;
+  amounts: ShoppingAmount[];
+  /** Notes of lines without an amount, e.g. "to taste" (null when no note). */
+  unquantified: (string | null)[];
+  dishes: string[];
+  lineCount: number;
+}
+
+export interface ShoppingList {
+  scope: { from: string | null; to: string | null };
+  generatedAt: string;
+  orderCount: number;
+  combined: ShoppingEntry[];
+  grouped: {
+    mealDate: string;
+    orders: {
+      orderId: string;
+      mealTime: string;
+      items: {
+        itemId: string;
+        recipeName: string;
+        servings: number;
+        recipeServings: number;
+        ingredients: (Ingredient & { approximate: boolean })[];
+      }[];
+    }[];
+  }[];
+}
+
+export function formatAmount(amount: ShoppingAmount) {
+  const unit =
+    amount.unit === null
+      ? 'whole'
+      : Number(amount.quantity) > 1
+        ? (PLURAL_UNITS[amount.unit as (typeof UNITS)[number]] ?? amount.unit)
+        : amount.unit;
+  return `${amount.approximate ? '≈ ' : ''}${amount.quantity} ${unit}`;
 }
