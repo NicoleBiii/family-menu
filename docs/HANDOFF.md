@@ -27,7 +27,11 @@ Full `npm run check` passed after AUTH-001: 17 PostgreSQL/API integration tests 
 
 Not verified: real Google/Supabase (tests use a local stub of the Supabase Auth HTTP endpoints), this change on the Mac, hosted CI, Docker, rate limiting, physical phone.
 
-## Owner-side setup outstanding
+## Real-provider smoke test
+
+Steps 1–5 passed with real Google/Supabase ([record](verification/2026-09-26-auth-001-provider-smoke.md)). Step 6 exposed silent Google re-sign-in after app sign-out; the authorize URL now sends `prompt=select_account`. Re-test step 6, then mark AUTH-001 Done.
+
+## Owner-side setup outstanding (superseded: completed by the owner)
 
 1. Create a Supabase dev project and a Google OAuth client, then fill `.env` — follow [SETUP_AUTH.md](SETUP_AUTH.md). Never commit or paste keys.
 2. On the Mac, apply migration 002: `npm run db:local` (if stopped) then `npm run db:migrate`. No dependency changes, so `npm ci` is not required.

@@ -145,3 +145,8 @@ Use dates in YYYY-MM-DD format, with America/Toronto as the reporting timezone. 
 - Status: implemented. See `docs/decisions/0002-auth-sessions.md`.
 - Supabase Auth establishes identity only; the API issues its own HttpOnly session and discards provider tokens. This supersedes ADR 0001's allowance to store a provider refresh credential.
 - Invitations are single-use, 7-day, owner-created links; the token travels in the URL fragment and only its hash is stored.
+
+### AUTH-001 real-provider smoke test
+
+- The owner configured Supabase + Google (Testing mode) and ran SETUP_AUTH.md §5 on her Mac: steps 1–5 passed.
+- Step 6: after app sign-out, sign-in completed without any Google screen (Google SSO reusing the browser's account). App session revocation was correct. Added `prompt=select_account` so the account chooser always appears, which also lets family members switch accounts on a shared device. Full `npm run check` passed again (17 integration, 12 browser). Step 6 awaits re-test.

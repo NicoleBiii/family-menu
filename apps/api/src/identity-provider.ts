@@ -41,6 +41,10 @@ export class SupabaseIdentityProvider {
     url.searchParams.set('code_challenge', codeChallenge);
     url.searchParams.set('code_challenge_method', 's256');
     url.searchParams.set('scopes', 'openid email profile');
+    // Supabase forwards extra query parameters to Google. Always show the account chooser so
+    // that signing out and back in on a shared family device does not silently reuse whichever
+    // Google account the browser is already signed in to.
+    url.searchParams.set('prompt', 'select_account');
     return url.href;
   }
 

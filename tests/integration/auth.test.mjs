@@ -46,6 +46,7 @@ before(async () => {
     if (request.method === 'GET' && url.pathname === '/auth/v1/authorize') {
       assert.equal(url.searchParams.get('provider'), 'google');
       assert.equal(url.searchParams.get('code_challenge_method'), 's256');
+      assert.equal(url.searchParams.get('prompt'), 'select_account');
       const code = randomUUID();
       issuedCodes.set(code, {
         challenge: url.searchParams.get('code_challenge'),
