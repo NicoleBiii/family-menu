@@ -16,7 +16,7 @@ The owner explicitly wants to alternate between Codex and Claude Opus when usage
 
 ## Start a session
 
-1. Open this repository root in the chosen tool. The parent ChatGPT mirror and the old planning directory are not the active source tree.
+1. Open this repository root (`/Users/bibi/Bibi_Dev/family-menu`) in the chosen tool. The old ChatGPT project mirror and the planning directory left there are not the active source tree.
 2. Read AGENTS.md and docs/HANDOFF.md. Check the latest Git commit, branch and working diff.
 3. Run `npm run handoff:status`. If another agent is recorded, confirm it has stopped before changing anything.
 4. Claim the task, e.g. `npm run handoff:claim -- claude AUTH-001` or `npm run handoff:claim -- codex AUTH-001`.

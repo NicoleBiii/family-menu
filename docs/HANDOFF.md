@@ -29,19 +29,19 @@ Not verified: real Google/Supabase (tests use a local stub of the Supabase Auth 
 
 ## Real-provider smoke test
 
-Steps 1–5 passed with real Google/Supabase ([record](verification/2026-09-26-auth-001-provider-smoke.md)). Step 6 exposed silent Google re-sign-in after app sign-out; the authorize URL now sends `prompt=select_account`. Re-test step 6, then mark AUTH-001 Done.
+AUTH-001 is Done. Real Google/Supabase steps passed ([record](verification/2026-09-26-auth-001-provider-smoke.md)); the account chooser now always appears (`prompt=select_account`). Google's UI offers no explicit deny step for basic scopes, so the provider-denial path is verified only against the stub.
 
-## Owner-side setup outstanding (superseded: completed by the owner)
+## Location
 
-1. Create a Supabase dev project and a Google OAuth client, then fill `.env` — follow [SETUP_AUTH.md](SETUP_AUTH.md). Never commit or paste keys.
-2. On the Mac, apply migration 002: `npm run db:local` (if stopped) then `npm run db:migrate`. No dependency changes, so `npm ci` is not required.
-3. Run the smoke test in SETUP_AUTH.md and record it under `docs/verification/`. Then mark AUTH-001 Done in PLAN.md.
+The repository lives at `/Users/bibi/Bibi_Dev/family-menu` (moved 2026-09-26 out of the ChatGPT project mirror under `~/.codex/.chatgpt-projects/`, whose files may be replaced by ChatGPT). Open this path directly in Codex or Claude Code. The old mirror still holds the archived `service-website-planning` folder and planning ZIPs; they are history only.
 
 ## Local services
 
 None left running by Claude on the owner's machine. The Mac's project PostgreSQL (127.0.0.1:55432, data in ignored `.local/pgdata`) and any preview started earlier by Codex may or may not still be running; check before starting duplicates. The Mac's default Node is 23; use Node 24.19.0 (see ignored `.local/MACHINE.md`).
 
 ## Next exact work
+
+0. INFRA-001 first step: push to a private GitHub repository (owner approved uploading on 2026-09-26), then check the first CI run.
 
 1. If the owner has completed setup: run and record the real-provider smoke test; fix any provider mismatch (e.g. token response shape) with a test.
 2. Otherwise start REC-001 (manual/preset recipes, private images): claim it, read MVP_SPEC recipe semantics and AC-05/AC-12, and scope every new table and route by `HouseholdsService.requireMember`. Extend the AC-02 cross-household test to recipes.

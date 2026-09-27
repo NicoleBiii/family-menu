@@ -150,3 +150,8 @@ Use dates in YYYY-MM-DD format, with America/Toronto as the reporting timezone. 
 
 - The owner configured Supabase + Google (Testing mode) and ran SETUP_AUTH.md §5 on her Mac: steps 1–5 passed.
 - Step 6: after app sign-out, sign-in completed without any Google screen (Google SSO reusing the browser's account). App session revocation was correct. Added `prompt=select_account` so the account chooser always appears, which also lets family members switch accounts on a shared device. Full `npm run check` passed again (17 integration, 12 browser). Step 6 awaits re-test.
+
+### AUTH-001 closed; repository relocation
+
+- Step 6 re-test: the account chooser now appears every time. Back from the chooser correctly creates no session. Google offered no Cancel/deny screen for basic scopes even after revoking app access, so the denial path stays stub-verified. AUTH-001 marked Done.
+- Owner decisions: move the repository to `/Users/bibi/Bibi_Dev/family-menu` so it is no longer inside the ChatGPT project mirror (whose AGENTS.md warns its files may be replaced), and allow uploading to GitHub (INFRA-001). Codex and Claude Code both open the new path directly; no tool configuration refers to the old path.

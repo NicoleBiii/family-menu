@@ -1,7 +1,7 @@
 # Three-Week Plan and Backlog
 
 Version: 0.1. Updated: 2026-09-26.
-Current phase: AUTH-001 implemented and locally verified; real Google/Supabase smoke test awaits the owner's account setup. Cloud setup (INFRA-001) is a separate pending gate.
+Current phase: AUTH-001 done (real-provider smoke passed). Next: INFRA-001 private GitHub repository, then REC-001. The repository moved to /Users/bibi/Bibi_Dev/family-menu on 2026-09-26.
 Working window: 2026-09-25 to 2026-10-16, assuming a start on the document date.
 
 ## Planning assumptions
@@ -27,23 +27,23 @@ Days are calendar sequencing slots, not a requirement to work without breaks.
 
 ## Active and near-term backlog
 
-| ID        | Task                                                                | State                  | Completion condition                                                                                                                     |
-| --------- | ------------------------------------------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| DISC-001  | Establish local planning starter                                    | Done                   | Initial seven-document starter and dated archive exist                                                                                   |
-| DISC-002  | Record role, skills, availability, deadline, budget                 | Done                   | PROJECT_BRIEF.md captures owner input; flexible hours are not fabricated                                                                 |
-| DISC-003  | Define product and primary problem                                  | Done                   | Household-menu concept and owner's observations recorded                                                                                 |
-| DISC-004  | Confirm release priorities and collaboration rules                  | Done                   | Owner selected all-member order editing and accepted explicit v1 deferrals                                                               |
-| DOC-001   | Write product-specific specification, plan, architecture and budget | Done                   | v0.1 documents exist; assumptions and sources are marked                                                                                 |
-| ENG-001   | Establish dedicated development repository and local foundation     | Local complete         | Reproducible setup, migrations, health/OpenAPI, mobile shell, local checks and prepared CI; see verification record                      |
-| INFRA-001 | Connect remote repository and isolated cloud preview                | Awaiting setup         | Select remote visibility/provider accounts; first hosted CI/container run; branch protection and deployment verification                 |
-| AUTH-001  | Google authentication and household isolation                       | Ready for verification | Local implementation and negative tests done (see verification/2026-09-26-auth-001.md); remaining: real-provider smoke per SETUP_AUTH.md |
-| REC-001   | Manual/preset recipes and private images                            | Ready                  | AC-05, AC-12; structured ingredients/yield; seed provenance recorded                                                                     |
-| ORD-001   | Orders, scheduling, snapshots and shared editing                    | Not started            | AC-03–04, AC-07–08, AC-11                                                                                                                |
-| SHOP-001  | Ingredient calculation and two shopping views                       | Not started            | AC-09–10 with explicit unit incompatibility cases                                                                                        |
-| AI-001    | Provider evaluation and bounded draft generation                    | Not started            | AC-06, AC-13; measured model choice and cost controls                                                                                    |
-| UX-001    | Mobile flow, accessibility and error states                         | Not started            | AC-14 plus real-phone check                                                                                                              |
-| REL-001   | Release, alerting, recovery and budget checks                       | Not started            | AC-15 and release checklist below                                                                                                        |
-| PORT-001  | English project story and demo                                      | Not started            | Reproducible README, short demo, architecture explanation and honest evidence links                                                      |
+| ID        | Task                                                                | State          | Completion condition                                                                                                                                  |
+| --------- | ------------------------------------------------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DISC-001  | Establish local planning starter                                    | Done           | Initial seven-document starter and dated archive exist                                                                                                |
+| DISC-002  | Record role, skills, availability, deadline, budget                 | Done           | PROJECT_BRIEF.md captures owner input; flexible hours are not fabricated                                                                              |
+| DISC-003  | Define product and primary problem                                  | Done           | Household-menu concept and owner's observations recorded                                                                                              |
+| DISC-004  | Confirm release priorities and collaboration rules                  | Done           | Owner selected all-member order editing and accepted explicit v1 deferrals                                                                            |
+| DOC-001   | Write product-specific specification, plan, architecture and budget | Done           | v0.1 documents exist; assumptions and sources are marked                                                                                              |
+| ENG-001   | Establish dedicated development repository and local foundation     | Local complete | Reproducible setup, migrations, health/OpenAPI, mobile shell, local checks and prepared CI; see verification record                                   |
+| INFRA-001 | Connect remote repository and isolated cloud preview                | Awaiting setup | Select remote visibility/provider accounts; first hosted CI/container run; branch protection and deployment verification                              |
+| AUTH-001  | Google authentication and household isolation                       | Done           | Local tests (verification/2026-09-26-auth-001.md) and real-provider smoke (verification/2026-09-26-auth-001-provider-smoke.md); denial path stub-only |
+| REC-001   | Manual/preset recipes and private images                            | Ready          | AC-05, AC-12; structured ingredients/yield; seed provenance recorded                                                                                  |
+| ORD-001   | Orders, scheduling, snapshots and shared editing                    | Not started    | AC-03–04, AC-07–08, AC-11                                                                                                                             |
+| SHOP-001  | Ingredient calculation and two shopping views                       | Not started    | AC-09–10 with explicit unit incompatibility cases                                                                                                     |
+| AI-001    | Provider evaluation and bounded draft generation                    | Not started    | AC-06, AC-13; measured model choice and cost controls                                                                                                 |
+| UX-001    | Mobile flow, accessibility and error states                         | Not started    | AC-14 plus real-phone check                                                                                                                           |
+| REL-001   | Release, alerting, recovery and budget checks                       | Not started    | AC-15 and release checklist below                                                                                                                     |
+| PORT-001  | English project story and demo                                      | Not started    | Reproducible README, short demo, architecture explanation and honest evidence links                                                                   |
 
 ## ENG-001 first-task outline
 

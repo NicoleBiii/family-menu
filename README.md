@@ -120,4 +120,4 @@ Before any cloud release, follow [deployment setup](docs/DEPLOYMENT.md). A workf
 - [AUTH-001 verification evidence](docs/verification/2026-09-26-auth-001.md)
 - [Google sign-in setup](docs/SETUP_AUTH.md)
 
-This repository is now the authoritative working copy. The sibling `service-website-planning` directory and dated ZIP files are historical planning snapshots. Project content is English-first; recipe input will support Unicode. No public software licence has been selected yet.
+This repository is now the authoritative working copy. It lives at `/Users/bibi/Bibi_Dev/family-menu` on the owner's machine; the earlier `service-website-planning` directory and dated ZIP files remain in the old ChatGPT project mirror as historical planning snapshots. Project content is English-first; recipe input will support Unicode. No public software licence has been selected yet.
