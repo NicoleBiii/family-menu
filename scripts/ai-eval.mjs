@@ -37,7 +37,10 @@ const setups = values.providers.split(',').map((name) => {
   const env = {
     ...process.env,
     DATABASE_URL: 'postgresql://unused@127.0.0.1/unused',
+    // Only the AI settings matter here; sign-in settings from .env are ignored.
     APP_ORIGIN: '',
+    SUPABASE_URL: '',
+    SUPABASE_PUBLISHABLE_KEY: '',
     AI_PROVIDER: name.trim(),
     AI_MODEL: models[name.trim()] ?? '',
     AI_BASE_URL: '',
