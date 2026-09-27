@@ -1,7 +1,7 @@
 # Current State and Handoff
 
 Updated: 2026-09-26 by Claude. Remote: private `github.com/NicoleBiii/family-menu`.
-ORD-001 was merged as PR #6 (`d3990c7`). SHOP-001 is on branch `shop-001` with its own PR; squash-merge it once CI passes (check `gh pr list`).
+ORD-001 (PR #6, `d3990c7`) and SHOP-001 (PR #7, `042060d`) are merged. UX-001 is on branch `ux-001` with its own PR; squash-merge it once CI passes (check `gh pr list`).
 Checkout claim after closeout: none; verify with `npm run handoff:status`.
 
 ## Completed scope
@@ -12,6 +12,7 @@ Checkout claim after closeout: none; verify with `npm run handoff:status`.
 - REC-001 (`c902126` recipes, then photos): household recipes with structured ingredients, 12 curated presets (owner-accepted), shared editing with revision conflicts, idempotent create, archive/restore, and one photo per recipe stored as small WebP in PostgreSQL. [ADR 0003](decisions/0003-recipes.md), [preset provenance](presets/PROVENANCE.md).
 - ORD-001: meal orders for now or later, household-local scheduling with explicit DST handling, immutable recipe snapshots, shared editing with revision conflicts, idempotent submission and closing, audit events, Meals page and order editor. [ADR 0004](decisions/0004-meal-orders.md).
 - SHOP-001: shopping demand from pending order snapshots with exact rational arithmetic (rounded up and flagged when inexact), fixed-family unit conversion, separate forms/counts/unquantified lines, combined and by-day views from one read, date-range scope, Shopping page. [ADR 0005](decisions/0005-shopping-list.md).
+- UX-001 (automated part): axe WCAG 2.2 A/AA scans at 0 violations on all main screens, keyboard-only core flow at 360 px with focus never hidden behind the bottom navigation, session-expiry/offline/server-error messages, per-page titles. The real-phone and screen-reader checklist is open ([record](verification/2026-09-27-ux-001.md)).
 
 ## Confirmed product constraints
 
@@ -25,7 +26,7 @@ Checkout claim after closeout: none; verify with `npm run handoff:status`.
 
 ## Verified state
 
-On the owner's Mac (Node 24.19.0, PostgreSQL 14.18): full `npm run check` passed after SHOP-001 — 52 integration tests (PostgreSQL/API plus pure calculation) and 28 desktop/mobile browser cases, plus format/lint/types/builds; OpenAPI regenerated. Evidence: [SHOP-001](verification/2026-09-26-shop-001.md), [ORD-001](verification/2026-09-26-ord-001.md), [REC-001](verification/2026-09-26-rec-001.md), [AUTH-001](verification/2026-09-26-auth-001.md), [provider smoke](verification/2026-09-26-auth-001-provider-smoke.md), [foundation](verification/2026-09-26-foundation.md). Hosted CI results are on the PRs and `main` runs.
+On the owner's Mac (Node 24.19.0, PostgreSQL 14.18): full `npm run check` passed after UX-001 — 52 integration tests (PostgreSQL/API plus pure calculation) and 40 desktop/mobile browser cases (including axe scans), plus format/lint/types/builds; OpenAPI regenerated. Evidence: [UX-001](verification/2026-09-27-ux-001.md), [SHOP-001](verification/2026-09-26-shop-001.md), [ORD-001](verification/2026-09-26-ord-001.md), [REC-001](verification/2026-09-26-rec-001.md), [AUTH-001](verification/2026-09-26-auth-001.md), [provider smoke](verification/2026-09-26-auth-001-provider-smoke.md), [foundation](verification/2026-09-26-foundation.md). Hosted CI results are on the PRs and `main` runs.
 
 Not verified: forced membership-removal interleaving; real iPhone HEIC upload; rate limiting; physical phone; screen reader. Google's provider-denial path is stub-only.
 
@@ -44,9 +45,8 @@ None left running by Claude. The Mac's project PostgreSQL (127.0.0.1:55432, data
 
 ## Next exact work
 
-1. Merge the SHOP-001 PR after CI passes.
-2. If the owner has decided the AI provider: AI-001 on branch `ai-001` — small quality/latency/schema/cost evaluation, then the draft workflow with durable request records, atomic quota/cost reservation, explicit save/discard and idempotent save (MVP_SPEC "AI draft workflow"). Otherwise UX-001: accessibility pass (keyboard, labels, focus, touch targets), loading/error states review, and the 360 px core-workflow check (AC-14).
-3. INFRA-001: isolated preview deployment.
+1. Merge the UX-001 PR after CI passes.
+2. If the owner has decided the AI provider: AI-001 on branch `ai-001` (MVP_SPEC "AI draft workflow"). Otherwise INFRA-001: isolated HTTPS preview deployment (needs the owner's hosting/account decisions per BUDGET.md), which also unblocks the UX-001 real-phone checklist.
 
 ## Switching agents
 

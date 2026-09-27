@@ -210,3 +210,11 @@ Use dates in YYYY-MM-DD format, with America/Toronto as the reporting timezone. 
 
 - Status: implemented. See `docs/decisions/0005-shopping-list.md`.
 - Exact rational arithmetic, rounded up only for display and flagged; conversions only inside fixed families (g/kg, ml/l, oz/lb, tsp/tbsp/cup); forms, counts and unquantified lines never merged; both views from one read.
+
+## 2026-09-27 — SHOP-001 merged; UX-001 accessibility and states
+
+- PR #7 (SHOP-001) passed CI on `8b5e2c1` and was squash-merged as `042060d`.
+- UX-001 on branch `ux-001`. Acceptance criteria were written first (axe 0 violations, keyboard-only core flow at 360 px with unobscured focus, recoverable error states, page titles).
+- Added dev dependency `@axe-core/playwright` 4.13.0 for automated WCAG 2.2 A/AA scans; it runs only in tests.
+- Fixed: eight low-contrast grey text colours (now `#5c6557`); focused fields hidden behind the fixed bottom navigation (scroll padding); raw network/server errors; session expiry now returns to sign-in with an explanation; per-page titles.
+- Verification: full `npm run check` passed (52 integration, 40 browser). The real-phone and screen-reader checklist in verification/2026-09-27-ux-001.md needs the owner and an HTTPS preview, so UX-001 is "Ready for verification", not Done.
