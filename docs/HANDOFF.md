@@ -1,7 +1,7 @@
 # Current State and Handoff
 
 Updated: 2026-09-26 by Claude. Remote: private `github.com/NicoleBiii/family-menu`.
-ORD-001 was built on branch `ord-001` and merged to `main` through a pull request after CI passed (check `git log` and the PR list). Changes now reach `main` only through PRs with green CI (AGENTS.md); GitHub cannot enforce this on the free private plan.
+ORD-001 is on branch `ord-001`, PR https://github.com/NicoleBiii/family-menu/pull/6. Squash-merge it once its CI passes; if CI fails, fix on the branch first. Check `gh pr view 6` before starting SHOP-001 from `main`. Changes now reach `main` only through PRs with green CI (AGENTS.md); GitHub cannot enforce this on the free private plan.
 Checkout claim after closeout: none; verify with `npm run handoff:status`.
 
 ## Completed scope
