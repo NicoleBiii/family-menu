@@ -25,7 +25,9 @@ Checkout claim after closeout: none; verify with `npm run handoff:status`.
 
 On the owner's Mac (Node 24.19.0, PostgreSQL 14.18): full `npm run check` passed after REC-001 photos — 33 PostgreSQL/API integration tests and 20 desktop/mobile browser cases, plus format/lint/types/builds; OpenAPI regenerated; runtime audit 0 known vulnerabilities. Hosted CI passed on `main` through the recipes commit (run 36290461289). Evidence: [REC-001 verification](verification/2026-09-26-rec-001.md); earlier: [AUTH-001](verification/2026-09-26-auth-001.md), [provider smoke](verification/2026-09-26-auth-001-provider-smoke.md), [foundation](verification/2026-09-26-foundation.md).
 
-Not verified: hosted CI and the Docker build for the photos commit until its CI run completes (check `gh run list --branch main`); forced membership-removal interleaving; real iPhone HEIC upload; rate limiting; physical phone. Google's provider-denial path is stub-only.
+Hosted CI (including the Docker build with `sharp`) passed on `7dccabf` (run 36290822821); the Node 20 Actions deprecation warning no longer appears.
+
+Not verified: forced membership-removal interleaving; real iPhone HEIC upload; rate limiting; physical phone. Google's provider-denial path is stub-only.
 
 ## Location
 
@@ -41,9 +43,8 @@ None blocking. Branch protection on `main` (require the CI check) is recommended
 
 ## Next exact work
 
-1. Confirm the CI run for the photos commit passed (including the Docker build with `sharp`); fix any Linux-only failure first.
-2. Start ORD-001 (orders, scheduling, snapshots, shared editing): claim it, read MVP_SPEC "Recipe and order semantics" and AC-03/04/07/08/11. Reuse `requireMember(..., lock = true)`, `expectedRevision` conflicts and client request ids from recipes. Order items snapshot the recipe's name, ingredients, steps, servings and price; archived recipes cannot be newly ordered. Add the minimal audit event table and cross-household negative tests.
-3. INFRA-001: branch protection (with owner approval), then the isolated preview deployment.
+1. Start ORD-001 (orders, scheduling, snapshots, shared editing): claim it, read MVP_SPEC "Recipe and order semantics" and AC-03/04/07/08/11. Reuse `requireMember(..., lock = true)`, `expectedRevision` conflicts and client request ids from recipes. Order items snapshot the recipe's name, ingredients, steps, servings and price; archived recipes cannot be newly ordered. Add the minimal audit event table and cross-household negative tests.
+2. INFRA-001: branch protection (with owner approval), then the isolated preview deployment.
 
 ## Switching agents
 
