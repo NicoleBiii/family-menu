@@ -59,9 +59,10 @@ interface Database {
     servings: number;
     price_points: number;
     steps: string[];
-    source: 'manual' | 'preset';
+    source: 'manual' | 'preset' | 'ai';
     source_preset_id: string | null;
     source_preset_version: number | null;
+    source_ai_draft_id: Generated<string | null>;
     create_request_id: string;
     revision: Generated<number>;
     created_by: string;
@@ -128,6 +129,34 @@ interface Database {
     recipe_revision: number;
     snapshot_at: Generated<Date>;
   };
+  'app.ai_draft_requests': {
+    id: Generated<string>;
+    household_id: string;
+    created_by: string;
+    create_request_id: string;
+    dish_name: string;
+    preferences: string;
+    status: Generated<'queued' | 'running' | 'succeeded' | 'failed'>;
+    provider: string;
+    model: string;
+    /** bigint micro-USD; pg returns it as a string. */
+    reserved_micros: string | number;
+    charged_micros: string | number | null;
+    input_tokens: number | null;
+    output_tokens: number | null;
+    lease_expires_at: Date | null;
+    started_at: Date | null;
+    finished_at: Date | null;
+    latency_ms: number | null;
+    error_code: AiDraftErrorCode | null;
+    draft: string | null; // JSON text on write; parsed jsonb on read
+    saved_recipe_id: string | null;
+    saved_by: string | null;
+    saved_at: Date | null;
+    discarded_by: string | null;
+    discarded_at: Date | null;
+    created_at: Generated<Date>;
+  };
   'app.audit_events': {
     id: Generated<string>;
     household_id: string;
@@ -139,6 +168,9 @@ interface Database {
     created_at: Generated<Date>;
   };
 }
+
+export type AiDraftErrorCode =
+  'timeout' | 'provider_error' | 'invalid_output' | 'refused' | 'interrupted' | 'expired';
 
 export type { Database };
 
@@ -171,7 +203,8 @@ export class DatabaseService implements OnModuleDestroy {
         and to_regclass('app.recipe_images') is not null
         and to_regclass('app.meal_orders') is not null
         and to_regclass('app.meal_order_items') is not null
-        and to_regclass('app.audit_events') is not null as ready
+        and to_regclass('app.audit_events') is not null
+        and to_regclass('app.ai_draft_requests') is not null as ready
     `.execute(this.db);
     return result.rows[0]?.ready === true;
   }

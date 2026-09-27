@@ -1798,12 +1798,292 @@
           "Shopping"
         ]
       }
+    },
+    "/api/households/{householdId}/ai-drafts": {
+      "get": {
+        "operationId": "AiDraftsController_overview",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Whether AI drafts are on, the household allowance left in the last 24 hours, and recent open drafts."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Not found, or the caller is not a member of the household."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "AI drafts"
+        ]
+      },
+      "post": {
+        "operationId": "AiDraftsController_create",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "Required on state-changing requests; returned by GET /api/auth/session.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "requestId",
+                  "dishName"
+                ],
+                "properties": {
+                  "requestId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Client-generated; retrying with the same id returns the same draft."
+                  },
+                  "dishName": {
+                    "type": "string",
+                    "maxLength": 80
+                  },
+                  "preferences": {
+                    "type": "string",
+                    "maxLength": 300
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The draft this requestId already created."
+          },
+          "202": {
+            "description": "Draft queued; poll it until it succeeds or fails."
+          },
+          "400": {
+            "description": "Invalid input."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Not found, or the caller is not a member of the household."
+          },
+          "429": {
+            "description": "Household or personal limit reached (code)."
+          },
+          "503": {
+            "description": "AI drafts are off (ai_disabled) or the monthly budget is used (budget_exhausted)."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "AI drafts"
+        ]
+      }
+    },
+    "/api/households/{householdId}/ai-drafts/{draftId}": {
+      "get": {
+        "operationId": "AiDraftsController_get",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "draftId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The draft and its status."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Not found, or the caller is not a member of the household."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "AI drafts"
+        ]
+      }
+    },
+    "/api/households/{householdId}/ai-drafts/{draftId}/save": {
+      "post": {
+        "operationId": "AiDraftsController_save",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "draftId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "Required on state-changing requests; returned by GET /api/auth/session.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "The recipe as the member edited it (same fields as a new recipe).",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The saved household recipe; saving again returns the same one."
+          },
+          "400": {
+            "description": "Invalid recipe."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Not found, or the caller is not a member of the household."
+          },
+          "409": {
+            "description": "The draft was discarded or is not ready."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "AI drafts"
+        ]
+      }
+    },
+    "/api/households/{householdId}/ai-drafts/{draftId}/discard": {
+      "post": {
+        "operationId": "AiDraftsController_discard",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "draftId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "Required on state-changing requests; returned by GET /api/auth/session.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Discarded; the menu is unchanged."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Not found, or the caller is not a member of the household."
+          },
+          "409": {
+            "description": "The draft was already saved."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "AI drafts"
+        ]
+      }
     }
   },
   "info": {
     "title": "Family Menu API",
     "description": "Session-authenticated household API. Sign-in uses Google through Supabase Auth; the API keeps its own HttpOnly session cookie and requires X-CSRF-Token on state-changing requests.",
-    "version": "0.5.0",
+    "version": "0.6.0",
     "contact": {}
   },
   "tags": [],

@@ -7,6 +7,8 @@ import helmet from 'helmet';
 import { existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { AiDraftsController } from './ai-drafts.controller.js';
+import { AiDraftsService } from './ai-drafts.service.js';
 import { APP_CONFIG, type AppConfig } from './config.js';
 import { DatabaseService } from './database.service.js';
 import { HealthController } from './health.controller.js';
@@ -38,6 +40,7 @@ class AppModule {
         RecipesController,
         OrdersController,
         ShoppingController,
+        AiDraftsController,
       ],
       providers: [
         { provide: APP_CONFIG, useValue: config },
@@ -49,6 +52,7 @@ class AppModule {
         RecipeImagesService,
         OrdersService,
         ShoppingService,
+        AiDraftsService,
         SessionGuard,
       ],
     };
@@ -90,7 +94,7 @@ export async function createApplication(config: AppConfig, quiet = false) {
       .setDescription(
         'Session-authenticated household API. Sign-in uses Google through Supabase Auth; the API keeps its own HttpOnly session cookie and requires X-CSRF-Token on state-changing requests.',
       )
-      .setVersion('0.5.0')
+      .setVersion('0.6.0')
       .addCookieAuth('fm_session')
       .build(),
   );

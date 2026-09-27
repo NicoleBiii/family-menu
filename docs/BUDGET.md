@@ -46,7 +46,7 @@ Evaluate a small representative set of recipe requests before selecting a model.
 
 Cap input, output, and retry counts. Reserve worst-case allowed cost before concurrent requests are dispatched, reconcile known actual usage, and retain conservative reservations for ambiguous outcomes. Failed/discarded output can still be billable. Rate-limit abuse and repeated calls even when no successful draft is saved.
 
-Use a global monthly AI allocation equivalent to CAD 12, with warning thresholds before exhaustion and a provider-independent feature switch. Provider dashboard alerts are supplemental; they are not assumed to enforce an exact immediate cap. At exhaustion, users can still use presets and manual recipes.
+Use a global monthly AI allocation equivalent to CAD 12, with warning thresholds before exhaustion and a provider-independent feature switch. Implemented in AI-001 as `AI_MONTHLY_BUDGET_USD=8.50` per UTC month (≈ CAD 12 at 1.39 CAD/USD), a warning log above 80%, and `AI_PROVIDER=off` (ADR 0006). Provider dashboard alerts are supplemental; they are not assumed to enforce an exact immediate cap. At exhaustion, users can still use presets and manual recipes.
 
 Paid membership later should grant additional entitlements; it must not be required to make the first beta affordable. Keep entitlement checks behind a small interface, without building subscription billing now.
 

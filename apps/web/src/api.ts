@@ -147,6 +147,33 @@ export interface RecipeContent {
   ingredients: Ingredient[];
 }
 
+export type RecipeSource = 'manual' | 'preset' | 'ai';
+
+export interface AiDraft {
+  id: string;
+  status: 'queued' | 'running' | 'succeeded' | 'failed';
+  dishName: string;
+  preferences: string;
+  model: string;
+  errorCode: string | null;
+  errorMessage: string | null;
+  /** The model's draft after server validation; null until it succeeds. */
+  draft: RecipeContent | null;
+  savedRecipeId: string | null;
+  discarded: boolean;
+  createdAt: string;
+  finishedAt: string | null;
+  createdBy: string;
+}
+
+export interface AiOverview {
+  enabled: boolean;
+  model: string | null;
+  householdDailyLimit: number;
+  remainingToday: number;
+  drafts: AiDraft[];
+}
+
 export interface RecipePreset extends RecipeContent {
   id: string;
   version: number;
@@ -158,7 +185,7 @@ export interface RecipeSummary {
   description: string;
   servings: number;
   pricePoints: number;
-  source: 'manual' | 'preset';
+  source: RecipeSource;
   presetId: string | null;
   revision: number;
   updatedAt: string;
@@ -170,7 +197,7 @@ export interface RecipeSummary {
 export interface RecipeDetail extends RecipeContent {
   id: string;
   pricePoints: number;
-  source: 'manual' | 'preset';
+  source: RecipeSource;
   presetId: string | null;
   presetVersion: number | null;
   revision: number;

@@ -57,6 +57,11 @@ export interface RecipeInput {
 
 type Executor = Transaction<Database> | DatabaseService['db'];
 
+export type RecipeProvenance =
+  | { source: 'manual' }
+  | { source: 'preset'; preset: NonNullable<ReturnType<typeof findPreset>> }
+  | { source: 'ai'; draftId: string };
+
 function fail(message: string): never {
   throw new BadRequestException(message);
 }
@@ -231,59 +236,80 @@ export class RecipesService {
     }
     return this.database.db.transaction().execute(async (trx) => {
       await this.households.requireMember(userId, householdId, trx, true);
-      // A retried save (double tap, network retry) returns the recipe the first attempt created.
-      const existing = await trx
+      return this.insertRecipe(
+        trx,
+        userId,
+        householdId,
+        input,
+        requestId,
+        preset ? { source: 'preset', preset } : { source: 'manual' },
+      );
+    });
+  }
+
+  /**
+   * Inserts a recipe inside the caller's transaction; the caller has already locked the
+   * membership. A retried save (double tap, network retry) with the same request id returns the
+   * recipe the first attempt created.
+   */
+  async insertRecipe(
+    trx: Transaction<Database>,
+    userId: string,
+    householdId: string,
+    input: RecipeInput,
+    requestId: string,
+    provenance: RecipeProvenance,
+  ) {
+    const existing = await trx
+      .selectFrom('app.recipes')
+      .select('id')
+      .where('household_id', '=', householdId)
+      .where('create_request_id', '=', requestId)
+      .executeTakeFirst();
+    if (existing) return this.detail(trx, householdId, existing.id);
+
+    const { count } = await trx
+      .selectFrom('app.recipes')
+      .select(sql<number>`count(*)::int`.as('count'))
+      .where('household_id', '=', householdId)
+      .executeTakeFirstOrThrow();
+    if (count >= MAX_RECIPES_PER_HOUSEHOLD) {
+      throw new ConflictException(
+        `A household can keep up to ${MAX_RECIPES_PER_HOUSEHOLD} recipes.`,
+      );
+    }
+    const inserted = await trx
+      .insertInto('app.recipes')
+      .values({
+        household_id: householdId,
+        name: input.name,
+        description: input.description,
+        servings: input.servings,
+        price_points: input.pricePoints,
+        steps: input.steps,
+        source: provenance.source,
+        source_preset_id: provenance.source === 'preset' ? provenance.preset.id : null,
+        source_preset_version: provenance.source === 'preset' ? provenance.preset.version : null,
+        source_ai_draft_id: provenance.source === 'ai' ? provenance.draftId : null,
+        create_request_id: requestId,
+        created_by: userId,
+        updated_by: userId,
+      })
+      .onConflict((conflict) => conflict.columns(['household_id', 'create_request_id']).doNothing())
+      .returning('id')
+      .executeTakeFirst();
+    if (!inserted) {
+      // A concurrent request with the same id committed first.
+      const winner = await trx
         .selectFrom('app.recipes')
         .select('id')
         .where('household_id', '=', householdId)
         .where('create_request_id', '=', requestId)
-        .executeTakeFirst();
-      if (existing) return this.detail(trx, householdId, existing.id);
-
-      const { count } = await trx
-        .selectFrom('app.recipes')
-        .select(sql<number>`count(*)::int`.as('count'))
-        .where('household_id', '=', householdId)
         .executeTakeFirstOrThrow();
-      if (count >= MAX_RECIPES_PER_HOUSEHOLD) {
-        throw new ConflictException(
-          `A household can keep up to ${MAX_RECIPES_PER_HOUSEHOLD} recipes.`,
-        );
-      }
-      const inserted = await trx
-        .insertInto('app.recipes')
-        .values({
-          household_id: householdId,
-          name: input.name,
-          description: input.description,
-          servings: input.servings,
-          price_points: input.pricePoints,
-          steps: input.steps,
-          source: preset ? 'preset' : 'manual',
-          source_preset_id: preset?.id ?? null,
-          source_preset_version: preset?.version ?? null,
-          create_request_id: requestId,
-          created_by: userId,
-          updated_by: userId,
-        })
-        .onConflict((conflict) =>
-          conflict.columns(['household_id', 'create_request_id']).doNothing(),
-        )
-        .returning('id')
-        .executeTakeFirst();
-      if (!inserted) {
-        // A concurrent request with the same id committed first.
-        const winner = await trx
-          .selectFrom('app.recipes')
-          .select('id')
-          .where('household_id', '=', householdId)
-          .where('create_request_id', '=', requestId)
-          .executeTakeFirstOrThrow();
-        return this.detail(trx, householdId, winner.id);
-      }
-      await this.insertIngredients(trx, householdId, inserted.id, input.ingredients);
-      return this.detail(trx, householdId, inserted.id);
-    });
+      return this.detail(trx, householdId, winner.id);
+    }
+    await this.insertIngredients(trx, householdId, inserted.id, input.ingredients);
+    return this.detail(trx, householdId, inserted.id);
   }
 
   async update(
@@ -404,7 +430,7 @@ export class RecipesService {
       .execute();
   }
 
-  private async detail(executor: Executor, householdId: string, recipeId: string) {
+  async detail(executor: Executor, householdId: string, recipeId: string) {
     if (!isUuid(recipeId)) throw new NotFoundException('Recipe not found.');
     const recipe = await executor
       .selectFrom('app.recipes as r')

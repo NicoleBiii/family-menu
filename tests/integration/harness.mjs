@@ -30,7 +30,13 @@ export const pool = new pg.Pool({ connectionString: databaseUrl, max: 3 });
 const issuedCodes = new Map();
 export const stub = { nextIdentity: undefined, tokenStatusOverride: undefined };
 let provider;
-export const server = { origin: undefined, providerOrigin: undefined };
+export const server = {
+  origin: undefined,
+  providerOrigin: undefined,
+  /** The running application and the config object it was built from (AI tests adjust limits). */
+  app: undefined,
+  config: undefined,
+};
 let app;
 let origin;
 
@@ -107,8 +113,14 @@ before(async () => {
     APP_ORIGIN: origin,
     SUPABASE_URL: providerOrigin,
     SUPABASE_PUBLISHABLE_KEY: PUBLISHABLE_KEY,
+    // Deterministic local AI provider. The test database keeps every month's drafts, so the
+    // budget is set far above what the suite can reserve; the budget test lowers it.
+    AI_PROVIDER: 'mock',
+    AI_MONTHLY_BUDGET_USD: '1000000',
   });
   ({ app } = await createApplication(config, true));
+  server.app = app;
+  server.config = config;
   await app.listen(port, '127.0.0.1');
 });
 

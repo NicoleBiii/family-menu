@@ -1207,3 +1207,49 @@ dialog h3 {
     grid-column: 2;
   }
 }
+/* AI-001: AI recipe drafts */
+.menu-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.ai-toggle {
+  border-color: #d7dfca;
+}
+.ai-panel {
+  max-width: 760px;
+}
+.ai-panel h2:focus {
+  outline: none;
+}
+.ai-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+.ai-form .field {
+  max-width: 520px;
+}
+.ai-drafts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+.ai-drafts li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid #e6e7d8;
+  font-size: 14px;
+}
+.ai-draft-actions {
+  display: inline-flex;
+  gap: 4px;
+}
+.ai-notice {
+  margin: 4px 0 8px;
+}
