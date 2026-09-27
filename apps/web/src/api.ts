@@ -43,9 +43,21 @@ export function setCsrfToken(token: string) {
   csrfToken = token;
 }
 
+/** Fired when an API call finds the session has ended; the app then shows sign-in again. */
+export const SESSION_EXPIRED_EVENT = 'family-menu:session-expired';
+
+/** fetch that turns a network failure into a readable ApiError (status 0). */
+async function send(input: string, init: RequestInit) {
+  try {
+    return await fetch(input, init);
+  } catch {
+    throw new ApiError(0, 'Family Menu could not be reached. Check your connection and try again.');
+  }
+}
+
 export async function api<T>(path: string, init: { method?: string; body?: unknown } = {}) {
   const method = init.method ?? 'GET';
-  const response = await fetch(`/api${path}`, {
+  const response = await send(`/api${path}`, {
     method,
     credentials: 'same-origin',
     headers: {
@@ -61,7 +73,14 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
 async function readResponse<T>(response: Response) {
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as Record<string, unknown> | null;
-    const message = typeof body?.message === 'string' ? body.message : 'Something went wrong.';
+    let message = typeof body?.message === 'string' ? body.message : 'Something went wrong.';
+    if (response.status >= 500) {
+      message = 'Something went wrong on our side. Please try again in a moment.';
+    }
+    if (response.status === 401 && !response.url.endsWith('/api/auth/session')) {
+      message = 'Your session has ended. Please sign in again.';
+      window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+    }
     throw new ApiError(response.status, message, body);
   }
   return (response.status === 204 ? undefined : await response.json()) as T;
@@ -69,7 +88,7 @@ async function readResponse<T>(response: Response) {
 
 /** Uploads raw image bytes; the server validates and re-encodes them. */
 export async function uploadImage<T>(path: string, image: Blob) {
-  const response = await fetch(`/api${path}`, {
+  const response = await send(`/api${path}`, {
     method: 'PUT',
     credentials: 'same-origin',
     headers: { Accept: 'application/json', 'X-CSRF-Token': csrfToken, 'Content-Type': image.type },

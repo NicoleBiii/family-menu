@@ -33,6 +33,7 @@
     "handoff:release": "node scripts/handoff.mjs release"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
     "@eslint/js": "10.0.1",
     "@playwright/test": "1.63.0",
     "@types/express": "5.0.6",

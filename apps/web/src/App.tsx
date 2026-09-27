@@ -11,7 +11,14 @@ import {
   ShoppingBasket,
   Utensils,
 } from 'lucide-react';
-import { api, authErrorMessages, setCsrfToken, signInUrl, type Session } from './api';
+import {
+  api,
+  authErrorMessages,
+  SESSION_EXPIRED_EVENT,
+  setCsrfToken,
+  signInUrl,
+  type Session,
+} from './api';
 import { HouseholdPage } from './HouseholdPage';
 import { JoinPage } from './JoinPage';
 import { MenuPage } from './MenuPage';
@@ -78,6 +85,18 @@ export function App() {
   useEffect(() => {
     void refreshSession();
   }, [refreshSession]);
+  useEffect(() => {
+    const onExpired = () => {
+      setAuthError('Your session has ended. Please sign in again.');
+      void refreshSession();
+    };
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
+  }, [refreshSession]);
+  useEffect(() => {
+    document.title =
+      page === 'Menu' ? 'Family Menu — A little more together' : `${page} · Family Menu`;
+  }, [page]);
   useEffect(() => {
     const onPop = () => setPageState(initialPage());
     window.addEventListener('popstate', onPop);
