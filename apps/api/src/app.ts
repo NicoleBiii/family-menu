@@ -18,6 +18,7 @@ import { HouseholdsService } from './households.service.js';
 import { SupabaseIdentityProvider } from './identity-provider.js';
 import { RecipePresetsController, RecipesController } from './recipes.controller.js';
 import { RecipesService } from './recipes.service.js';
+import { RecipeImagesService } from './recipe-images.service.js';
 
 @Module({})
 class AppModule {
@@ -39,6 +40,7 @@ class AppModule {
         AuthService,
         HouseholdsService,
         RecipesService,
+        RecipeImagesService,
         SessionGuard,
       ],
     };

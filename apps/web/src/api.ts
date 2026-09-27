@@ -53,12 +53,31 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
     },
     body: init.body === undefined ? undefined : JSON.stringify(init.body),
   });
+  return readResponse<T>(response);
+}
+
+async function readResponse<T>(response: Response) {
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as { message?: unknown } | null;
     const message = typeof body?.message === 'string' ? body.message : 'Something went wrong.';
     throw new ApiError(response.status, message);
   }
   return (response.status === 204 ? undefined : await response.json()) as T;
+}
+
+/** Uploads raw image bytes; the server validates and re-encodes them. */
+export async function uploadImage<T>(path: string, image: Blob) {
+  const response = await fetch(`/api${path}`, {
+    method: 'PUT',
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json', 'X-CSRF-Token': csrfToken, 'Content-Type': image.type },
+    body: image,
+  });
+  return readResponse<T>(response);
+}
+
+export function recipeImageUrl(householdId: string, recipeId: string, imageId: string) {
+  return `/api/households/${householdId}/recipes/${recipeId}/image/${imageId}`;
 }
 
 export function signInUrl(returnTo: string) {
@@ -124,6 +143,7 @@ export interface RecipeSummary {
   updatedAt: string;
   archived: boolean;
   ingredientCount: number;
+  imageId: string | null;
 }
 
 export interface RecipeDetail extends RecipeContent {
@@ -138,6 +158,7 @@ export interface RecipeDetail extends RecipeContent {
   createdBy: string;
   updatedBy: string;
   archived: boolean;
+  imageId: string | null;
 }
 
 const PLURAL_UNITS: Partial<Record<(typeof UNITS)[number], string>> = {

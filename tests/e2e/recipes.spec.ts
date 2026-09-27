@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import sharp from 'sharp';
 
 // REC-001 browser flows. Sign-in uses the test-only provider stub (tests/e2e/provider-stub.mjs).
 
@@ -126,4 +127,40 @@ test('saving over another member’s newer change shows a conflict and can load 
   await expect(page.getByRole('textbox', { name: 'Recipe name' })).toHaveValue('Changed elsewhere');
   await page.getByRole('button', { name: 'Save recipe' }).click();
   await expect(page.getByRole('button', { name: 'View Changed elsewhere' })).toBeVisible();
+});
+
+test('a member adds and removes a recipe photo, shown on the card and in the dialog', async ({
+  page,
+}) => {
+  await signInWithHousehold(page);
+  await page.getByRole('button', { name: 'Add recipe' }).click();
+  await page.getByRole('textbox', { name: 'Recipe name' }).fill('Photo soup');
+  await page.getByRole('button', { name: 'Save recipe' }).click();
+  await page.getByRole('button', { name: 'View Photo soup' }).click();
+  const dialog = page.getByRole('dialog');
+
+  const photo = await sharp({
+    create: { width: 1200, height: 800, channels: 3, background: { r: 220, g: 150, b: 60 } },
+  })
+    .png()
+    .toBuffer();
+  await dialog
+    .getByLabel('Add photo')
+    .setInputFiles({ name: 'soup.png', mimeType: 'image/png', buffer: photo });
+  const shown = dialog.getByRole('img', { name: 'Photo of Photo soup' });
+  await expect(shown).toBeVisible();
+  expect(await shown.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+  await expect(dialog.getByText('Change photo')).toBeVisible();
+  expect(await fitsViewport(page)).toBe(true);
+
+  await page.keyboard.press('Escape');
+  const cardImage = page.getByRole('button', { name: 'View Photo soup' }).locator('img');
+  await expect(cardImage).toBeVisible();
+
+  await page.getByRole('button', { name: 'View Photo soup' }).click();
+  await dialog.getByRole('button', { name: 'Remove photo' }).click();
+  await expect(dialog.getByText('Add photo')).toBeVisible();
+  await expect(shown).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(cardImage).toHaveCount(0);
 });

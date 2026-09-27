@@ -1,6 +1,6 @@
 # ADR 0003 — Household recipes and curated presets
 
-Date: 2026-09-26. Status: implemented and locally verified (REC-001, recipes part). Recipe images are not yet implemented; see "Open decision".
+Date: 2026-09-26. Status: implemented and locally verified (REC-001), including recipe photos.
 
 ## Decisions
 
@@ -21,6 +21,15 @@ Date: 2026-09-26. Status: implemented and locally verified (REC-001, recipes par
 - The 500-recipe limit is checked before insert without a lock, so concurrent creates can exceed it slightly. Acceptable for a soft abuse limit.
 - There is no audit-event table yet; `created_by`, `updated_by`, timestamps and revision are recorded. The minimal audit event from MVP_SPEC arrives with orders.
 
-## Open decision: recipe images (AC-12)
+## Recipe photos (AC-12)
 
-Not implemented. The architecture proposal assumed private Supabase Storage with short-lived signed URLs. That requires a server-side Supabase secret key (the current config deliberately accepts only a publishable key), bucket setup, a storage stub for tests and an image-processing dependency. A smaller alternative is storing re-encoded, size-limited images in PostgreSQL and serving them through the authorized API. The owner chooses before image work starts.
+Owner decision 2026-09-26: store photos in PostgreSQL; dish photos do not need to be high resolution. This supersedes the private object-storage proposal in ARCHITECTURE.md.
+
+- **One optional photo per recipe** in `app.recipe_images` (bytea), keyed to the recipe with the same composite household foreign key as ingredient lines, deleted with the recipe's household.
+- **Upload:** `PUT …/recipes/:id/image` with raw `image/jpeg`, `image/png` or `image/webp` bytes, at most 5 MB (413 above that, checked from `Content-Length` and while streaming). The declared type must match the file's magic bytes (415 otherwise), so libvips' other loaders (SVG, TIFF, HEIF, PDF…) never see uploads. Decoding uses `sharp` 0.35.4 with a 40-megapixel input limit.
+- **Normalization:** apply EXIF orientation, fit within 1024 × 1024 without enlarging, re-encode as WebP quality 78. Re-encoding drops EXIF/GPS/XMP/ICC metadata. Stored files are capped at 1 MB by a table constraint. The browser also downsizes to 1600 px JPEG before upload, which lets iPhone HEIC photos work in Safari.
+- **Serving:** `GET …/recipes/:id/image/:imageId` requires a session and current membership like every household route; other households get 404. Each upload gets a new id, so responses are `Cache-Control: private, max-age=31536000, immutable` and an old id stops working after replacement or removal.
+- **Independent of recipe text.** Photo changes do not use or bump the recipe revision; the most recent photo wins. Archived recipes keep their photo but cannot change it (409). Membership and recipe rows are locked during replacement to serialize concurrent uploads.
+- **Dependency:** `sharp` ships prebuilt libvips for macOS arm64 and Linux glibc (CI, Debian-slim Dockerfile). `sharp.concurrency(1)` and `cache(false)` bound memory on a small instance.
+
+Limits: no per-household storage quota beyond the 500-recipe limit (≤ about 500 MB worst case, far above expected use); no rate limiting on uploads yet; the Docker image with `sharp` is verified only by CI's container build.

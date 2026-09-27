@@ -4,7 +4,9 @@ import {
   ArchiveRestore,
   ArrowRight,
   BookOpen,
+  Camera,
   ChefHat,
+  ImageOff,
   Pencil,
   Plus,
   Search,
@@ -16,13 +18,16 @@ import {
   api,
   ApiError,
   formatIngredient,
+  recipeImageUrl,
   signInUrl,
+  uploadImage,
   type HouseholdSummary,
   type RecipeDetail,
   type RecipePreset,
   type RecipeSummary,
   type Session,
 } from './api';
+import { prepareImage } from './image';
 import { RecipeEditor, type EditorStart } from './RecipeEditor';
 
 const TONES = ['lemon', 'sesame', 'tomato', 'greens'] as const;
@@ -52,6 +57,7 @@ export function MenuPage({ session, household, onGoHousehold, searchRef, hero }:
   const [selected, setSelected] = useState<Selected | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [photo, setPhoto] = useState({ busy: false, error: '' });
   const dialog = useRef<HTMLDialogElement>(null);
   const opener = useRef<HTMLElement | null>(null);
   const householdId = household?.id;
@@ -80,6 +86,7 @@ export function MenuPage({ session, household, onGoHousehold, searchRef, hero }:
   function closeDialog() {
     dialog.current?.close();
     setSelected(null);
+    setPhoto({ busy: false, error: '' });
     opener.current?.focus();
   }
   async function openRecipe(id: string, from: HTMLElement) {
@@ -115,6 +122,31 @@ export function MenuPage({ session, household, onGoHousehold, searchRef, hero }:
       await loadRecipes();
     }
   }
+  /** Uploads a new photo, or removes the current one when `file` is null. */
+  async function changePhoto(recipe: RecipeDetail, file: File | null) {
+    setPhoto({ busy: true, error: '' });
+    try {
+      const path = `/households/${householdId}/recipes/${recipe.id}`;
+      if (file) await uploadImage(`${path}/image`, await prepareImage(file));
+      else await api(`${path}/image`, { method: 'DELETE' });
+      const next = await api<RecipeDetail>(path);
+      setSelected((current) =>
+        current?.kind === 'recipe' && current.recipe.id === next.id
+          ? { kind: 'recipe', recipe: next }
+          : current,
+      );
+      setPhoto({ busy: false, error: '' });
+      await loadRecipes();
+    } catch (caught) {
+      setPhoto({
+        busy: false,
+        error: caught instanceof Error ? caught.message : 'Could not update the photo.',
+      });
+    }
+  }
+  const imageUrl = (recipeId: string, imageId: string | null) =>
+    householdId && imageId ? recipeImageUrl(householdId, recipeId, imageId) : undefined;
+
   function startEditor(start: EditorStart) {
     dialog.current?.close();
     setSelected(null);
@@ -220,6 +252,7 @@ export function MenuPage({ session, household, onGoHousehold, searchRef, hero }:
                   description={recipe.description}
                   servings={recipe.servings}
                   label={recipe.archived ? 'Archived' : `${recipe.pricePoints} pts / serving`}
+                  imageUrl={imageUrl(recipe.id, recipe.imageId)}
                   onOpen={(target) => openRecipe(recipe.id, target)}
                 />
               ))}
@@ -317,6 +350,13 @@ export function MenuPage({ session, household, onGoHousehold, searchRef, hero }:
             }
             onEdit={(recipe) => startEditor({ mode: 'edit', recipe })}
             onArchive={setArchived}
+            imageUrl={
+              selected.kind === 'recipe'
+                ? imageUrl(selected.recipe.id, selected.recipe.imageId)
+                : undefined
+            }
+            photo={photo}
+            onPhoto={changePhoto}
           />
         )}
       </dialog>
@@ -330,6 +370,7 @@ function RecipeCard({
   description,
   servings,
   label,
+  imageUrl,
   onOpen,
 }: {
   id: string;
@@ -337,6 +378,7 @@ function RecipeCard({
   description: string;
   servings: number;
   label: string;
+  imageUrl?: string;
   onOpen: (target: HTMLElement) => void;
 }) {
   return (
@@ -345,11 +387,15 @@ function RecipeCard({
       onClick={(event) => onOpen(event.currentTarget)}
       aria-label={`View ${name}`}
     >
-      {/* No photo yet: an honest placeholder rather than an unrelated picture. */}
       <div className={`recipe-art ${tone(id)}`}>
-        <span className="recipe-initial" aria-hidden="true">
-          {Array.from(name.trim())[0] ?? '?'}
-        </span>
+        {imageUrl ? (
+          <img className="recipe-photo" src={imageUrl} alt="" loading="lazy" />
+        ) : (
+          // Without a household photo: an honest placeholder rather than an unrelated picture.
+          <span className="recipe-initial" aria-hidden="true">
+            {Array.from(name.trim())[0] ?? '?'}
+          </span>
+        )}
         <span className="category-label">{label}</span>
       </div>
       <div className="recipe-content">
@@ -416,6 +462,9 @@ function RecipeView({
   onUsePreset,
   onEdit,
   onArchive,
+  imageUrl,
+  photo,
+  onPhoto,
 }: {
   selected: Selected;
   canSave: boolean;
@@ -424,6 +473,9 @@ function RecipeView({
   onUsePreset: (preset: RecipePreset) => void;
   onEdit: (recipe: RecipeDetail) => void;
   onArchive: (recipe: RecipeDetail, archived: boolean) => Promise<void>;
+  imageUrl?: string;
+  photo: { busy: boolean; error: string };
+  onPhoto: (recipe: RecipeDetail, file: File | null) => Promise<void>;
 }) {
   const content = selected.kind === 'preset' ? selected.preset : selected.recipe;
   const recipe = selected.kind === 'recipe' ? selected.recipe : null;
@@ -437,6 +489,7 @@ function RecipeView({
           <X size={22} />
         </button>
       </div>
+      {imageUrl && <img className="dialog-photo" src={imageUrl} alt={`Photo of ${content.name}`} />}
       <h2 id="recipe-dialog-title">{content.name}</h2>
       <p className="dialog-subtitle">
         Serves {content.servings}
@@ -476,6 +529,39 @@ function RecipeView({
             : ''}
           {recipe.presetId ? ' · from a starter recipe' : ''}
         </p>
+      )}
+      {recipe && !recipe.archived && (
+        <div className="photo-actions">
+          <label className={`text-button file-button${photo.busy ? ' busy' : ''}`}>
+            <Camera size={16} aria-hidden="true" />
+            {photo.busy ? 'Saving photo…' : recipe.imageId ? 'Change photo' : 'Add photo'}
+            <input
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              disabled={photo.busy}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = '';
+                if (file) void onPhoto(recipe, file);
+              }}
+            />
+          </label>
+          {recipe.imageId && (
+            <button
+              className="text-button"
+              disabled={photo.busy}
+              onClick={() => onPhoto(recipe, null)}
+            >
+              <ImageOff size={16} /> Remove photo
+            </button>
+          )}
+          {photo.error && (
+            <p className="form-error" role="alert">
+              {photo.error}
+            </p>
+          )}
+        </div>
       )}
       <div className="form-actions">
         {selected.kind === 'preset' &&

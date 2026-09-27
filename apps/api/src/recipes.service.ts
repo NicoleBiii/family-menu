@@ -201,6 +201,9 @@ export class RecipesService {
         sql<number>`(select count(*)::int from app.recipe_ingredients i where i.recipe_id = r.id)`.as(
           'ingredientCount',
         ),
+        sql<string | null>`(select m.id from app.recipe_images m where m.recipe_id = r.id)`.as(
+          'imageId',
+        ),
       ])
       .where('r.household_id', '=', householdId)
       .orderBy(sql`lower(r.name)`)
@@ -423,6 +426,9 @@ export class RecipesService {
         'r.archived_at as archivedAt',
         'c.display_name as createdBy',
         'u.display_name as updatedBy',
+        sql<string | null>`(select m.id from app.recipe_images m where m.recipe_id = r.id)`.as(
+          'imageId',
+        ),
       ])
       .where('r.id', '=', recipeId)
       .where('r.household_id', '=', householdId)

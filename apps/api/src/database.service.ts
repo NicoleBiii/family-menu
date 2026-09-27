@@ -82,6 +82,17 @@ interface Database {
     form: string | null;
     note: string | null;
   };
+  'app.recipe_images': {
+    id: Generated<string>;
+    household_id: string;
+    recipe_id: string;
+    content: Buffer;
+    content_type: 'image/webp';
+    width: number;
+    height: number;
+    created_by: string;
+    created_at: Generated<Date>;
+  };
 }
 
 export type { Database };
@@ -111,7 +122,8 @@ export class DatabaseService implements OnModuleDestroy {
         and to_regclass('app.sessions') is not null
         and to_regclass('app.household_invitations') is not null
         and to_regclass('app.recipes') is not null
-        and to_regclass('app.recipe_ingredients') is not null as ready
+        and to_regclass('app.recipe_ingredients') is not null
+        and to_regclass('app.recipe_images') is not null as ready
     `.execute(this.db);
     return result.rows[0]?.ready === true;
   }

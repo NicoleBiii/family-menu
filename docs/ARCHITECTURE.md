@@ -45,7 +45,7 @@ Expose an OpenAPI contract from NestJS. Keep DTO validation at the API boundary,
 - All business reads and writes go through NestJS. Keep business tables in a non-exposed schema and restrict grants. Disable the Data API if unused; do not accidentally allow browser access to bypass NestJS authorization.
 - Use a restricted application database role, separately from the migration owner. Supabase ownership/service credentials must not become browser credentials.
 - Scope database queries by household and object identity. Enforce cross-record household consistency through composite keys/constraints where practical.
-- Private recipe images are delivered through short-lived authorized URLs. Restrict uploads, validate actual file content and dimensions, remove metadata where appropriate, and limit size. Preset assets with suitable rights can be public.
+- Private recipe images are delivered through short-lived authorized URLs. Restrict uploads, validate actual file content and dimensions, remove metadata where appropriate, and limit size. Preset assets with suitable rights can be public. _Superseded 2026-09-26 by [ADR 0003](decisions/0003-recipes.md): photos are re-encoded small WebP files stored in PostgreSQL and served only through the session-authorized API; no object storage bucket is used._
 - Membership removal, mutation authorization, and data writes must have a defined transaction/locking strategy so a removal race cannot allow later unauthorized mutations.
 
 ## Conceptual records

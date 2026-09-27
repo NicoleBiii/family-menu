@@ -171,3 +171,16 @@ Use dates in YYYY-MM-DD format, with America/Toronto as the reporting timezone. 
 
 - Status: implemented. See `docs/decisions/0003-recipes.md`.
 - Presets are versioned read-only code with a public endpoint, copied into households with provenance; exact decimal quantities with a controlled unit list; full-replacement edits guarded by `expectedRevision`; client `requestId` makes creation idempotent; archive instead of delete.
+
+## 2026-09-26 — Owner decisions; REC-001 photos; Dependabot triage
+
+- Owner decisions: store recipe photos in PostgreSQL (dish photos need not be high resolution); push approved; Dependabot recommendation accepted; the 12 preset texts accepted as written.
+- Pushed `c902126`. Squash-merged Dependabot #1–#3 (upload-artifact 7.0.1, checkout 7.0.1, setup-node 7.0.0); #3 needed a Dependabot rebase after #2. Closed #4 (`@types/node` 26) and #5 (TypeScript 7) with reasons, and added Dependabot ignore rules for those majors. Hosted CI passed on `main` after #2 (run 36290461289), which covers the recipes commit.
+- Implemented photos (AC-12): migration 004 `app.recipe_images`, magic-byte type check, `sharp` re-encoding to ≤ 1024 px WebP without metadata, 5 MB upload limit, member-only serving with immutable ids, browser-side downsizing, card and dialog photos with add/change/remove.
+- Test fixtures surfaced that sharp's `withExif` does not write orientation; the fixture now uses `withMetadata`. Production code was unaffected.
+- Verification: full `npm run check` passed (33 integration, 20 browser); mutation checks for the magic-byte and household-scoping guards; audit 0 vulnerabilities. REC-001 marked Done.
+
+### DEC-012 — Recipe photos in PostgreSQL
+
+- Status: implemented; supersedes the private object-storage proposal in ARCHITECTURE.md. See ADR 0003.
+- One normalized WebP per recipe in the database, served through the authorized API. Backups include photos; no bucket, secret key or separate file backup is needed.

@@ -9,7 +9,7 @@ Source file: `apps/api/src/presets.ts`. Recorded 2026-09-26.
 | Images       | None. Cards show a letter placeholder rather than an unrelated photo.                                                                                                                                  |
 | Testing      | Not kitchen-tested. Quantities are reasonable starting points, not verified results. Every preset passes the same server validation as household recipes (integration test).                           |
 | Safety       | No dietary, allergen or nutrition claims are made. Households edit their own copies.                                                                                                                   |
-| Owner review | Pending. The owner should read the 12 presets before the first release and change or remove anything that does not suit the audience.                                                                  |
+| Owner review | Accepted by the owner on 2026-09-26 without changes.                                                                                                                                                   |
 | Versioning   | Each preset has a `version`; bump it when its content changes. Saved household copies record the preset id and version they started from, and are never changed by a preset update.                    |
 
 Presets: tomato-egg-stir-fry, lemon-herb-chicken, sesame-noodle-bowl, roasted-vegetable-bowl, egg-fried-rice, mapo-tofu, beef-broccoli, chicken-congee, spaghetti-bolognese, pancakes, greek-salad, garlic-bok-choy (all version 1).

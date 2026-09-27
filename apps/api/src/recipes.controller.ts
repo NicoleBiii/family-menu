@@ -1,18 +1,44 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Put, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Header,
+  HttpCode,
+  Param,
+  Post,
+  Put,
+  Req,
+  StreamableFile,
+  UseGuards,
+} from '@nestjs/common';
+import type { Request } from 'express';
 import {
   ApiBadRequestResponse,
   ApiBody,
   ApiConflictResponse,
   ApiCookieAuth,
+  ApiConsumes,
   ApiCreatedResponse,
   ApiHeader,
+  ApiNoContentResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
+  ApiPayloadTooLargeResponse,
+  ApiProduces,
   ApiTags,
+  ApiUnsupportedMediaTypeResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { CurrentSession, SessionGuard } from './auth.guard.js';
 import type { AuthenticatedSession } from './auth.service.js';
+import {
+  acceptedFormat,
+  MAX_UPLOAD_BYTES,
+  normalizeImage,
+  readLimitedBody,
+  RecipeImagesService,
+} from './recipe-images.service.js';
 import {
   MAX_INGREDIENTS,
   MAX_STEPS,
@@ -81,7 +107,10 @@ export class RecipePresetsController {
 @UseGuards(SessionGuard)
 @Controller('households/:householdId/recipes')
 export class RecipesController {
-  constructor(private readonly recipes: RecipesService) {}
+  constructor(
+    private readonly recipes: RecipesService,
+    private readonly images: RecipeImagesService,
+  ) {}
 
   @Get()
   @ApiOkResponse({ description: 'All household recipes, including archived ones (flagged).' })
@@ -204,6 +233,63 @@ export class RecipesController {
       false,
       parseExpectedRevision(body),
     );
+  }
+
+  @Put(':recipeId/image')
+  @ApiHeader(csrfHeader)
+  @ApiConsumes('image/jpeg', 'image/png', 'image/webp')
+  @ApiBody({
+    description: `Raw image bytes, at most ${MAX_UPLOAD_BYTES / 1024 / 1024} MB. Re-encoded to WebP within 1024 × 1024 without metadata.`,
+    schema: { type: 'string', format: 'binary' },
+  })
+  @ApiOkResponse({ description: 'Photo stored; returns its new immutable id.' })
+  @ApiBadRequestResponse({ description: 'Empty or unreadable image.' })
+  @ApiConflictResponse({ description: 'The recipe is archived.' })
+  @ApiPayloadTooLargeResponse({ description: 'Upload larger than the limit.' })
+  @ApiUnsupportedMediaTypeResponse({ description: 'Not a JPEG, PNG or WebP image.' })
+  async putImage(
+    @CurrentSession() session: AuthenticatedSession,
+    @Param('householdId') id: string,
+    @Param('recipeId') recipeId: string,
+    @Req() request: Request,
+  ) {
+    const format = acceptedFormat(request.headers['content-type']);
+    await this.images.assertWritable(session.userId, id, recipeId);
+    const image = await normalizeImage(await readLimitedBody(request), format);
+    return this.images.replace(session.userId, id, recipeId, image);
+  }
+
+  @Delete(':recipeId/image')
+  @HttpCode(204)
+  @ApiHeader(csrfHeader)
+  @ApiNoContentResponse({ description: 'Photo removed.' })
+  @ApiConflictResponse({ description: 'The recipe is archived.' })
+  async deleteImage(
+    @CurrentSession() session: AuthenticatedSession,
+    @Param('householdId') id: string,
+    @Param('recipeId') recipeId: string,
+  ) {
+    await this.images.remove(session.userId, id, recipeId);
+  }
+
+  @Get(':recipeId/image/:imageId')
+  @Header('Cache-Control', 'private, max-age=31536000, immutable')
+  @ApiProduces('image/webp')
+  @ApiOkResponse({
+    description: 'The photo. Ids change on every upload, so responses are immutable.',
+  })
+  async getImage(
+    @CurrentSession() session: AuthenticatedSession,
+    @Param('householdId') id: string,
+    @Param('recipeId') recipeId: string,
+    @Param('imageId') imageId: string,
+  ) {
+    const image = await this.images.read(session.userId, id, recipeId, imageId);
+    return new StreamableFile(image.content, {
+      type: image.content_type,
+      length: image.content.length,
+      disposition: 'inline',
+    });
   }
 }
 

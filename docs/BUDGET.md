@@ -30,7 +30,7 @@ This is a proposed allocation, not a guaranteed bill. At the same exchange assum
 
 - Supabase Pro starts at USD 25/month, with the first project included under its base compute allowance. Additional projects start at USD 10/month. Its base tier includes auth/storage allowances and seven days of daily database backups. Source: [Supabase pricing](https://supabase.com/pricing).
 - Supabase Free is useful for development, but has inactivity pausing and does not include automatic database backups. Do not assume it meets the intended ongoing-operation standard. Source: [Supabase pricing](https://supabase.com/pricing).
-- Database backups do not back up the actual Storage API objects. Images require a separate backup process. Source: [Supabase backup documentation](https://supabase.com/docs/guides/platform/backups).
+- Database backups do not back up the actual Storage API objects. Images require a separate backup process. Source: [Supabase backup documentation](https://supabase.com/docs/guides/platform/backups). Update 2026-09-26: recipe photos are stored in PostgreSQL instead (ADR 0003), so database backups include them. Each photo is at most 1024 px and typically tens of KB (hard limit 1 MB); even 10 households × 200 photos × 100 KB is about 200 MB of database storage.
 - Railway Hobby has a USD 5 minimum with USD 5 usage included; it is not an unlimited USD 5 server. Its resource charges depend on actual consumption. Source: [Railway plans](https://docs.railway.com/pricing/plans).
 - Railway's resource hard limit can take workloads offline. Use earlier application-level AI limits and alerts so ordinary use is not the first thing stopped. Source: [Railway cost controls](https://docs.railway.com/pricing/cost-control).
 

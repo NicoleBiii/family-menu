@@ -2,7 +2,7 @@
 
 A mobile-first shared menu for the people you call home: collect recipes, coordinate meals, and turn your plans into a shopping list.
 
-**Status: early development, not a released service.** Google sign-in (through Supabase Auth), households, invitations and membership work and passed a real-provider smoke test ([setup](docs/SETUP_AUTH.md)). Households can save, edit, archive and restore their own recipes, starting from scratch or from 12 starter recipes. Recipe images, ordering, shopping calculations and AI generation are next milestones.
+**Status: early development, not a released service.** Google sign-in (through Supabase Auth), households, invitations and membership work and passed a real-provider smoke test ([setup](docs/SETUP_AUTH.md)). Households can save, edit, archive and restore their own recipes, starting from scratch or from 12 starter recipes, and add a photo to each. Ordering, shopping calculations and AI generation are next milestones.
 
 ## What works today
 
