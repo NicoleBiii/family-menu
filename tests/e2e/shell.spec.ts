@@ -23,16 +23,17 @@ test('starter recipes can be searched, inspected and closed with focus restored'
   await expect(cards).toHaveCount(12);
 });
 
-test('navigation honestly describes unavailable meal features and fits the viewport', async ({
+test('shopping explains sign-in when signed out and the layout fits the viewport', async ({
   page,
 }) => {
   await page.goto('/');
   await page.getByRole('navigation').getByRole('button', { name: 'Shopping' }).click();
   await expect(page.getByRole('heading', { name: 'Shopping', exact: true })).toBeVisible();
   await expect(
-    page.getByText('Shopping lists are not available yet. Recipes and meal orders are.'),
+    page.getByText('Sign in to see what your household needs to buy for its planned meals.'),
   ).toBeVisible();
-  await page.getByRole('button', { name: 'Browse the menu' }).click();
+  await expect(page).toHaveURL(/\/shopping$/);
+  await page.getByRole('navigation').getByRole('button', { name: 'Menu' }).click();
   await expect(page.getByRole('heading', { name: 'Starter recipes' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,

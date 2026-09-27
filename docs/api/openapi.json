@@ -1743,12 +1743,67 @@
           "Meal orders"
         ]
       }
+    },
+    "/api/households/{householdId}/shopping": {
+      "get": {
+        "operationId": "ShoppingController_list",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "First household-local meal date.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "Last household-local meal date.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ingredient demand of pending orders (all by default, including overdue ones): a combined list and the same demand grouped by meal date and order. Amounts are exact decimals; values that need rounding are rounded up and flagged approximate."
+          },
+          "400": {
+            "description": "Invalid date range."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Not found, or the caller is not a member of the household."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Shopping"
+        ]
+      }
     }
   },
   "info": {
     "title": "Family Menu API",
     "description": "Session-authenticated household API. Sign-in uses Google through Supabase Auth; the API keeps its own HttpOnly session cookie and requires X-CSRF-Token on state-changing requests.",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "contact": {}
   },
   "tags": [],

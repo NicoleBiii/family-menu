@@ -199,3 +199,14 @@ Use dates in YYYY-MM-DD format, with America/Toronto as the reporting timezone. 
 ### DEC-014 — PR workflow without enforcement
 
 - Status: adopted in AGENTS.md. Supersedes direct pushes to `main` used earlier in this session.
+
+## 2026-09-26 — ORD-001 merged; SHOP-001 shopping lists
+
+- PR #6 (ORD-001) passed CI on its head commit `c9b68ea` and was squash-merged as `d3990c7`; the branch was deleted. Applied migrations 003–005 to the local development database with `npm run db:migrate`.
+- SHOP-001 on branch `shop-001`: pure calculation module (`shopping.ts`, BigInt rationals, round-up display with an approximate flag, fixed unit families), one-statement read of pending order snapshots, `GET /api/households/:id/shopping` with optional date range, and the Shopping page (combined / by day, refresh on return, generated-at indicator). No schema change.
+- Verification: full `npm run check` passed (52 integration, 28 browser); three mutation checks failed their intended tests. See verification/2026-09-26-shop-001.md.
+
+### DEC-015 — Shopping calculation
+
+- Status: implemented. See `docs/decisions/0005-shopping-list.md`.
+- Exact rational arithmetic, rounded up only for display and flagged; conversions only inside fixed families (g/kg, ml/l, oz/lb, tsp/tbsp/cup); forms, counts and unquantified lines never merged; both views from one read.

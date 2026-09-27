@@ -16,6 +16,7 @@ import { HouseholdPage } from './HouseholdPage';
 import { JoinPage } from './JoinPage';
 import { MenuPage } from './MenuPage';
 import { OrdersPage } from './OrdersPage';
+import { ShoppingPage } from './ShoppingPage';
 
 const navigation = [
   { label: 'Menu', icon: Utensils },
@@ -30,6 +31,7 @@ function initialPage(): Page {
   if (window.location.pathname === '/join') return 'Join';
   if (window.location.pathname === '/household') return 'Household';
   if (window.location.pathname === '/meals') return 'Meals';
+  if (window.location.pathname === '/shopping') return 'Shopping';
   return 'Menu';
 }
 function readAuthError() {
@@ -98,7 +100,9 @@ export function App() {
           ? '/join'
           : next === 'Meals'
             ? '/meals'
-            : '/';
+            : next === 'Shopping'
+              ? '/shopping'
+              : '/';
     if (window.location.pathname !== path) history.pushState(null, '', path);
   }
   async function signOut() {
@@ -240,24 +244,21 @@ export function App() {
         ) : (
           <section className="page-panel">
             <p className="eyebrow">YOUR SHARED TABLE</p>
-            <h1>{page}</h1>
-            <div className="empty-state">
-              <ShoppingBasket size={36} />
-              <h2>A clearer list. An easier shop.</h2>
-              <p>Ingredients from your meal orders will come together here.</p>
-              <p className="sample-note">
-                Shopping lists are not available yet. Recipes and meal orders are.
-              </p>
-              <button className="primary-button" onClick={() => setPage('Menu')}>
-                Browse the menu <ArrowRight size={18} />
-              </button>
-            </div>
+            <h1>Shopping</h1>
+            <ShoppingPage
+              session={session}
+              household={activeHousehold}
+              onGoMeals={() => setPage('Meals')}
+              onGoHousehold={() => setPage('Household')}
+            />
           </section>
         )}
         <footer className="page-footer">
           <ChefHat size={18} />
           <p>A shared menu for the people you call home.</p>
-          <span>Starter recipes are written for Family Menu · Shopping lists are coming next</span>
+          <span>
+            Starter recipes are written for Family Menu · Virtual points have no cash value
+          </span>
         </footer>
       </main>
       <nav className="main-nav" aria-label="Main navigation">
