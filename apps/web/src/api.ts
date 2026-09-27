@@ -31,6 +31,8 @@ export class ApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    /** Parsed JSON error body, e.g. { code: 'ambiguous_time', options: [...] }. */
+    readonly body: Record<string, unknown> | null = null,
   ) {
     super(message);
   }
@@ -58,9 +60,9 @@ export async function api<T>(path: string, init: { method?: string; body?: unkno
 
 async function readResponse<T>(response: Response) {
   if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { message?: unknown } | null;
+    const body = (await response.json().catch(() => null)) as Record<string, unknown> | null;
     const message = typeof body?.message === 'string' ? body.message : 'Something went wrong.';
-    throw new ApiError(response.status, message);
+    throw new ApiError(response.status, message, body);
   }
   return (response.status === 204 ? undefined : await response.json()) as T;
 }
@@ -182,4 +184,67 @@ export function formatIngredient(line: Ingredient) {
     line.form ? `, ${line.form}` : '',
     line.note ? ` (${line.note})` : '',
   ].join('');
+}
+
+export type OrderStatus = 'pending' | 'completed' | 'cancelled';
+
+export interface OrderItem {
+  id: string;
+  recipeId: string;
+  recipeName: string;
+  servings: number;
+  /** Base yield of the recipe snapshot. */
+  recipeServings: number;
+  pricePoints: number;
+}
+
+export interface OrderItemDetail extends OrderItem {
+  steps: string[];
+  ingredients: (Ingredient & { key: string })[];
+  recipeRevision: number;
+  snapshotAt: string;
+}
+
+export interface MealOrder<Item extends OrderItem = OrderItem> {
+  id: string;
+  status: OrderStatus;
+  scheduledAt: string;
+  /** Household-local meal date (YYYY-MM-DD) and time (HH:MM). */
+  mealDate: string;
+  mealTime: string;
+  timezone: string;
+  utcOffset: string;
+  notes: string;
+  revision: number;
+  createdAt: string;
+  updatedAt: string;
+  closedAt: string | null;
+  createdBy: string;
+  updatedBy: string;
+  closedBy: string | null;
+  totalPoints: number;
+  items: Item[];
+}
+
+export type MealOrderDetail = MealOrder<OrderItemDetail>;
+
+/** Today's date (YYYY-MM-DD) in a time zone. */
+export function localToday(timeZone: string, offsetDays = 0) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone }).format(
+    new Date(Date.now() + offsetDays * 86_400_000),
+  );
+}
+
+/** "Today", "Tomorrow" or e.g. "Sat, Oct 3" for a household-local date. */
+export function dayLabel(date: string, timeZone: string) {
+  if (date === localToday(timeZone)) return 'Today';
+  if (date === localToday(timeZone, 1)) return 'Tomorrow';
+  if (date === localToday(timeZone, -1)) return 'Yesterday';
+  return new Intl.DateTimeFormat('en', {
+    timeZone: 'UTC',
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    ...(date.slice(0, 4) === localToday(timeZone).slice(0, 4) ? {} : { year: 'numeric' }),
+  }).format(new Date(`${date}T12:00:00Z`));
 }

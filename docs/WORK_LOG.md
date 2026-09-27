@@ -184,3 +184,18 @@ Use dates in YYYY-MM-DD format, with America/Toronto as the reporting timezone. 
 
 - Status: implemented; supersedes the private object-storage proposal in ARCHITECTURE.md. See ADR 0003.
 - One normalized WebP per recipe in the database, served through the authorized API. Backups include photos; no bucket, secret key or separate file backup is needed.
+
+## 2026-09-26 — Branch protection attempt; ORD-001 meal orders
+
+- The owner approved branch protection. GitHub refused both classic branch protection and rulesets for this private repository on the free plan ("Upgrade to GitHub Pro or make this repository public"). Nothing was changed. AGENTS.md now requires both agents to reach `main` through a task branch and a PR with passing CI, by convention. Enforcement needs GitHub Pro or a public repository; the owner decides.
+- ORD-001 on branch `ord-001`: migration 005 (`meal_orders`, `meal_order_items`, `audit_events`), `OrdersService`/controller, `Intl`-based local-time resolver with explicit DST gap/overlap handling, Meals page, order editor, and "Order" from a recipe dialog. `/meals` is now a routable page.
+- Verification: full `npm run check` passed (45 integration, 26 browser); four mutation checks each failed only their intended test. See verification/2026-09-26-ord-001.md.
+
+### DEC-013 — Meal orders
+
+- Status: implemented. See `docs/decisions/0004-meal-orders.md`.
+- Orders store the instant plus the household-local date/time and zone; DST-skipped times are rejected and repeated ones need an explicit choice. Items are immutable recipe snapshots; kept items keep them on edit. Closing is idempotent per target state. Every order mutation writes a minimal audit event.
+
+### DEC-014 — PR workflow without enforcement
+
+- Status: adopted in AGENTS.md. Supersedes direct pushes to `main` used earlier in this session.

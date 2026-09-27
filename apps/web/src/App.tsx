@@ -15,6 +15,7 @@ import { api, authErrorMessages, setCsrfToken, signInUrl, type Session } from '.
 import { HouseholdPage } from './HouseholdPage';
 import { JoinPage } from './JoinPage';
 import { MenuPage } from './MenuPage';
+import { OrdersPage } from './OrdersPage';
 
 const navigation = [
   { label: 'Menu', icon: Utensils },
@@ -28,6 +29,7 @@ const ACTIVE_KEY = 'family-menu.active-household';
 function initialPage(): Page {
   if (window.location.pathname === '/join') return 'Join';
   if (window.location.pathname === '/household') return 'Household';
+  if (window.location.pathname === '/meals') return 'Meals';
   return 'Menu';
 }
 function readAuthError() {
@@ -50,6 +52,10 @@ export function App() {
   const [activeId, setActiveId] = useState<string | null>(storedActive);
   const [authError, setAuthError] = useState(readAuthError);
   const search = useRef<HTMLInputElement>(null);
+  const [orderPrefill, setOrderPrefill] = useState<{ recipeId: string; servings: number } | null>(
+    null,
+  );
+  const clearPrefill = useCallback(() => setOrderPrefill(null), []);
 
   const refreshSession = useCallback(async () => {
     try {
@@ -85,7 +91,14 @@ export function App() {
 
   function setPage(next: Page) {
     setPageState(next);
-    const path = next === 'Household' ? '/household' : next === 'Join' ? '/join' : '/';
+    const path =
+      next === 'Household'
+        ? '/household'
+        : next === 'Join'
+          ? '/join'
+          : next === 'Meals'
+            ? '/meals'
+            : '/';
     if (window.location.pathname !== path) history.pushState(null, '', path);
   }
   async function signOut() {
@@ -205,27 +218,35 @@ export function App() {
             session={session}
             household={activeHousehold}
             onGoHousehold={() => setPage('Household')}
+            onOrder={(recipeId, servings) => {
+              setOrderPrefill({ recipeId, servings });
+              setPage('Meals');
+              window.scrollTo({ top: 0 });
+            }}
             searchRef={search}
           />
+        ) : page === 'Meals' ? (
+          <section className="page-panel">
+            <p className="eyebrow">YOUR SHARED TABLE</p>
+            <h1>Meals</h1>
+            <OrdersPage
+              session={session}
+              household={activeHousehold}
+              prefill={orderPrefill}
+              onPrefillUsed={clearPrefill}
+              onGoHousehold={() => setPage('Household')}
+            />
+          </section>
         ) : (
           <section className="page-panel">
             <p className="eyebrow">YOUR SHARED TABLE</p>
             <h1>{page}</h1>
             <div className="empty-state">
-              {page === 'Meals' ? <CalendarDays size={36} /> : <ShoppingBasket size={36} />}
-              <h2>
-                {page === 'Meals'
-                  ? 'Good meals start with a plan.'
-                  : 'A clearer list. An easier shop.'}
-              </h2>
-              <p>
-                {page === 'Meals'
-                  ? 'Your household’s planned meals will live here.'
-                  : 'Ingredients from your meal orders will come together here.'}
-              </p>
+              <ShoppingBasket size={36} />
+              <h2>A clearer list. An easier shop.</h2>
+              <p>Ingredients from your meal orders will come together here.</p>
               <p className="sample-note">
-                Meal orders and shopping lists are not available yet. Households, invitations and
-                recipes are.
+                Shopping lists are not available yet. Recipes and meal orders are.
               </p>
               <button className="primary-button" onClick={() => setPage('Menu')}>
                 Browse the menu <ArrowRight size={18} />
@@ -236,7 +257,7 @@ export function App() {
         <footer className="page-footer">
           <ChefHat size={18} />
           <p>A shared menu for the people you call home.</p>
-          <span>Starter recipes are written for Family Menu · Meal orders are coming next</span>
+          <span>Starter recipes are written for Family Menu · Shopping lists are coming next</span>
         </footer>
       </main>
       <nav className="main-nav" aria-label="Main navigation">

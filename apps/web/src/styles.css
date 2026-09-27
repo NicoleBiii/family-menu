@@ -852,6 +852,126 @@ dialog h3 {
 .step-row .field {
   max-width: none;
 }
+/* ORD-001: meal orders */
+.orders-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.order-day h2 {
+  font-size: 22px;
+  margin: 18px 0 10px;
+}
+.order-card {
+  padding: 16px 18px;
+  margin-bottom: 12px;
+  border: 1px solid #dedfce;
+  border-radius: 16px;
+  background: #fffef7;
+}
+.order-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.order-time {
+  font-size: 18px;
+}
+.order-points {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #68745f;
+}
+.status-tag {
+  padding: 2px 9px;
+  border-radius: 10px;
+  font-size: 11px;
+  background: #edf0e7;
+}
+.status-tag.overdue {
+  background: #fbeee2;
+  color: #8a4a1d;
+}
+.status-tag.cancelled {
+  background: #f1ecea;
+  color: #6f5a52;
+}
+.order-items {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+}
+.order-items li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid #ecede2;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.order-notes {
+  font-size: 14px;
+  font-style: italic;
+  margin: 6px 0;
+}
+.choice-group {
+  border: 0;
+  padding: 0;
+  margin: 6px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+.choice-group legend {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 14px;
+}
+.choice input {
+  width: 20px;
+  height: 20px;
+}
+.order-line {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 1px solid #ecede2;
+}
+.order-line .field.wide {
+  flex: 1 1 220px;
+  max-width: none;
+}
+.order-line-name {
+  flex: 1 1 220px;
+  margin: 0 0 12px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.servings-field {
+  flex: 0 0 110px;
+}
+.icon-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 @media (max-width: 900px) {
   .recipe-grid {
     grid-template-columns: repeat(2, 1fr);

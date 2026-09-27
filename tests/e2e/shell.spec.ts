@@ -30,9 +30,7 @@ test('navigation honestly describes unavailable meal features and fits the viewp
   await page.getByRole('navigation').getByRole('button', { name: 'Shopping' }).click();
   await expect(page.getByRole('heading', { name: 'Shopping', exact: true })).toBeVisible();
   await expect(
-    page.getByText(
-      'Meal orders and shopping lists are not available yet. Households, invitations and recipes are.',
-    ),
+    page.getByText('Shopping lists are not available yet. Recipes and meal orders are.'),
   ).toBeVisible();
   await page.getByRole('button', { name: 'Browse the menu' }).click();
   await expect(page.getByRole('heading', { name: 'Starter recipes' })).toBeVisible();

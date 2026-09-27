@@ -1,7 +1,7 @@
 # Current State and Handoff
 
-Updated: 2026-09-26 by Claude. Branch: main. Remote: private `github.com/NicoleBiii/family-menu`.
-Latest implementation commit: the REC-001 photos commit on `main` (check `git log`; it includes this handoff). Pushed to `origin/main` with the owner's approval.
+Updated: 2026-09-26 by Claude. Remote: private `github.com/NicoleBiii/family-menu`.
+ORD-001 is on branch `ord-001`, PR https://github.com/NicoleBiii/family-menu/pull/6. Squash-merge it once its CI passes; if CI fails, fix on the branch first. Check `gh pr view 6` before starting SHOP-001 from `main`. Changes now reach `main` only through PRs with green CI (AGENTS.md); GitHub cannot enforce this on the free private plan.
 Checkout claim after closeout: none; verify with `npm run handoff:status`.
 
 ## Completed scope
@@ -10,6 +10,7 @@ Checkout claim after closeout: none; verify with `npm run handoff:status`.
 - AUTH-001 (`33a01a7`, closed `e5bf9c8`): Google sign-in through Supabase Auth with server-side PKCE, HttpOnly app sessions, CSRF, households, owner-only single-use invitations, join/remove/leave, mobile UI. [ADR 0002](decisions/0002-auth-sessions.md). Real-provider smoke passed.
 - INFRA-001 partial: private GitHub repository, hosted CI passing, Dependabot triaged (Actions bumps merged; TypeScript and `@types/node` majors ignored).
 - REC-001 (`c902126` recipes, then photos): household recipes with structured ingredients, 12 curated presets (owner-accepted), shared editing with revision conflicts, idempotent create, archive/restore, and one photo per recipe stored as small WebP in PostgreSQL. [ADR 0003](decisions/0003-recipes.md), [preset provenance](presets/PROVENANCE.md).
+- ORD-001: meal orders for now or later, household-local scheduling with explicit DST handling, immutable recipe snapshots, shared editing with revision conflicts, idempotent submission and closing, audit events, Meals page and order editor. [ADR 0004](decisions/0004-meal-orders.md).
 
 ## Confirmed product constraints
 
@@ -23,11 +24,9 @@ Checkout claim after closeout: none; verify with `npm run handoff:status`.
 
 ## Verified state
 
-On the owner's Mac (Node 24.19.0, PostgreSQL 14.18): full `npm run check` passed after REC-001 photos — 33 PostgreSQL/API integration tests and 20 desktop/mobile browser cases, plus format/lint/types/builds; OpenAPI regenerated; runtime audit 0 known vulnerabilities. Hosted CI passed on `main` through the recipes commit (run 36290461289). Evidence: [REC-001 verification](verification/2026-09-26-rec-001.md); earlier: [AUTH-001](verification/2026-09-26-auth-001.md), [provider smoke](verification/2026-09-26-auth-001-provider-smoke.md), [foundation](verification/2026-09-26-foundation.md).
+On the owner's Mac (Node 24.19.0, PostgreSQL 14.18): full `npm run check` passed after ORD-001 — 45 PostgreSQL/API integration tests and 26 desktop/mobile browser cases, plus format/lint/types/builds; OpenAPI regenerated. Evidence: [ORD-001](verification/2026-09-26-ord-001.md), [REC-001](verification/2026-09-26-rec-001.md), [AUTH-001](verification/2026-09-26-auth-001.md), [provider smoke](verification/2026-09-26-auth-001-provider-smoke.md), [foundation](verification/2026-09-26-foundation.md). Hosted CI results are on the PRs and `main` runs.
 
-Hosted CI (including the Docker build with `sharp`) passed on `7dccabf` (run 36290822821); the Node 20 Actions deprecation warning no longer appears.
-
-Not verified: forced membership-removal interleaving; real iPhone HEIC upload; rate limiting; physical phone. Google's provider-denial path is stub-only.
+Not verified: forced membership-removal interleaving; real iPhone HEIC upload; rate limiting; physical phone; screen reader. Google's provider-denial path is stub-only.
 
 ## Location
 
@@ -35,16 +34,16 @@ The repository lives at `/Users/bibi/Bibi_Dev/family-menu` (moved 2026-09-26 out
 
 ## Local services
 
-None left running by Claude. The Mac's project PostgreSQL (127.0.0.1:55432, data in ignored `.local/pgdata`) is left running. Migrations 003–004 are applied to `family_menu_test` only; run `npm run db:migrate` for the development database before using the dev server. The Mac's default Node is 23; use Node 24.19.0 (see ignored `.local/MACHINE.md`).
+None left running by Claude. The Mac's project PostgreSQL (127.0.0.1:55432, data in ignored `.local/pgdata`) is left running. Migrations 003–005 are applied to `family_menu_test` only; run `npm run db:migrate` for the development database before using the dev server. The Mac's default Node is 23; use Node 24.19.0 (see ignored `.local/MACHINE.md`).
 
 ## Open owner decisions
 
-None blocking. Branch protection on `main` (require the CI check) is recommended before more collaborators or agents push; enabling it changes repository settings and needs the owner's go-ahead.
+- Branch protection needs GitHub Pro (about USD 4/month) or a public repository. Until then the PR-plus-CI rule is a convention only.
 
 ## Next exact work
 
-1. Start ORD-001 (orders, scheduling, snapshots, shared editing): claim it, read MVP_SPEC "Recipe and order semantics" and AC-03/04/07/08/11. Reuse `requireMember(..., lock = true)`, `expectedRevision` conflicts and client request ids from recipes. Order items snapshot the recipe's name, ingredients, steps, servings and price; archived recipes cannot be newly ordered. Add the minimal audit event table and cross-household negative tests.
-2. INFRA-001: branch protection (with owner approval), then the isolated preview deployment.
+1. SHOP-001 (ingredient calculation and two shopping views, AC-09/AC-10): create branch `shop-001`, claim it, read MVP_SPEC "Shopping-list calculation". Compute from pending order snapshots only (`meal_order_items.ingredients` carries `key`, exact `quantity`, `unit`, `form`; required = quantity × servings ÷ recipe_servings) in one consistent read. Use exact decimal arithmetic, fixed conversions only (g/kg, ml/l; decide tsp/tbsp/cup explicitly), keep count, unit-less and unquantified lines separate. Include the 500 g chicken fixture and household isolation tests.
+2. INFRA-001: isolated preview deployment.
 
 ## Switching agents
 
