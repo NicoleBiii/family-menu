@@ -24,6 +24,8 @@ Checked: 2026-09-25. Currency of the owner's budget: CAD. Preferred ceiling: CAD
 | Tax, exchange-rate, and usage contingency       |                      15 | Planning reserve, not a tax calculation                                                           |
 | **Planned total**                               |                  **85** | **Leaves CAD 15 headroom within the preferred ceiling**                                           |
 
+Preview decision (owner, 2026-09-28): the INFRA-001 preview runs the app and its PostgreSQL on Railway Hobby (usage-billed within the Railway allocation and the staging allowance), keeps Supabase only for sign-in on the existing development project, and uses a separate Gemini key capped by `AI_MONTHLY_BUDGET_USD=2`. The production database choice (Supabase Pro with daily backups, or Railway with verified backups) is revisited before real households.
+
 This is a proposed allocation, not a guaranteed bill. At the same exchange assumption, a full-month second Supabase Micro project adds approximately CAD 14 before tax, instead of the CAD 5 temporary-staging allowance. Preview resources left running, larger compute, image transformation add-ons, or public AI access can exceed the budget.
 
 ## Verified provider facts

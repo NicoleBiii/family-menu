@@ -244,3 +244,14 @@ Use dates in YYYY-MM-DD format, with America/Toronto as the reporting timezone. 
 
 - Status: owner decision, 2026-09-28. Recorded in ADR 0006; Claude Haiku 4.5 is the tested alternative. Production requires a paid Gemini key.
 - Local `.env` now sets `AI_PROVIDER=gemini` (ignored file). A real Gemini draft passed through the service, database, worker, validation and save (2.6 s, 763 micro-USD).
+
+## 2026-09-28 — AI-001 merged; INFRA-001 Railway preview preparation
+
+- The owner merged PR #9 (AI-001) as `e8c8b92`. INFRA-001 on branch `infra-001`.
+- Owner decisions: the preview runs on Railway Hobby with Railway PostgreSQL; sign-in stays on the Supabase development project; AI drafts use a separate Gemini key (`family-menu-staging`) with `AI_MONTHLY_BUDGET_USD=2`.
+- `railway.json` runs `node scripts/migrate.mjs` as the pre-deploy command. Railway documents that pre-deploy commands run once per deploy in a separate container with the service's variables and private network, and that a failure stops the deploy (docs.railway.com, pre-deploy command guide). CI now starts the built image: migration against a fresh database, readiness, and page load.
+- The DEPLOYMENT.md runbook lists the owner's account steps, the variables and the limitations: one database credential (the pre-deploy step shares runtime variables), unverified backups, usage alerts only.
+
+### DEC-018 — Railway preview
+
+- Status: owner decision; configuration prepared, deployment pending the owner's Railway account. Synthetic data only. A restricted runtime login, verified backups and a separate production environment are prerequisites for real households (REL-001).
