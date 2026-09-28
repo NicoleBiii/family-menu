@@ -4,6 +4,7 @@ import {
   api,
   ApiError,
   UNITS,
+  type AiDraft,
   type Ingredient,
   type RecipeContent,
   type RecipeDetail,
@@ -11,6 +12,7 @@ import {
 
 export type EditorStart =
   | { mode: 'create'; presetId?: string; content?: RecipeContent }
+  | { mode: 'ai'; draft: AiDraft & { draft: RecipeContent } }
   | { mode: 'edit'; recipe: RecipeDetail };
 
 interface DraftLine {
@@ -85,6 +87,8 @@ interface Props {
   start: EditorStart;
   onCancel: () => void;
   onSaved: (recipe: RecipeDetail) => void;
+  /** AI drafts only: called after the draft was discarded. */
+  onDiscarded?: () => void;
 }
 
 /**
@@ -92,11 +96,13 @@ interface Props {
  * obvious mistakes. Edits carry the revision that was opened so a concurrent change by another
  * member is reported instead of overwritten.
  */
-export function RecipeEditor({ householdId, start, onCancel, onSaved }: Props) {
+export function RecipeEditor({ householdId, start, onCancel, onSaved, onDiscarded }: Props) {
   const [draft, setDraft] = useState<Draft>(() =>
     start.mode === 'edit'
       ? toDraft(start.recipe)
-      : toDraft(start.content ?? { ingredients: [], steps: [] }),
+      : start.mode === 'ai'
+        ? toDraft(start.draft.draft)
+        : toDraft(start.content ?? { ingredients: [], steps: [] }),
   );
   const [revision, setRevision] = useState(start.mode === 'edit' ? start.recipe.revision : 0);
   // One id per editor session: retries of the same save cannot create a second recipe.
@@ -134,18 +140,40 @@ export function RecipeEditor({ householdId, start, onCancel, onSaved }: Props) {
             method: 'PUT',
             body: { ...toBody(draft), expectedRevision: revision },
           })
-        : await api<RecipeDetail>(`/households/${householdId}/recipes`, {
-            method: 'POST',
-            body: {
-              ...toBody(draft),
-              requestId,
-              ...(start.mode === 'create' && start.presetId ? { presetId: start.presetId } : {}),
-            },
-          });
+        : start.mode === 'ai'
+          ? // Saving the same draft twice returns the recipe from the first save.
+            await api<RecipeDetail>(`/households/${householdId}/ai-drafts/${start.draft.id}/save`, {
+              method: 'POST',
+              body: toBody(draft),
+            })
+          : await api<RecipeDetail>(`/households/${householdId}/recipes`, {
+              method: 'POST',
+              body: {
+                ...toBody(draft),
+                requestId,
+                ...(start.mode === 'create' && start.presetId ? { presetId: start.presetId } : {}),
+              },
+            });
       onSaved(saved);
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : 'Could not save the recipe.');
       setConflict(caught instanceof ApiError && caught.status === 409 && recipeId !== null);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function discardDraft() {
+    if (start.mode !== 'ai') return;
+    setBusy(true);
+    setError('');
+    try {
+      await api(`/households/${householdId}/ai-drafts/${start.draft.id}/discard`, {
+        method: 'POST',
+      });
+      onDiscarded?.();
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught.message : 'Could not discard the draft.');
     } finally {
       setBusy(false);
     }
@@ -165,7 +193,13 @@ export function RecipeEditor({ householdId, start, onCancel, onSaved }: Props) {
   }
 
   const title =
-    start.mode === 'edit' ? 'Edit recipe' : start.presetId ? 'Save a starter recipe' : 'New recipe';
+    start.mode === 'edit'
+      ? 'Edit recipe'
+      : start.mode === 'ai'
+        ? 'Review the AI draft'
+        : start.presetId
+          ? 'Save a starter recipe'
+          : 'New recipe';
 
   return (
     <form className="card-panel recipe-editor" onSubmit={submit} aria-labelledby="editor-title">
@@ -173,6 +207,13 @@ export function RecipeEditor({ householdId, start, onCancel, onSaved }: Props) {
       <h2 id="editor-title" tabIndex={-1} ref={heading}>
         {title}
       </h2>
+      {start.mode === 'ai' && (
+        <p className="notice ai-notice">
+          Written by AI ({start.draft.model}) from “{start.draft.dishName}”. It is not in your menu
+          yet. Check the amounts, cooking times and any allergens, set a price, then save it or
+          discard it.
+        </p>
+      )}
       {start.mode === 'create' && start.presetId && (
         <p className="muted">
           This saves your own copy. Change anything you like; the starter recipe stays as it is.
@@ -355,8 +396,13 @@ export function RecipeEditor({ householdId, start, onCancel, onSaved }: Props) {
         <button className="primary-button" disabled={busy}>
           {busy ? 'Saving…' : 'Save recipe'}
         </button>
+        {start.mode === 'ai' && (
+          <button type="button" className="text-button" disabled={busy} onClick={discardDraft}>
+            Discard draft
+          </button>
+        )}
         <button type="button" className="text-button" onClick={onCancel}>
-          Cancel
+          {start.mode === 'ai' ? 'Decide later' : 'Cancel'}
         </button>
       </div>
     </form>

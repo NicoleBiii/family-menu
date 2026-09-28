@@ -33,6 +33,9 @@ export default defineConfig({
         APP_ORIGIN: 'http://127.0.0.1:4173',
         SUPABASE_URL: 'http://127.0.0.1:4174',
         SUPABASE_PUBLISHABLE_KEY: stubKey,
+        // Deterministic local AI provider (apps/api/src/ai-providers.ts); no network calls.
+        AI_PROVIDER: 'mock',
+        AI_MONTHLY_BUDGET_USD: '1000000',
         DATABASE_URL:
           process.env.TEST_DATABASE_URL ??
           'postgresql://family_menu:local-development-only@127.0.0.1:55432/family_menu_test',

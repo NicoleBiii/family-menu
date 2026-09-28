@@ -11,6 +11,7 @@ import {
   Pencil,
   Plus,
   Search,
+  Sparkles,
   Star,
   Users,
   X,
@@ -28,6 +29,7 @@ import {
   type RecipeSummary,
   type Session,
 } from './api';
+import { AiDraftPanel } from './AiDraftPanel';
 import { prepareImage } from './image';
 import { RecipeEditor, type EditorStart } from './RecipeEditor';
 
@@ -56,6 +58,7 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
   const [query, setQuery] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const [editor, setEditor] = useState<EditorStart | null>(null);
+  const [aiPanel, setAiPanel] = useState(false);
   const [selected, setSelected] = useState<Selected | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -153,6 +156,7 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
     dialog.current?.close();
     setSelected(null);
     setNotice('');
+    setAiPanel(false);
     setEditor(start);
     window.scrollTo({ top: 0 });
   }
@@ -163,12 +167,35 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
         <RecipeEditor
           householdId={householdId}
           start={editor}
-          onCancel={() => setEditor(null)}
+          onCancel={() => {
+            // Leaving an AI draft keeps it under "Unfinished drafts".
+            setAiPanel(editor.mode === 'ai');
+            setEditor(null);
+          }}
           onSaved={async (saved) => {
             setEditor(null);
             setNotice(`Saved ${saved.name}.`);
             await loadRecipes();
           }}
+          onDiscarded={() => {
+            setEditor(null);
+            setNotice('Draft discarded. Your menu is unchanged.');
+          }}
+        />
+      </section>
+    );
+  }
+
+  if (aiPanel && householdId) {
+    return (
+      <section className="page-panel">
+        <AiDraftPanel
+          householdId={householdId}
+          onReview={(draft) => {
+            if (draft.draft) startEditor({ mode: 'ai', draft: { ...draft, draft: draft.draft } });
+          }}
+          onManual={() => startEditor({ mode: 'create' })}
+          onClose={() => setAiPanel(false)}
         />
       </section>
     );
@@ -220,6 +247,16 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
                 onClick={() => setShowArchived((value) => !value)}
               >
                 <Archive size={14} /> Archived ({archived.length})
+              </button>
+              <button
+                className="archive-toggle ai-toggle"
+                onClick={() => {
+                  setNotice('');
+                  setAiPanel(true);
+                  window.scrollTo({ top: 0 });
+                }}
+              >
+                <Sparkles size={14} aria-hidden="true" /> Draft with AI
               </button>
               <button className="primary-button" onClick={() => startEditor({ mode: 'create' })}>
                 <Plus size={18} /> Add recipe
@@ -536,6 +573,7 @@ function RecipeView({
             ? ` · last changed by ${recipe.updatedBy}`
             : ''}
           {recipe.presetId ? ' · from a starter recipe' : ''}
+          {recipe.source === 'ai' ? ' · started from an AI draft' : ''}
         </p>
       )}
       {recipe && !recipe.archived && (

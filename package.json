@@ -26,6 +26,7 @@
     "db:stop": "node scripts/local-db.mjs stop",
     "test:integration": "npm run build --workspace @family-menu/api && node --env-file-if-exists=.env --test --test-concurrency=1 tests/integration/*.test.mjs",
     "test:e2e": "playwright test",
+    "ai:eval": "npm run build --workspace @family-menu/api && node --env-file-if-exists=.env scripts/ai-eval.mjs",
     "openapi": "npm run build --workspace @family-menu/api && node --env-file-if-exists=.env apps/api/dist/openapi.js",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run build && npm run test:integration && npm run test:e2e",
     "handoff:status": "node scripts/handoff.mjs status",

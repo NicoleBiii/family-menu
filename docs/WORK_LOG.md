@@ -218,3 +218,29 @@ Use dates in YYYY-MM-DD format, with America/Toronto as the reporting timezone. 
 - Added dev dependency `@axe-core/playwright` 4.13.0 for automated WCAG 2.2 A/AA scans; it runs only in tests.
 - Fixed: eight low-contrast grey text colours (now `#5c6557`); focused fields hidden behind the fixed bottom navigation (scroll padding); raw network/server errors; session expiry now returns to sign-in with an explanation; per-page titles.
 - Verification: full `npm run check` passed (52 integration, 40 browser). The real-phone and screen-reader checklist in verification/2026-09-27-ux-001.md needs the owner and an HTTPS preview, so UX-001 is "Ready for verification", not Done.
+
+## 2026-09-27 — UX-001 merged; AI-001 draft workflow with mock provider
+
+- The owner merged PR #8 (UX-001) as `b390171`. AI-001 started on branch `ai-001`.
+- Owner decisions: evaluate Claude Haiku 4.5, DeepSeek V4.1 Flash and Gemini 3.1 Flash-Lite before choosing; keep the AI budget at CAD 12/month; use API keys rather than workload identity federation for now.
+- Price comparison gathered on 2026-09-27 from the providers' pages (USD per million input/output tokens): Claude Haiku 4.5 1/5, Sonnet 5 2/10; DeepSeek V4.1 Flash 0.30/1.20 at peak (half off-peak), V4 Pro 1.32/3.96; Gemini 3.1 Flash-Lite 0.25/1.50, 3.8 Flash 0.75/3.75 until 2026-12-31 then 1.50/7.50; OpenAI gpt-5-nano 0.05/0.40. DeepSeek stores data in the PRC and its JSON mode does not enforce a schema; Gemini's free tier uses content to improve products. Sources: api-docs.deepseek.com pricing, JSON-mode and privacy pages; platform.claude.com pricing; ai.google.dev pricing; developers.openai.com pricing.
+- Implemented migration 006 (`ai_draft_requests`; recipe source `ai`), provider adapters (Anthropic SDK 0.128.0, DeepSeek and Gemini over REST, mock), `AiDraftsService` with locked admission, reservations, a leased in-process worker and recovery, the AI draft screen and editor review/save/discard, and `scripts/ai-eval.mjs` with 16 cases.
+- Verification: full `npm run check` passed (68 integration, 46 browser); three mutation checks failed their intended tests. See verification/2026-09-27-ai-001.md. No real provider has been called.
+
+### DEC-016 — AI drafts, quotas and provider evaluation
+
+- Status: workflow implemented; model choice pending the evaluation. See `docs/decisions/0006-ai-drafts.md`.
+- One durable row per request doubles as the cost reservation; admission checks household, personal and monthly-budget limits under one advisory lock; unknown outcomes keep the worst-case reservation; no automatic retries; drafts reach the menu only through an explicit, idempotent save.
+
+## 2026-09-28 — AI-001 provider evaluation
+
+- The owner ran `npm run ai:eval` with real keys (2026-09-27): Haiku 14/16, DeepSeek 16/16, Gemini free tier 15/16 schema-valid. All three failures were the same near-miss (unit without an amount, or the text "null" as a quantity).
+- With the owner's approval: `validateDraft` now repairs those near-misses without inventing amounts, the prompt says a to-taste line has both quantity and unit null, and the evaluation was re-run (about USD 0.08): Haiku 16/16, DeepSeek 14/16 (a unit outside the list; one invalid JSON reply), Gemini free tier 2/16 (errors before any token, probably rate limits).
+- The owner prepaid Gemini (paid tier); a Gemini-only re-run passed 16/16. The evaluation script now records the error status and accepts `--delay-ms`.
+- Results are in ADR 0006 and `docs/verification/ai-eval/`. Open: the owner's usable-draft review and the model choice.
+- Owner's usable-draft review: Anthropic 16/16, Gemini (paid) 16/16, DeepSeek 14/16.
+
+### DEC-017 — AI provider for now: Gemini 3.1 Flash-Lite (paid tier)
+
+- Status: owner decision, 2026-09-28. Recorded in ADR 0006; Claude Haiku 4.5 is the tested alternative. Production requires a paid Gemini key.
+- Local `.env` now sets `AI_PROVIDER=gemini` (ignored file). A real Gemini draft passed through the service, database, worker, validation and save (2.6 s, 763 micro-USD).
