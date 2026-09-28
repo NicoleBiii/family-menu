@@ -1,7 +1,7 @@
 # Current State and Handoff
 
 Updated: 2026-09-27 by Claude. Remote: private `github.com/NicoleBiii/family-menu`.
-UX-001 is merged (PR #8, `b390171`). AI-001 is on branch `ai-001` with its own PR: the draft workflow is done with a mock provider; the real-provider evaluation waits for the owner's API keys.
+UX-001 is merged (PR #8, `b390171`). AI-001 is done on branch `ai-001` (PR #9): Gemini 3.1 Flash-Lite (paid tier) chosen after a measured evaluation; a real Gemini draft passed end to end.
 Checkout claim after closeout: none; verify with `npm run handoff:status`.
 
 ## Completed scope
@@ -12,7 +12,7 @@ Checkout claim after closeout: none; verify with `npm run handoff:status`.
 - REC-001 (`c902126` recipes, then photos): household recipes with structured ingredients, 12 curated presets (owner-accepted), shared editing with revision conflicts, idempotent create, archive/restore, and one photo per recipe stored as small WebP in PostgreSQL. [ADR 0003](decisions/0003-recipes.md), [preset provenance](presets/PROVENANCE.md).
 - ORD-001: meal orders for now or later, household-local scheduling with explicit DST handling, immutable recipe snapshots, shared editing with revision conflicts, idempotent submission and closing, audit events, Meals page and order editor. [ADR 0004](decisions/0004-meal-orders.md).
 - SHOP-001: shopping demand from pending order snapshots with exact rational arithmetic (rounded up and flagged when inexact), fixed-family unit conversion, separate forms/counts/unquantified lines, combined and by-day views from one read, date-range scope, Shopping page. [ADR 0005](decisions/0005-shopping-list.md).
-- AI-001 (mock-provider part): durable draft requests with worst-case cost reservations, household/personal/monthly-budget limits under one lock, leased in-process worker with recovery and no blind retries, review/edit/save/discard with idempotent save, Anthropic/DeepSeek/Gemini adapters (stub-tested only) and an evaluation script. [ADR 0006](decisions/0006-ai-drafts.md), [record](verification/2026-09-27-ai-001.md).
+- AI-001: durable draft requests with worst-case cost reservations, household/personal/monthly-budget limits under one lock, leased in-process worker with recovery and no blind retries, review/edit/save/discard with idempotent save, Anthropic/DeepSeek/Gemini adapters, a measured three-provider evaluation, and Gemini 3.1 Flash-Lite chosen for now. [ADR 0006](decisions/0006-ai-drafts.md), [record](verification/2026-09-27-ai-001.md).
 - UX-001 (automated part): axe WCAG 2.2 A/AA scans at 0 violations on all main screens, keyboard-only core flow at 360 px with focus never hidden behind the bottom navigation, session-expiry/offline/server-error messages, per-page titles. The real-phone and screen-reader checklist is open ([record](verification/2026-09-27-ux-001.md)).
 
 ## Confirmed product constraints
@@ -20,7 +20,7 @@ Checkout claim after closeout: none; verify with `npm run handoff:status`.
 - Mobile-first household menu and recipe management.
 - All household members can edit the shared menu and each other's pending orders.
 - v1 sources: manual recipes, presets, and quota-limited text AI drafts with explicit save/discard.
-- AI: evaluate Claude Haiku 4.5, DeepSeek V4.1 Flash and Gemini 3.1 Flash-Lite before choosing; AI spend cap CAD 12/month (enforced as USD 8.50); API keys, not workload identity federation, for now.
+- AI: Gemini 3.1 Flash-Lite on a paid key for now (Claude Haiku 4.5 as the tested alternative); AI spend cap CAD 12/month (enforced as USD 8.50); API keys, not workload identity federation, for now.
 - Ordering/scheduling, two shopping views, completion/history.
 - Defer wallets, paid memberships, social imports, grocery checkout, and completed-meal photos.
 - English project artifacts; Chinese discussion and Unicode recipe input.
@@ -30,7 +30,7 @@ Checkout claim after closeout: none; verify with `npm run handoff:status`.
 
 On the owner's Mac (Node 24.19.0, PostgreSQL 14.18): full `npm run check` passed on `ai-001` — 68 integration tests (PostgreSQL/API, provider stubs and pure calculation) and 46 desktop/mobile browser cases (including axe scans), plus format/lint/types/builds; OpenAPI regenerated. Evidence: [AI-001](verification/2026-09-27-ai-001.md), [UX-001](verification/2026-09-27-ux-001.md), [SHOP-001](verification/2026-09-26-shop-001.md), [ORD-001](verification/2026-09-26-ord-001.md), [REC-001](verification/2026-09-26-rec-001.md), [AUTH-001](verification/2026-09-26-auth-001.md), [provider smoke](verification/2026-09-26-auth-001-provider-smoke.md), [foundation](verification/2026-09-26-foundation.md). Hosted CI results are on the PRs and `main` runs.
 
-Not verified: any real AI provider call; forced membership-removal interleaving; real iPhone HEIC upload; rate limiting (except AI quotas); physical phone; screen reader. Google's provider-denial path is stub-only.
+Not verified: the browser AI path with real sign-in and real Gemini; forced membership-removal interleaving; real iPhone HEIC upload; rate limiting (except AI quotas); physical phone; screen reader. Google's provider-denial path is stub-only.
 
 ## Location
 
@@ -38,18 +38,16 @@ The repository lives at `/Users/bibi/Bibi_Dev/family-menu` (moved 2026-09-26 out
 
 ## Local services
 
-None left running by Claude. The Mac's project PostgreSQL (127.0.0.1:55432, data in ignored `.local/pgdata`) is left running. Migrations through 006 are applied to both `family_menu_test` and the development database `family_menu` (006 applied with `npm run db:migrate` on 2026-09-27). Local development uses `AI_PROVIDER=mock` for AI drafts without a key (set it in `.env`; the default is off). The Mac's default Node is 23; use Node 24.19.0 (see ignored `.local/MACHINE.md`).
+None left running by Claude. The Mac's project PostgreSQL (127.0.0.1:55432, data in ignored `.local/pgdata`) is left running. Migrations through 006 are applied to both `family_menu_test` and the development database `family_menu` (006 applied with `npm run db:migrate` on 2026-09-27). The owner's `.env` sets `AI_PROVIDER=gemini` with a paid key; `AI_PROVIDER=mock` works without any key (the default is off). The Mac's default Node is 23; use Node 24.19.0 (see ignored `.local/MACHINE.md`).
 
 ## Open owner decisions
 
-- **AI-001 model choice:** the evaluation ran on 2026-09-27/28 (ADR 0006: Haiku 16/16 at 4.9 s and USD 0.0035; DeepSeek 14/16 at 2.0 s and USD 0.0006; Gemini paid 16/16 at 2.7 s and USD 0.0011). The owner reviews the drafts files in `docs/verification/ai-eval/` for usability and chooses.
 - Branch protection needs GitHub Pro (about USD 4/month) or a public repository. Until then the PR-plus-CI rule is a convention only.
 
 ## Next exact work
 
-1. Merge the AI-001 PR (mock-provider workflow) after CI passes.
-2. After the owner's choice: record it in ADR 0006, set `AI_PROVIDER`/key in `.env`, run one real-provider draft through the app (smoke test), and close AI-001.
-3. Otherwise INFRA-001: isolated HTTPS preview deployment (needs the owner's hosting/account decisions per BUDGET.md), which also unblocks the UX-001 real-phone checklist. Revisit workload identity federation there if the host issues OIDC tokens.
+1. Merge the AI-001 PR (#9) after CI passes.
+2. INFRA-001: isolated HTTPS preview deployment (needs the owner's hosting/account decisions per BUDGET.md), which also unblocks the UX-001 real-phone checklist. Revisit workload identity federation there if the host issues OIDC tokens.
 
 ## Switching agents
 

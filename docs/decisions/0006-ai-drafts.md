@@ -1,6 +1,6 @@
 # ADR 0006 — AI recipe drafts, quotas and provider choice
 
-Date: 2026-09-27. Status: workflow implemented and locally verified with a mock provider (AI-001). Real-provider evaluation run on 2026-09-27/28 (below); model choice waits for the owner's review of draft quality.
+Date: 2026-09-27. Status: implemented and locally verified (AI-001). Provider chosen for now on 2026-09-28: **Google Gemini 3.1 Flash-Lite, paid tier** (below).
 
 ## Owner decisions (2026-09-27)
 
@@ -48,7 +48,11 @@ Same 16 cases through the production adapters; raw results and drafts in `docs/v
 | DeepSeek `deepseek-flash`      | 16/16             | 14/16                         | 2.0 / 2.7 s                  | USD 0.0006         | Run 2: unit "根" outside the list; one reply was not valid JSON (JSON mode does not enforce a schema)                                                     |
 | Google `gemini-3.1-flash-lite` | 15/16 (free tier) | 16/16 (paid tier, 2026-09-28) | 2.7 / 3.5 s                  | USD 0.0011         | A second free-tier run failed 14/16 with errors before any token, most likely free-tier rate limits (status not recorded then; the script now records it) |
 
-Injection and not-a-dish inputs produced harmless recipes from all three; none revealed the prompt. The usable-draft rate (the owner's review of the drafts files) and the final choice are still open. Whatever is chosen, production uses a paid account: Gemini's free tier uses content to improve products.
+Injection and not-a-dish inputs produced harmless recipes from all three; none revealed the prompt. Owner's usable-draft review (2026-09-28, run-2 drafts; Gemini from its paid-tier run): Anthropic 16/16, Gemini 16/16, DeepSeek 14/16 (the two unusable ones are its two validation failures).
+
+**Choice (owner, 2026-09-28): Gemini 3.1 Flash-Lite on the paid tier, for now.** It matched Haiku on validity and usability at about half the latency and a third of the cost, and paid-tier content is not used to improve Google's products. Claude Haiku 4.5 is the tested alternative; switching is `AI_PROVIDER=anthropic` plus its key. Production must use a paid Gemini key (billing enabled); the free tier is not acceptable for household input.
+
+Real-provider smoke test (2026-09-28): one draft ("可乐鸡翅", preferences "少糖") through `AiDraftsService`, PostgreSQL, the worker and validation, then saved as a recipe with `source: 'ai'`: succeeded in 2.6 s, 364/448 tokens, charged 763 micro-USD against a 4,375 reservation. The browser path with real Google sign-in and real Gemini is left for the INFRA-001 staging smoke test.
 
 ## Consequences and limits
 

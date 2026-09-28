@@ -238,3 +238,9 @@ Use dates in YYYY-MM-DD format, with America/Toronto as the reporting timezone. 
 - With the owner's approval: `validateDraft` now repairs those near-misses without inventing amounts, the prompt says a to-taste line has both quantity and unit null, and the evaluation was re-run (about USD 0.08): Haiku 16/16, DeepSeek 14/16 (a unit outside the list; one invalid JSON reply), Gemini free tier 2/16 (errors before any token, probably rate limits).
 - The owner prepaid Gemini (paid tier); a Gemini-only re-run passed 16/16. The evaluation script now records the error status and accepts `--delay-ms`.
 - Results are in ADR 0006 and `docs/verification/ai-eval/`. Open: the owner's usable-draft review and the model choice.
+- Owner's usable-draft review: Anthropic 16/16, Gemini (paid) 16/16, DeepSeek 14/16.
+
+### DEC-017 — AI provider for now: Gemini 3.1 Flash-Lite (paid tier)
+
+- Status: owner decision, 2026-09-28. Recorded in ADR 0006; Claude Haiku 4.5 is the tested alternative. Production requires a paid Gemini key.
+- Local `.env` now sets `AI_PROVIDER=gemini` (ignored file). A real Gemini draft passed through the service, database, worker, validation and save (2.6 s, 763 micro-USD).
