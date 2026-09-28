@@ -1,6 +1,6 @@
 # ADR 0006 — AI recipe drafts, quotas and provider choice
 
-Date: 2026-09-27. Status: workflow implemented and locally verified with a mock provider (AI-001). Provider and model not yet chosen: that waits for the evaluation run with real keys.
+Date: 2026-09-27. Status: workflow implemented and locally verified with a mock provider (AI-001). Real-provider evaluation run on 2026-09-27/28 (below); model choice waits for the owner's review of draft quality.
 
 ## Owner decisions (2026-09-27)
 
@@ -37,6 +37,18 @@ Date: 2026-09-27. Status: workflow implemented and locally verified with a mock 
 ## Evaluation (to run with the owner's keys)
 
 `npm run ai:eval -- --providers anthropic,deepseek,gemini` shows the worst-case cost (USD 0.37 for 16 cases × 3 providers). With `--yes` it sends the same 16 cases through the production adapters and validation. The cases cover English, Chinese, mixed, vague, not-a-dish and prompt-injection inputs. It writes `docs/verification/ai-eval/<date>-results.json`, with schema validity, latency, tokens and cost, and `<date>-drafts.md`, a usable-or-not checklist for a person to fill in. The choice goes into this ADR with the measured numbers.
+
+## Evaluation results (2026-09-27/28)
+
+Same 16 cases through the production adapters; raw results and drafts in `docs/verification/ai-eval/`. The 2026-09-27 run used the original validation; the owner then approved a repair of two near-misses (a quantity written as the text "null", and a unit such as "pinch" without an amount: the unit is dropped and the note kept, never an invented amount) plus one prompt sentence, and a second run.
+
+| Provider / model               | Run 1: valid      | Run 2: valid                  | Median / p90 latency (run 2) | Avg cost per draft | Notes                                                                                                                                                     |
+| ------------------------------ | ----------------- | ----------------------------- | ---------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Anthropic `claude-haiku-4-5`   | 14/16             | 16/16                         | 4.9 / 7.9 s                  | USD 0.0035         | Run-1 failures were both near-misses, now repaired                                                                                                        |
+| DeepSeek `deepseek-flash`      | 16/16             | 14/16                         | 2.0 / 2.7 s                  | USD 0.0006         | Run 2: unit "根" outside the list; one reply was not valid JSON (JSON mode does not enforce a schema)                                                     |
+| Google `gemini-3.1-flash-lite` | 15/16 (free tier) | 16/16 (paid tier, 2026-09-28) | 2.7 / 3.5 s                  | USD 0.0011         | A second free-tier run failed 14/16 with errors before any token, most likely free-tier rate limits (status not recorded then; the script now records it) |
+
+Injection and not-a-dish inputs produced harmless recipes from all three; none revealed the prompt. The usable-draft rate (the owner's review of the drafts files) and the final choice are still open. Whatever is chosen, production uses a paid account: Gemini's free tier uses content to improve products.
 
 ## Consequences and limits
 

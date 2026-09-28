@@ -28,6 +28,8 @@ const { values } = parseArgs({
     cases: { type: 'string', default: 'scripts/ai-eval-cases.json' },
     out: { type: 'string', default: 'docs/verification/ai-eval' },
     yes: { type: 'boolean', default: false },
+    // Pause between calls, e.g. for a free tier's requests-per-minute limit.
+    'delay-ms': { type: 'string', default: '0' },
   },
 });
 
@@ -80,7 +82,12 @@ for (const setup of setups) {
           ? validateDraft(reply.text)
           : { status: 'failed', code: reply.finish };
     } catch (error) {
-      outcome = { status: 'failed', code: error.name === 'TimeoutError' ? 'timeout' : 'error' };
+      outcome = {
+        status: 'failed',
+        code: error.name === 'TimeoutError' ? 'timeout' : 'error',
+        // Adapter errors carry only the HTTP status, never request or response bodies.
+        detail: error.message,
+      };
     }
     const latencyMs = Math.round(performance.now() - started);
     const known = reply && reply.inputTokens !== null && reply.outputTokens !== null;
@@ -91,6 +98,7 @@ for (const setup of setups) {
       dishName: item.dishName,
       status: outcome.status,
       code: outcome.code ?? null,
+      detail: outcome.detail ?? null,
       latencyMs,
       inputTokens: reply?.inputTokens ?? null,
       outputTokens: reply?.outputTokens ?? null,
@@ -102,8 +110,9 @@ for (const setup of setups) {
     console.log(
       `${result.provider.padEnd(9)} ${item.id.padEnd(14)} ${result.status.padEnd(9)} ` +
         `${String(latencyMs).padStart(6)} ms  ${result.inputTokens ?? '?'}/${result.outputTokens ?? '?'} tokens` +
-        (result.code ? `  (${result.code})` : ''),
+        (result.code ? `  (${result.code}${result.detail ? `: ${result.detail}` : ''})` : ''),
     );
+    await new Promise((resolve) => setTimeout(resolve, Number(values['delay-ms'])));
   }
 }
 

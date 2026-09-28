@@ -231,3 +231,10 @@ Use dates in YYYY-MM-DD format, with America/Toronto as the reporting timezone. 
 
 - Status: workflow implemented; model choice pending the evaluation. See `docs/decisions/0006-ai-drafts.md`.
 - One durable row per request doubles as the cost reservation; admission checks household, personal and monthly-budget limits under one advisory lock; unknown outcomes keep the worst-case reservation; no automatic retries; drafts reach the menu only through an explicit, idempotent save.
+
+## 2026-09-28 — AI-001 provider evaluation
+
+- The owner ran `npm run ai:eval` with real keys (2026-09-27): Haiku 14/16, DeepSeek 16/16, Gemini free tier 15/16 schema-valid. All three failures were the same near-miss (unit without an amount, or the text "null" as a quantity).
+- With the owner's approval: `validateDraft` now repairs those near-misses without inventing amounts, the prompt says a to-taste line has both quantity and unit null, and the evaluation was re-run (about USD 0.08): Haiku 16/16, DeepSeek 14/16 (a unit outside the list; one invalid JSON reply), Gemini free tier 2/16 (errors before any token, probably rate limits).
+- The owner prepaid Gemini (paid tier); a Gemini-only re-run passed 16/16. The evaluation script now records the error status and accepts `--delay-ms`.
+- Results are in ADR 0006 and `docs/verification/ai-eval/`. Open: the owner's usable-draft review and the model choice.

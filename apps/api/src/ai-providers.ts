@@ -83,7 +83,7 @@ Return one JSON object with exactly these fields:
 - name: the dish name, at most 120 characters.
 - description: one short sentence, at most 200 characters.
 - servings: the whole number of servings the amounts make, from 1 to 12.
-- ingredients: 1 to 25 lines. Each line has name (at most 100 characters), quantity (a decimal string such as "200" or "0.5" with at most 3 decimal places, or null when the amount is to taste), unit (one of ${UNITS.join(', ')}, or null for whole items; a unit needs a quantity), form (preparation such as "diced", or null) and note (such as "to taste", or null).
+- ingredients: 1 to 25 lines. Each line has name (at most 100 characters), quantity (a decimal string such as "200" or "0.5" with at most 3 decimal places, or null when the amount is to taste), unit (one of ${UNITS.join(', ')}, or null for whole items; a unit needs a quantity, so a to-taste line has both quantity and unit null), form (preparation such as "diced", or null) and note (such as "to taste", or null).
 - steps: 1 to 15 short steps in order, each at most 400 characters.
 
 Prefer metric mass and volume units. Write in the same language as the dish name. Do not say that the recipe suits any allergy or diet, and do not include prices, nutrition figures or photos. If the text does not name a dish, write a simple recipe for the closest reasonable dish.`;

@@ -543,6 +543,28 @@ export class AiDraftsService implements OnApplicationBootstrap, OnModuleDestroy 
   }
 }
 
+/**
+ * Repairs two near-misses seen in the 2026-09-27 evaluation without inventing an amount: a
+ * quantity written as the text "null" (or blank) means no quantity, and a unit without a
+ * quantity (such as "a pinch of salt, to taste") loses its unit and keeps its note. Anything
+ * else is left for the normal validation to accept or reject.
+ */
+function normalizeAmounts(ingredients: unknown) {
+  if (!Array.isArray(ingredients)) return ingredients;
+  return ingredients.map((line: unknown) => {
+    if (!line || typeof line !== 'object') return line;
+    const next = { ...(line as Record<string, unknown>) };
+    if (typeof next.quantity === 'string' && /^\s*(null)?\s*$/i.test(next.quantity)) {
+      next.quantity = null;
+    }
+    if ((next.quantity === null || next.quantity === undefined) && next.unit) {
+      if (!next.note) next.note = 'to taste';
+      next.unit = null;
+    }
+    return next;
+  });
+}
+
 /** Parses model text and applies the same rules as a manually entered recipe. */
 export function validateDraft(
   text: string,
@@ -562,6 +584,7 @@ export function validateDraft(
     // Price stays the household's choice; the model is never asked for one.
     const { name, description, servings, steps, ingredients } = parseRecipeInput({
       ...parsed,
+      ingredients: normalizeAmounts((parsed as { ingredients?: unknown }).ingredients),
       pricePoints: 0,
     });
     const draft = { name, description, servings, steps, ingredients };

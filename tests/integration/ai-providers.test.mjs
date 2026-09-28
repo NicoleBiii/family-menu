@@ -223,11 +223,31 @@ test('validation: model output must be a complete recipe under the normal rules'
   assert.equal(validateDraft('[]').status, 'failed');
   assert.equal(validateDraft(JSON.stringify({ ...recipe, ingredients: [] })).status, 'failed');
   assert.equal(validateDraft(JSON.stringify({ ...recipe, servings: 0 })).status, 'failed');
-  const unitWithoutAmount = {
+  // Near-misses from the 2026-09-27 evaluation are repaired without inventing an amount.
+  const nearMiss = validateDraft(
+    JSON.stringify({
+      ...recipe,
+      ingredients: [
+        { name: 'Salt', quantity: null, unit: 'pinch', form: null, note: 'to taste' },
+        { name: 'Nutmeg', quantity: null, unit: 'pinch', form: null, note: null },
+        { name: '花椒', quantity: 'null', unit: null, form: null, note: '适量' },
+      ],
+    }),
+  );
+  assert.equal(nearMiss.status, 'succeeded');
+  assert.deepEqual(
+    nearMiss.draft.ingredients.map(({ quantity, unit, note }) => ({ quantity, unit, note })),
+    [
+      { quantity: null, unit: null, note: 'to taste' },
+      { quantity: null, unit: null, note: 'to taste' },
+      { quantity: null, unit: null, note: '适量' },
+    ],
+  );
+  const badQuantity = {
     ...recipe,
-    ingredients: [{ name: 'Rice', quantity: null, unit: 'g', form: null, note: null }],
+    ingredients: [{ name: 'Rice', quantity: 'some', unit: 'g', form: null, note: null }],
   };
-  assert.equal(validateDraft(JSON.stringify(unitWithoutAmount)).status, 'failed');
+  assert.equal(validateDraft(JSON.stringify(badQuantity)).status, 'failed');
   const inexact = {
     ...recipe,
     ingredients: [{ name: 'Rice', quantity: '0.1234', unit: 'g', form: null, note: null }],

@@ -42,13 +42,13 @@ None left running by Claude. The Mac's project PostgreSQL (127.0.0.1:55432, data
 
 ## Open owner decisions
 
-- **AI-001 keys:** the owner is creating Anthropic, DeepSeek and Gemini (billing enabled) API accounts with low provider-side spend caps, keys only in `.env`. Then run `npm run ai:eval -- --providers anthropic,deepseek,gemini` (dry run shows ≤ USD 0.37), review the drafts checklist, and choose the model.
+- **AI-001 model choice:** the evaluation ran on 2026-09-27/28 (ADR 0006: Haiku 16/16 at 4.9 s and USD 0.0035; DeepSeek 14/16 at 2.0 s and USD 0.0006; Gemini paid 16/16 at 2.7 s and USD 0.0011). The owner reviews the drafts files in `docs/verification/ai-eval/` for usability and chooses.
 - Branch protection needs GitHub Pro (about USD 4/month) or a public repository. Until then the PR-plus-CI rule is a convention only.
 
 ## Next exact work
 
 1. Merge the AI-001 PR (mock-provider workflow) after CI passes.
-2. When the owner's keys are in `.env`: run the evaluation with `--yes` (after the owner approves the cost), have the owner mark usable drafts, record the numbers and the chosen provider/model in ADR 0006, run one real-provider smoke draft through the app, and close AI-001.
+2. After the owner's choice: record it in ADR 0006, set `AI_PROVIDER`/key in `.env`, run one real-provider draft through the app (smoke test), and close AI-001.
 3. Otherwise INFRA-001: isolated HTTPS preview deployment (needs the owner's hosting/account decisions per BUDGET.md), which also unblocks the UX-001 real-phone checklist. Revisit workload identity federation there if the host issues OIDC tokens.
 
 ## Switching agents
