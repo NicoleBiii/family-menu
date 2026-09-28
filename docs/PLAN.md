@@ -1,7 +1,7 @@
 # Three-Week Plan and Backlog
 
 Version: 0.1. Updated: 2026-09-27.
-Current phase: AI-001 done (2026-09-28; Gemini 3.1 Flash-Lite chosen). Next: INFRA-001 preview deployment. UX-001 automated checks done; its real-phone check needs the INFRA-001 preview. INFRA-001: private GitHub repository, hosted CI and Dependabot triage done; branch protection is unavailable on the free private plan (PR-plus-CI convention instead); preview deployment remains. The repository moved to /Users/bibi/Bibi_Dev/family-menu on 2026-09-26.
+Current phase: AI-001 done (2026-09-28; Gemini 3.1 Flash-Lite chosen). INFRA-001 Railway preview prepared; waiting for the owner's Railway account setup (docs/DEPLOYMENT.md). UX-001 automated checks done; its real-phone check needs the INFRA-001 preview. INFRA-001: private GitHub repository, hosted CI and Dependabot triage done; branch protection is unavailable on the free private plan (PR-plus-CI convention instead); preview deployment remains. The repository moved to /Users/bibi/Bibi_Dev/family-menu on 2026-09-26.
 Working window: 2026-09-25 to 2026-10-16, assuming a start on the document date.
 
 ## Planning assumptions
@@ -35,7 +35,7 @@ Days are calendar sequencing slots, not a requirement to work without breaks.
 | DISC-004  | Confirm release priorities and collaboration rules                  | Done                   | Owner selected all-member order editing and accepted explicit v1 deferrals                                                                                        |
 | DOC-001   | Write product-specific specification, plan, architecture and budget | Done                   | v0.1 documents exist; assumptions and sources are marked                                                                                                          |
 | ENG-001   | Establish dedicated development repository and local foundation     | Local complete         | Reproducible setup, migrations, health/OpenAPI, mobile shell, local checks and prepared CI; see verification record                                               |
-| INFRA-001 | Connect remote repository and isolated cloud preview                | In progress            | Done: private repo, hosted CI, Dependabot triage, PR convention. Branch protection needs GitHub Pro (owner choice). Open: isolated preview deployment             |
+| INFRA-001 | Connect remote repository and isolated cloud preview                | In progress            | Done: private repo, CI (now also starts the image), Dependabot, PR convention, Railway config and runbook. Open: owner's Railway setup, deploy, smoke             |
 | AUTH-001  | Google authentication and household isolation                       | Done                   | Local tests (verification/2026-09-26-auth-001.md) and real-provider smoke (verification/2026-09-26-auth-001-provider-smoke.md); denial path stub-only             |
 | REC-001   | Manual/preset recipes and private images                            | Done                   | AC-05 and AC-12 (verification/2026-09-26-rec-001.md, ADR 0003); photos in PostgreSQL; presets accepted by the owner                                               |
 | ORD-001   | Orders, scheduling, snapshots and shared editing                    | Done                   | AC-03–04, AC-07–08, AC-11 (verification/2026-09-26-ord-001.md, ADR 0004)                                                                                          |

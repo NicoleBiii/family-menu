@@ -45,6 +45,25 @@ jobs:
       - run: npm audit --omit=dev --audit-level=high
       - name: Build deployment image
         run: docker build --tag family-menu:${{ github.sha }} .
+      # Runs the image the way Railway does: the pre-deploy migration, then the server with its
+      # readiness check. Uses a fresh database so migrations start from nothing.
+      - name: Start deployment image
+        run: |
+          docker exec "$(docker ps -q --filter ancestor=postgres:17)" \
+            psql -U family_menu -d family_menu_test -c 'create database family_menu_image'
+          url=postgresql://family_menu:local-development-only@127.0.0.1:5432/family_menu_image
+          docker run --rm --network host -e DATABASE_URL="$url" \
+            family-menu:${{ github.sha }} node scripts/migrate.mjs
+          docker run -d --name app --network host -e DATABASE_URL="$url" -e PORT=3300 \
+            -e APP_ORIGIN=https://preview.example.test family-menu:${{ github.sha }}
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3300/api/health/ready; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:3300/api/health/ready
+          curl -fsS http://127.0.0.1:3300/ | grep -q '<div id="root">'
+          docker logs app
+          docker rm -f app
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure()
         with:

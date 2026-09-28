@@ -1,7 +1,7 @@
 # Current State and Handoff
 
 Updated: 2026-09-27 by Claude. Remote: private `github.com/NicoleBiii/family-menu`.
-UX-001 is merged (PR #8, `b390171`). AI-001 is done on branch `ai-001` (PR #9): Gemini 3.1 Flash-Lite (paid tier) chosen after a measured evaluation; a real Gemini draft passed end to end.
+AI-001 is merged (PR #9, `e8c8b92`; Gemini 3.1 Flash-Lite chosen). INFRA-001 is on branch `infra-001` with its own PR: Railway preview configuration, CI image start check and runbook; the deployment itself waits for the owner's Railway setup.
 Checkout claim after closeout: none; verify with `npm run handoff:status`.
 
 ## Completed scope
@@ -42,12 +42,14 @@ None left running by Claude. The Mac's project PostgreSQL (127.0.0.1:55432, data
 
 ## Open owner decisions
 
+- **Railway setup:** decided (Railway Hobby + Railway PostgreSQL, separate Gemini key with a USD 2 budget); account creation and billing are the owner's steps.
 - Branch protection needs GitHub Pro (about USD 4/month) or a public repository. Until then the PR-plus-CI rule is a convention only.
 
 ## Next exact work
 
-1. Merge the AI-001 PR (#9) after CI passes.
-2. INFRA-001: isolated HTTPS preview deployment (needs the owner's hosting/account decisions per BUDGET.md), which also unblocks the UX-001 real-phone checklist. Revisit workload identity federation there if the host issues OIDC tokens.
+1. Merge the INFRA-001 PR after CI passes (its new "Start deployment image" step is the first real run of the image).
+2. Owner follows docs/DEPLOYMENT.md "Railway preview runbook" steps 1–5 (account, project from `main`, PostgreSQL, domain, variables, Supabase redirect URL). Keys go only into Railway variables, never chat.
+3. Then check `/api/health/ready` on the domain, run the smoke test with the owner, record it in `docs/verification/`, and hand the URL to the UX-001 phone and screen-reader checklist.
 
 ## Switching agents
 
