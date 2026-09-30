@@ -255,3 +255,11 @@ Use dates in YYYY-MM-DD format, with America/Toronto as the reporting timezone. 
 ### DEC-018 — Railway preview
 
 - Status: owner decision; configuration prepared, deployment pending the owner's Railway account. Synthetic data only. A restricted runtime login, verified backups and a separate production environment are prerequisites for real households (REL-001).
+
+## 2026-09-29 — INFRA-001 merged; Railway setup pending
+
+- Resumed from the clean `infra-001` checkout with no active handoff claim. Verified PR #10 was merged on 2026-09-28 as `725a397`, with its Quality checks passing (GitHub Actions run 36474253128). Fast-forwarded local `main` to that merge commit.
+- The owner confirmed that no Railway preview has been created. The GitHub deployments API returned no deployment records; that alone does not establish the state of the Railway account.
+- Confirmed the next owner action is docs/DEPLOYMENT.md runbook steps 1–5. After the owner shares the public domain, the project can verify readiness, run the end-to-end smoke test, and continue UX-001 real-device checks.
+- This entry only reconciles the handoff after the merge. No cloud deployment or provider smoke test is claimed.
+- Verification on Node 24.19.0: `npm ci --offline` passed with zero reported vulnerabilities. The full `npm run check` passed (format, lint, types, builds, 68 integration tests against `family_menu_test`, 46 browser tests). Its first run hit sandbox `EPERM` on loopback PostgreSQL access; the permitted rerun passed. `git diff --check` passed. The project PostgreSQL is listening on 127.0.0.1:55432; no application service was left running.
