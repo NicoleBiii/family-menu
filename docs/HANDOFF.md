@@ -1,14 +1,14 @@
 # Current State and Handoff
 
-Updated: 2026-09-27 by Claude. Remote: private `github.com/NicoleBiii/family-menu`.
-AI-001 is merged (PR #9, `e8c8b92`; Gemini 3.1 Flash-Lite chosen). INFRA-001 is on branch `infra-001` with its own PR: Railway preview configuration, CI image start check and runbook; the deployment itself waits for the owner's Railway setup.
-Checkout claim after closeout: none; verify with `npm run handoff:status`.
+Updated: 2026-09-29 by Codex. Remote: private `github.com/NicoleBiii/family-menu`.
+INFRA-001 PR #10 passed Quality checks and was squash-merged into `main` as `725a397` on 2026-09-28. Railway preview deployment still waits for the owner's account and project setup. The owner confirmed on 2026-09-29 that the Railway preview has not been created.
+Latest implementation commit: `725a397`. This handoff correction was prepared on `codex/infra-handoff`. Checkout claim after closeout: none; verify with `npm run handoff:status`.
 
 ## Completed scope
 
 - ENG-001 local foundation (`570d2c7`): npm workspaces, Node 24.19.0, NestJS 12, React/Vite, TypeScript 6, Kysely/PostgreSQL, migrations, health/readiness/OpenAPI, CI/container config, handover tooling.
 - AUTH-001 (`33a01a7`, closed `e5bf9c8`): Google sign-in through Supabase Auth with server-side PKCE, HttpOnly app sessions, CSRF, households, owner-only single-use invitations, join/remove/leave, mobile UI. [ADR 0002](decisions/0002-auth-sessions.md). Real-provider smoke passed.
-- INFRA-001 partial: private GitHub repository, hosted CI passing, Dependabot triaged (Actions bumps merged; TypeScript and `@types/node` majors ignored).
+- INFRA-001 partial: private GitHub repository, hosted CI passing, Dependabot triaged (Actions bumps merged; TypeScript and `@types/node` majors ignored), and Railway preview configuration merged in PR #10.
 - REC-001 (`c902126` recipes, then photos): household recipes with structured ingredients, 12 curated presets (owner-accepted), shared editing with revision conflicts, idempotent create, archive/restore, and one photo per recipe stored as small WebP in PostgreSQL. [ADR 0003](decisions/0003-recipes.md), [preset provenance](presets/PROVENANCE.md).
 - ORD-001: meal orders for now or later, household-local scheduling with explicit DST handling, immutable recipe snapshots, shared editing with revision conflicts, idempotent submission and closing, audit events, Meals page and order editor. [ADR 0004](decisions/0004-meal-orders.md).
 - SHOP-001: shopping demand from pending order snapshots with exact rational arithmetic (rounded up and flagged when inexact), fixed-family unit conversion, separate forms/counts/unquantified lines, combined and by-day views from one read, date-range scope, Shopping page. [ADR 0005](decisions/0005-shopping-list.md).
@@ -30,6 +30,8 @@ Checkout claim after closeout: none; verify with `npm run handoff:status`.
 
 On the owner's Mac (Node 24.19.0, PostgreSQL 14.18): full `npm run check` passed on `ai-001` — 68 integration tests (PostgreSQL/API, provider stubs and pure calculation) and 46 desktop/mobile browser cases (including axe scans), plus format/lint/types/builds; OpenAPI regenerated. Evidence: [AI-001](verification/2026-09-27-ai-001.md), [UX-001](verification/2026-09-27-ux-001.md), [SHOP-001](verification/2026-09-26-shop-001.md), [ORD-001](verification/2026-09-26-ord-001.md), [REC-001](verification/2026-09-26-rec-001.md), [AUTH-001](verification/2026-09-26-auth-001.md), [provider smoke](verification/2026-09-26-auth-001-provider-smoke.md), [foundation](verification/2026-09-26-foundation.md). Hosted CI results are on the PRs and `main` runs.
 
+On 2026-09-29, `npm ci --offline` and the full `npm run check` passed again on the merged INFRA-001 source plus this documentation update: 68 integration and 46 browser tests. The first check attempt was blocked by sandbox loopback `EPERM`; rerunning with permitted access to the isolated `family_menu_test` database passed. PR #10 Quality checks passed. No Railway deploy or staging smoke test has run.
+
 Not verified: the browser AI path with real sign-in and real Gemini; forced membership-removal interleaving; real iPhone HEIC upload; rate limiting (except AI quotas); physical phone; screen reader. Google's provider-denial path is stub-only.
 
 ## Location
@@ -38,7 +40,7 @@ The repository lives at `/Users/bibi/Bibi_Dev/family-menu` (moved 2026-09-26 out
 
 ## Local services
 
-None left running by Claude. The Mac's project PostgreSQL (127.0.0.1:55432, data in ignored `.local/pgdata`) is left running. Migrations through 006 are applied to both `family_menu_test` and the development database `family_menu` (006 applied with `npm run db:migrate` on 2026-09-27). The owner's `.env` sets `AI_PROVIDER=gemini` with a paid key; `AI_PROVIDER=mock` works without any key (the default is off). The Mac's default Node is 23; use Node 24.19.0 (see ignored `.local/MACHINE.md`).
+The Mac's project PostgreSQL is listening at 127.0.0.1:55432 (data in ignored `.local/pgdata`). No application service was left running by this session. Migrations through 006 were applied to both `family_menu_test` and the development database `family_menu` on 2026-09-27. The owner's `.env` sets `AI_PROVIDER=gemini` with a paid key; `AI_PROVIDER=mock` works without any key (the default is off). The Mac's default Node is 23; use Node 24.19.0 (see ignored `.local/MACHINE.md`).
 
 ## Open owner decisions
 
@@ -47,9 +49,8 @@ None left running by Claude. The Mac's project PostgreSQL (127.0.0.1:55432, data
 
 ## Next exact work
 
-1. Merge the INFRA-001 PR after CI passes (its new "Start deployment image" step is the first real run of the image).
-2. Owner follows docs/DEPLOYMENT.md "Railway preview runbook" steps 1–5 (account, project from `main`, PostgreSQL, domain, variables, Supabase redirect URL). Keys go only into Railway variables, never chat.
-3. Then check `/api/health/ready` on the domain, run the smoke test with the owner, record it in `docs/verification/`, and hand the URL to the UX-001 phone and screen-reader checklist.
+1. Owner follows docs/DEPLOYMENT.md "Railway preview runbook" steps 1–5 (account, project from `main`, PostgreSQL, domain, variables, Supabase redirect URL). Keys go only into Railway variables, never chat. Railway setup is not yet complete.
+2. Once the owner provides the public domain, check `/api/health/ready` there, run the smoke test with the owner, record it in `docs/verification/`, and use the URL for the UX-001 phone and screen-reader checklist.
 
 ## Switching agents
 
