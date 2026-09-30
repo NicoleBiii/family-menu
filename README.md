@@ -104,7 +104,7 @@ Use `codex` instead of `claude` for the other agent. Claims are advisory and loc
 
 ## Deployment status
 
-A Dockerfile and Railway configuration are prepared. They have not been executed on a cloud service, and no remote Git repository is configured. The local host has no Docker installation, so the container build is also unverified locally.
+A Dockerfile has passed the CI image start check. The private GitHub repository is connected to a Railway app service in `staging`, but no successful Railway deployment is verified. Railway no longer accepts `railway.json` for newly created services; configure the pre-deploy migration and readiness check in the service Settings using [deployment setup](docs/DEPLOYMENT.md). The local host has no Docker installation, so the container build is unverified locally.
 
 Before any cloud release, follow [deployment setup](docs/DEPLOYMENT.md). A workflow file alone does not enable branch protection, secret scanning, or an enforced release gate. The current implementation is a foundation; do not present it as a production-ready household service.
 

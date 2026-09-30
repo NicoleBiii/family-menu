@@ -1,8 +1,8 @@
 # Current State and Handoff
 
-Updated: 2026-09-29 by Codex. Remote: private `github.com/NicoleBiii/family-menu`.
-INFRA-001 PR #10 passed Quality checks and was squash-merged into `main` as `725a397` on 2026-09-28. Railway preview deployment still waits for the owner's account and project setup. The owner confirmed on 2026-09-29 that the Railway preview has not been created.
-Latest implementation commit: `725a397`. This handoff correction was prepared on `codex/infra-handoff`. Checkout claim after closeout: none; verify with `npm run handoff:status`.
+Updated: 2026-09-30 by Codex. Remote: private `github.com/NicoleBiii/family-menu`.
+INFRA-001 PR #10 passed Quality checks and was squash-merged into `main` as `725a397` on 2026-09-28. The owner has since connected the Railway app service to `main` in `staging`; PostgreSQL, deployment and domain status still need verification.
+Latest implementation commit: `725a397`. Railway has a GitHub-connected app service in `staging`, but no successful deployment is verified. The current documentation correction is on `codex/railway-new-service-runbook`. Checkout claim after closeout: none; verify with `npm run handoff:status`.
 
 ## Completed scope
 
@@ -30,7 +30,9 @@ Latest implementation commit: `725a397`. This handoff correction was prepared on
 
 On the owner's Mac (Node 24.19.0, PostgreSQL 14.18): full `npm run check` passed on `ai-001` — 68 integration tests (PostgreSQL/API, provider stubs and pure calculation) and 46 desktop/mobile browser cases (including axe scans), plus format/lint/types/builds; OpenAPI regenerated. Evidence: [AI-001](verification/2026-09-27-ai-001.md), [UX-001](verification/2026-09-27-ux-001.md), [SHOP-001](verification/2026-09-26-shop-001.md), [ORD-001](verification/2026-09-26-ord-001.md), [REC-001](verification/2026-09-26-rec-001.md), [AUTH-001](verification/2026-09-26-auth-001.md), [provider smoke](verification/2026-09-26-auth-001-provider-smoke.md), [foundation](verification/2026-09-26-foundation.md). Hosted CI results are on the PRs and `main` runs.
 
-On 2026-09-29, `npm ci --offline` and the full `npm run check` passed again on the merged INFRA-001 source plus this documentation update: 68 integration and 46 browser tests. The first check attempt was blocked by sandbox loopback `EPERM`; rerunning with permitted access to the isolated `family_menu_test` database passed. PR #10 Quality checks passed. No Railway deploy or staging smoke test has run.
+On 2026-09-29, `npm ci --offline` and the full `npm run check` passed again on the merged INFRA-001 source plus this documentation update: 68 integration and 46 browser tests. The first check attempt was blocked by sandbox loopback `EPERM`; rerunning with permitted access to the isolated `family_menu_test` database passed. PR #10 Quality checks passed. No successful Railway deploy or staging smoke test is verified.
+
+For the 2026-09-30 Railway runbook correction, Prettier and `git diff --check` passed. No application code changed; the full local `npm run check` was not repeated. The corrected documentation needs PR CI before merge.
 
 Not verified: the browser AI path with real sign-in and real Gemini; forced membership-removal interleaving; real iPhone HEIC upload; rate limiting (except AI quotas); physical phone; screen reader. Google's provider-denial path is stub-only.
 
@@ -49,8 +51,8 @@ The Mac's project PostgreSQL is listening at 127.0.0.1:55432 (data in ignored `.
 
 ## Next exact work
 
-1. Owner follows docs/DEPLOYMENT.md "Railway preview runbook" steps 1–5 (account, project from `main`, PostgreSQL, domain, variables, Supabase redirect URL). Keys go only into Railway variables, never chat. Railway setup is not yet complete.
-2. Once the owner provides the public domain, check `/api/health/ready` there, run the smoke test with the owner, record it in `docs/verification/`, and use the URL for the UX-001 phone and screen-reader checklist.
+1. Owner follows the corrected docs/DEPLOYMENT.md runbook: add PostgreSQL; configure Dockerfile, pre-deploy migration, readiness healthcheck and database variable in the **app service**; apply staged changes; generate the domain; then set auth/AI variables and the Supabase redirect URL. The previous runbook incorrectly assumed `railway.json` would configure a new service. Keys go only into Railway variables, never chat.
+2. Once the owner provides the public domain and deployment result, check `/api/health/ready` there, run the smoke test with the owner, record it in `docs/verification/`, and use the URL for the UX-001 phone and screen-reader checklist.
 
 ## Switching agents
 
