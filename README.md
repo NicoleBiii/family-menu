@@ -104,7 +104,7 @@ Use `codex` instead of `claude` for the other agent. Claims are advisory and loc
 
 ## Deployment status
 
-A Dockerfile has passed the CI image start check. The private GitHub repository is connected to a Railway app service in `staging`, but no successful Railway deployment is verified. Railway no longer accepts `railway.json` for newly created services; configure the pre-deploy migration and readiness check in the service Settings using [deployment setup](docs/DEPLOYMENT.md). The local host has no Docker installation, so the container build is unverified locally.
+A Dockerfile has passed the CI image start check. The private GitHub repository is connected to a Railway app service in `staging`; the owner's service is `Active`, and its public readiness endpoint returned HTTP 200 on 2026-10-01. The product smoke and release identity are still pending ([staging verification](docs/verification/2026-10-01-infra-001-staging.md)). Railway no longer accepts `railway.json` for newly created services; configure the pre-deploy migration and readiness check in the service Settings using [deployment setup](docs/DEPLOYMENT.md). The local host has no Docker installation, so the container build is unverified locally.
 
 Before any cloud release, follow [deployment setup](docs/DEPLOYMENT.md). A workflow file alone does not enable branch protection, secret scanning, or an enforced release gate. The current implementation is a foundation; do not present it as a production-ready household service.
 

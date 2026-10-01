@@ -1,8 +1,10 @@
 # Current State and Handoff
 
-Updated: 2026-09-30 by Codex. Remote: private `github.com/NicoleBiii/family-menu`.
-INFRA-001 PR #10 passed Quality checks and was squash-merged into `main` as `725a397` on 2026-09-28. The owner has since connected the Railway app service to `main` in `staging`; PostgreSQL, deployment and domain status still need verification.
-Latest implementation commit: `725a397`. Railway has a GitHub-connected app service in `staging`, but no successful deployment is verified. The current documentation correction is on `codex/railway-new-service-runbook`. Checkout claim after closeout: none; verify with `npm run handoff:status`.
+Updated: 2026-10-01 by Codex. Remote: private `github.com/NicoleBiii/family-menu`.
+INFRA-001 PR #10 merged as `725a397`; the new-service runbook correction merged in PR #12 as `03a01e6`. The owner reports the Railway app service is `Active` in `staging` at `https://family-menu-staging.up.railway.app`. External checks returned HTTP 200 from `/` and HTTP 200 with `{"status":"ready"}` from `/api/health/ready` on 2026-10-01. Product smoke and deployment identity are pending ([record](verification/2026-10-01-infra-001-staging.md)).
+Latest implementation commit: `725a397`. The current verification record is on `codex/staging-smoke-record`. Checkout claim after closeout: none; verify with `npm run handoff:status`.
+
+The 2026-10-01 documentation-only update checked Prettier and `git diff --check`. The full local `npm run check` was not repeated; PR CI is the merge gate.
 
 ## Completed scope
 
@@ -32,7 +34,7 @@ On the owner's Mac (Node 24.19.0, PostgreSQL 14.18): full `npm run check` passed
 
 On 2026-09-29, `npm ci --offline` and the full `npm run check` passed again on the merged INFRA-001 source plus this documentation update: 68 integration and 46 browser tests. The first check attempt was blocked by sandbox loopback `EPERM`; rerunning with permitted access to the isolated `family_menu_test` database passed. PR #10 Quality checks passed. No successful Railway deploy or staging smoke test is verified.
 
-For the 2026-09-30 Railway runbook correction, Prettier and `git diff --check` passed. No application code changed; the full local `npm run check` was not repeated. The corrected documentation needs PR CI before merge.
+For the 2026-09-30 Railway runbook correction, Prettier and `git diff --check` passed. No application code changed; the full local `npm run check` was not repeated. PR #12 Quality checks passed before merge.
 
 Not verified: the browser AI path with real sign-in and real Gemini; forced membership-removal interleaving; real iPhone HEIC upload; rate limiting (except AI quotas); physical phone; screen reader. Google's provider-denial path is stub-only.
 
@@ -51,8 +53,8 @@ The Mac's project PostgreSQL is listening at 127.0.0.1:55432 (data in ignored `.
 
 ## Next exact work
 
-1. Owner follows the corrected docs/DEPLOYMENT.md runbook: add PostgreSQL; configure Dockerfile, pre-deploy migration, readiness healthcheck and database variable in the **app service**; apply staged changes; generate the domain; then set auth/AI variables and the Supabase redirect URL. The previous runbook incorrectly assumed `railway.json` would configure a new service. Keys go only into Railway variables, never chat.
-2. Once the owner provides the public domain and deployment result, check `/api/health/ready` there, run the smoke test with the owner, record it in `docs/verification/`, and use the URL for the UX-001 phone and screen-reader checklist.
+1. Owner fills the manual smoke rows in `docs/verification/2026-10-01-infra-001-staging.md` or sends their results for Codex to record. Use synthetic data; do not share keys, cookies or invitation tokens. Record deployed commit, Railway deployment ID and pre-deploy migration result from the Railway deployment details.
+2. Investigate any failures, complete the UX-001 real-phone and screen-reader checklist, and update INFRA-001 status only after evidence is recorded.
 
 ## Switching agents
 

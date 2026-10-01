@@ -1,6 +1,6 @@
 # Deployment Setup and Remaining Gates
 
-Status (2026-09-30): the Railway preview has a GitHub-connected app service in the `staging` environment, but no successful deployment has been verified. Owner decisions for the preview: the app on Railway Hobby, PostgreSQL on Railway, Google sign-in through the existing Supabase development project, and AI drafts through a separate Gemini key with a low budget.
+Status (2026-10-01): the Railway preview has an `Active` app service in `staging`, and its public readiness endpoint returns HTTP 200. Owner manual product smoke is pending; see [staging verification](verification/2026-10-01-infra-001-staging.md). Owner decisions for the preview: the app on Railway Hobby, PostgreSQL on Railway, Google sign-in through the existing Supabase development project, and AI drafts through a separate Gemini key with a low budget.
 
 ## Local preview
 
