@@ -1,6 +1,6 @@
 # UI Expansion Proposal — 2026-10-01
 
-Status: **proposed for owner approval**. This document does not authorize implementation or change the confirmed MVP specification. The owner asked to discuss significant changes before they are processed. No feature code or database migration belongs to this design task.
+Status: **approved by the owner for phased implementation on 2026-10-01**. Approval authorizes the specified UI and data changes; it does not establish that they have been implemented or verified. The [MVP specification](../MVP_SPEC.md) records the expanded release target.
 
 ## Context and owner-confirmed direction
 
@@ -15,7 +15,7 @@ The owner passed the six-step Railway staging smoke using desktop Chrome and Chr
 7. Keep Menu for recipe management and use Meals as the categorized browsing and basket entry point.
 8. Shopping history records the purchased ingredient, quantity and time. Increased demand shows only the remaining amount to buy.
 
-These are direction decisions, not approval of the full implementation plan below. The current [MVP specification](../MVP_SPEC.md) defers purchase checkboxes and generated images. Approval would add purchase tracking to scope; generated images remain deferred.
+The owner subsequently approved the full scope and sequence below. The prior no-purchase-checkbox default is superseded; generated images remain deferred.
 
 ## Proposed user experience and acceptance criteria
 
@@ -96,6 +96,6 @@ Proposed implementation order, each on a bounded PR with its own acceptance evid
 5. Free-library chooser and generic invite preview; verify iMessage on a real device.
 6. Repeat end-to-end staging checks in both locales and on a physical phone, then complete UX-001 and REL-001. Reassess the first-release date after the owner approves the expanded scope; no new delivery date is promised here.
 
-## Approval requested
+## Approved boundary
 
-Approve or amend this proposed scope and sequence before implementation. The most consequential choices are category ownership/one-category semantics and shopping purchase reconciliation. All active household members continue to edit the shared menu and one another's pending orders. Wallets, billing, social imports, grocery checkout and meal photos remain deferred.
+Implement and verify the approved scope in bounded phases. The most consequential choices are category ownership/one-category semantics and shopping purchase reconciliation. All active household members continue to edit the shared menu and one another's pending orders. Wallets, billing, social imports, grocery checkout and meal photos remain deferred.

@@ -2,7 +2,7 @@
 
 Updated: 2026-10-01 by Codex. Remote: private `github.com/NicoleBiii/family-menu`.
 INFRA-001 PR #10 merged as `725a397`; the new-service runbook correction merged in PR #12 as `03a01e6`. The owner reports the Railway app service is `Active` in `staging` at `https://family-menu-staging.up.railway.app`. External checks returned HTTP 200 from `/` and HTTP 200 with `{"status":"ready"}` from `/api/health/ready` on 2026-10-01. The owner reports all six product smoke steps passed using desktop Chrome and Chrome on an iPhone 18 Pro Max; 200% zoom and a screen-reader check had no reported problems. The provided runtime log shows Nest listening on port 8080, but it does not establish migration success. Deployment identity, pre-deploy migration evidence and detailed UX checklist coverage remain pending ([record](verification/2026-10-01-infra-001-staging.md)).
-Latest implementation commit: `725a397`. The UX-002 design proposal is on `codex/ux-expansion-proposal`; verify the current checkout claim with `npm run handoff:status`.
+The owner approved UX-002's [UI expansion](proposals/2026-10-01-ui-expansion.md) on 2026-10-01. PR #16 merged the proposal as `13df79f`. The first implementation checkpoint is on `codex/ux-002-phase-1`; verify its latest commit and current claim with Git and `npm run handoff:status`.
 
 The 2026-10-01 documentation-only update checked Prettier and `git diff --check`. The full local `npm run check` was not repeated; PR CI is the merge gate.
 
@@ -16,6 +16,7 @@ The 2026-10-01 documentation-only update checked Prettier and `git diff --check`
 - SHOP-001: shopping demand from pending order snapshots with exact rational arithmetic (rounded up and flagged when inexact), fixed-family unit conversion, separate forms/counts/unquantified lines, combined and by-day views from one read, date-range scope, Shopping page. [ADR 0005](decisions/0005-shopping-list.md).
 - AI-001: durable draft requests with worst-case cost reservations, household/personal/monthly-budget limits under one lock, leased in-process worker with recovery and no blind retries, review/edit/save/discard with idempotent save, Anthropic/DeepSeek/Gemini adapters, a measured three-provider evaluation, and Gemini 3.1 Flash-Lite chosen for now. [ADR 0006](decisions/0006-ai-drafts.md), [record](verification/2026-09-27-ai-001.md).
 - UX-001 (automated part): axe WCAG 2.2 A/AA scans at 0 violations on all main screens, keyboard-only core flow at 360 px with focus never hidden behind the bottom navigation, session-expiry/offline/server-error messages, per-page titles. The real-phone and screen-reader checklist is open ([record](verification/2026-09-27-ux-001.md)).
+- UX-002 in progress: first checkpoint adds sign-out confirmation, desktop photo drag-and-drop, a more visible phone photo button, favicon and Apple touch icon ([record](verification/2026-10-01-ux-002-polish.md)). Localization, categories, basket, shopping history, free-library chooser and generic invite preview remain to be implemented.
 
 ## Confirmed product constraints
 
@@ -54,7 +55,7 @@ The Mac's project PostgreSQL is listening at 127.0.0.1:55432 (data in ignored `.
 ## Next exact work
 
 1. Record the deployed commit, Railway deployment ID and pre-deploy migration result from the Railway deployment details. Keep keys, cookies and invitation tokens out of the record.
-2. Present [the UX-002 proposal](proposals/2026-10-01-ui-expansion.md) for the owner's review and explicit approval or amendment. It incorporates the confirmed basket, shopping-history, locale, category, photo-library and invite-preview choices. Do not begin feature or migration work until approval. After approved changes, complete the remaining detailed UX-001 manual checklist, then proceed to REL-001 recovery, alerts and release checks. INFRA-001 remains Ready for verification until its evidence gaps are closed.
+2. Finish the first UX-002 checkpoint through PR and CI, then implement the approved remaining phases: localization, household categories and AI suggestions, Meals basket, shopping purchase reconciliation/history, free-library chooser and generic invite preview. Preserve all-member editing and existing order snapshots. Complete the detailed UX-001 manual checklist after these changes, then proceed to REL-001 recovery, alerts and release checks. INFRA-001 remains Ready for verification until its evidence gaps are closed.
 
 ## Switching agents
 

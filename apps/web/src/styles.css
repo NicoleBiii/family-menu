@@ -750,6 +750,31 @@ select:focus-visible {
   gap: 4px;
   margin-top: 8px;
 }
+.photo-dropzone {
+  width: 100%;
+  min-height: 84px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 2px dashed #a8b5a0;
+  border-radius: 12px;
+  background: #f3f5ed;
+}
+.photo-dropzone.dragging {
+  border-color: #364f36;
+  background: #e6eedf;
+}
+.photo-drop-hint {
+  color: #5c6557;
+  font-size: 13px;
+}
+.photo-upload-button {
+  margin-top: 0;
+  min-height: 48px;
+  font-size: 14px;
+}
 .file-button {
   cursor: pointer;
 }
@@ -760,6 +785,21 @@ select:focus-visible {
 .file-button.busy {
   opacity: 0.6;
   cursor: progress;
+}
+@media (max-width: 700px), (pointer: coarse) {
+  .photo-dropzone {
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+  .photo-drop-hint {
+    display: none;
+  }
+  .photo-upload-button {
+    width: 100%;
+    justify-content: center;
+  }
 }
 .dialog-description {
   font-size: 14px;

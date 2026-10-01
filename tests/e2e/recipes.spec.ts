@@ -144,13 +144,21 @@ test('a member adds and removes a recipe photo, shown on the card and in the dia
   })
     .png()
     .toBuffer();
-  await dialog
-    .getByLabel('Add photo')
-    .setInputFiles({ name: 'soup.png', mimeType: 'image/png', buffer: photo });
+  await dialog.locator('.photo-dropzone').evaluate((target, base64) => {
+    const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+    const transfer = new DataTransfer();
+    transfer.items.add(new File([bytes], 'soup.png', { type: 'image/png' }));
+    target.dispatchEvent(new DragEvent('dragenter', { bubbles: true, dataTransfer: transfer }));
+    target.dispatchEvent(new DragEvent('drop', { bubbles: true, dataTransfer: transfer }));
+  }, photo.toString('base64'));
   const shown = dialog.getByRole('img', { name: 'Photo of Photo soup' });
   await expect(shown).toBeVisible();
   expect(await shown.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
   await expect(dialog.getByText('Change photo')).toBeVisible();
+  await dialog
+    .getByLabel('Change photo')
+    .setInputFiles({ name: 'soup.png', mimeType: 'image/png', buffer: photo });
+  await expect(shown).toBeVisible();
   expect(await fitsViewport(page)).toBe(true);
 
   await page.keyboard.press('Escape');
