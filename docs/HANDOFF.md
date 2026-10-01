@@ -1,8 +1,8 @@
 # Current State and Handoff
 
 Updated: 2026-10-01 by Codex. Remote: private `github.com/NicoleBiii/family-menu`.
-INFRA-001 PR #10 merged as `725a397`; the new-service runbook correction merged in PR #12 as `03a01e6`. The owner reports the Railway app service is `Active` in `staging` at `https://family-menu-staging.up.railway.app`. External checks returned HTTP 200 from `/` and HTTP 200 with `{"status":"ready"}` from `/api/health/ready` on 2026-10-01. Product smoke and deployment identity are pending ([record](verification/2026-10-01-infra-001-staging.md)).
-Latest implementation commit: `725a397`. The current verification record is on `codex/staging-smoke-record`. Checkout claim after closeout: none; verify with `npm run handoff:status`.
+INFRA-001 PR #10 merged as `725a397`; the new-service runbook correction merged in PR #12 as `03a01e6`. The owner reports the Railway app service is `Active` in `staging` at `https://family-menu-staging.up.railway.app`. External checks returned HTTP 200 from `/` and HTTP 200 with `{"status":"ready"}` from `/api/health/ready` on 2026-10-01. The owner reports all six product smoke steps passed; deployment identity and device/browser details remain pending ([record](verification/2026-10-01-infra-001-staging.md)).
+Latest implementation commit: `725a397`. The owner smoke update is on `codex/staging-smoke-results`; verify the current checkout claim with `npm run handoff:status`.
 
 The 2026-10-01 documentation-only update checked Prettier and `git diff --check`. The full local `npm run check` was not repeated; PR CI is the merge gate.
 
@@ -53,8 +53,8 @@ The Mac's project PostgreSQL is listening at 127.0.0.1:55432 (data in ignored `.
 
 ## Next exact work
 
-1. Owner fills the manual smoke rows in `docs/verification/2026-10-01-infra-001-staging.md` or sends their results for Codex to record. Use synthetic data; do not share keys, cookies or invitation tokens. Record deployed commit, Railway deployment ID and pre-deploy migration result from the Railway deployment details.
-2. Investigate any failures, complete the UX-001 real-phone and screen-reader checklist, and update INFRA-001 status only after evidence is recorded.
+1. Record the device/browser used for the six passed smoke steps, deployed commit, Railway deployment ID and pre-deploy migration result from the Railway deployment details. Keep keys, cookies and invitation tokens out of the record.
+2. Collect the owner's UI change requests while the staging experience is fresh; implement approved bounded UX changes before final regression. Complete the UX-001 real-phone, screen-reader and zoom checklist, then proceed to REL-001 recovery, alerts and release checks. INFRA-001 remains Ready for verification until its evidence gaps are closed.
 
 ## Switching agents
 

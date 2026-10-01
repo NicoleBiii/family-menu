@@ -1,6 +1,6 @@
 # INFRA-001 Staging Verification — 2026-10-01
 
-Status: public readiness verified; owner manual smoke pending. This preview uses synthetic data only.
+Status: public readiness verified; owner reports all six manual smoke steps passed on 2026-10-01. Deployment identity and device/browser details remain pending. This preview uses synthetic data only.
 
 ## Environment and release identity
 
@@ -16,7 +16,7 @@ Status: public readiness verified; owner manual smoke pending. This preview uses
 
 Do not paste variable values, API keys, session cookies, invitation tokens or personal records into this file.
 
-Before the owner smoke, confirm in Railway that the app service has `APP_ORIGIN`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `AI_PROVIDER=gemini`, `GEMINI_API_KEY` and `AI_MONTHLY_BUDGET_USD=2`, and that Supabase allows this origin's `/api/auth/callback`. Record only that each is configured, never its value. These confirmations have not yet been reported.
+The successful sign-in and Gemini smoke imply that the relevant app variables and Supabase callback allow-list were functional during the test. Their exact settings and the `AI_MONTHLY_BUDGET_USD=2` value were not independently inspected. Do not record secret values here.
 
 ## Checks completed
 
@@ -31,18 +31,20 @@ Before the owner smoke, confirm in Railway that the app service has `APP_ORIGIN`
 
 Use Google test accounts and synthetic household/recipe data. Record the date, browser/device, result and a short observation for each row. A screenshot link may be added if it contains no secrets or invitation tokens. Failures remain visible; do not replace them with a later pass without recording the retest.
 
-| Step | Action and expected result                                                                                            | Result  | Date / device / observation |
-| ---- | --------------------------------------------------------------------------------------------------------------------- | ------- | --------------------------- |
-| 1    | Open the public origin on a phone or desktop; the menu loads without an error.                                        | Not run |                             |
-| 2    | Sign in through Google as a test user; create a synthetic household; sign out and sign in again.                      | Not run |                             |
-| 3    | Create and save a manual recipe with measured ingredients; copy and edit a preset; upload a synthetic test photo.     | Not run |                             |
-| 4    | Generate one Gemini draft, review/edit it, explicitly save it, and confirm it appears in the household menu.          | Not run |                             |
-| 5    | Order the recipe for now or later; edit the pending order; confirm combined and by-day shopping demand; complete it.  | Not run |                             |
-| 6    | If a second Google test user is available, invite and join them; confirm they can edit the shared menu/pending order. | Not run |                             |
+The owner marked all six rows Pass in the working tree and confirmed in chat on 2026-10-01 that all tests passed. The device/browser and per-step observations were not provided; the empty observation cells below preserve that limit.
+
+| Step | Action and expected result                                                                                            | Result | Date / device / observation |
+| ---- | --------------------------------------------------------------------------------------------------------------------- | ------ | --------------------------- |
+| 1    | Open the public origin on a phone or desktop; the menu loads without an error.                                        | Pass   |                             |
+| 2    | Sign in through Google as a test user; create a synthetic household; sign out and sign in again.                      | Pass   |                             |
+| 3    | Create and save a manual recipe with measured ingredients; copy and edit a preset; upload a synthetic test photo.     | Pass   |                             |
+| 4    | Generate one Gemini draft, review/edit it, explicitly save it, and confirm it appears in the household menu.          | Pass   |                             |
+| 5    | Order the recipe for now or later; edit the pending order; confirm combined and by-day shopping demand; complete it.  | Pass   |                             |
+| 6    | If a second Google test user is available, invite and join them; confirm they can edit the shared menu/pending order. | Pass   |                             |
 
 The real-phone, screen-reader and 200% zoom checks remain tracked in [UX-001 verification](2026-09-27-ux-001.md). A desktop browser smoke alone does not complete those checks.
 
 ## Outcome and next action
 
-- Staging infrastructure is reachable; product smoke has not yet been reported.
-- After the owner completes the rows, record any failures, deployment identity and migration result, then update INFRA-001 status and the handoff.
+- Staging infrastructure is reachable, and the owner reports the six product smoke steps passed. This report does not establish the remaining real-phone, screen-reader or 200% zoom checks.
+- Record the device/browser, deployed commit, Railway deployment ID and pre-deploy migration result when available. Resolve any later failures without overwriting this first result.
