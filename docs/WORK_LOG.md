@@ -277,3 +277,9 @@ Use dates in YYYY-MM-DD format, with America/Toronto as the reporting timezone. 
 - External `curl` checks on 2026-10-01 returned HTTP 200 and `{"status":"ready"}` from `/api/health/ready` at 17:34 UTC, and HTTP 200 from `/` around 17:35 UTC. These confirm public reachability and database/schema readiness, not sign-in, AI or ordering behavior.
 - Created `docs/verification/2026-10-01-infra-001-staging.md` with these checks and pending owner manual smoke rows. INFRA-001 is ready for verification, not Done; UX-001's phone and screen-reader checklist can now use the preview URL.
 - Verification for this documentation-only update: Prettier check on edited Markdown and `git diff --check`; no application code changed, so the full local `npm run check` was not repeated. Hosted PR CI remains the merge gate.
+
+## 2026-10-01 — Owner staging smoke results
+
+- The owner marked all six staging manual-smoke rows Pass in the working tree and confirmed in chat that all tests passed. Preserved those edits. No device/browser, per-step observations, deployed commit, deployment ID or migration log were provided; the record leaves those fields open.
+- This is owner-reported functional smoke on the HTTPS preview, including Google sign-in, recipes/photo, one Gemini draft, orders/shopping and a second-member collaboration flow. It does not close UX-001's real-phone, screen-reader or zoom checks.
+- The owner has UI feedback to provide. Collect it now and prioritize bounded fixes before release regression. Next release task after UX verification is REL-001 (backups/restore, alert delivery, release identity and spend review).
