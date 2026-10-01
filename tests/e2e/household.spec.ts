@@ -80,6 +80,14 @@ test('an owner creates a household, invites a member who joins, then removes the
   await expect(member.getByText(householdName)).toHaveCount(0);
 
   await member.getByRole('button', { name: 'Sign out' }).click();
+  const signOutDialog = member.getByRole('dialog', { name: 'Sign out?' });
+  await expect(signOutDialog).toBeVisible();
+  await signOutDialog.getByRole('button', { name: 'Stay signed in' }).click();
+  await expect(signOutDialog).not.toBeVisible();
+  await expect(member.getByRole('button', { name: 'Sign out' })).toBeVisible();
+  await expect(member.getByRole('button', { name: 'Sign out' })).toBeFocused();
+  await member.getByRole('button', { name: 'Sign out' }).click();
+  await signOutDialog.getByRole('button', { name: 'Sign out' }).click();
   await expect(member.getByRole('link', { name: 'Sign in with Google' })).toBeVisible();
   await memberContext.close();
 });

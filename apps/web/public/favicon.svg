@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Family Menu">
+  <rect width="64" height="64" rx="15" fill="#364f36"/>
+  <path d="M19 25h26v18a7 7 0 0 1-7 7H26a7 7 0 0 1-7-7V25Z" fill="#fffef7"/>
+  <path d="M17 24h30M25 19h14M32 19v-4" fill="none" stroke="#fffef7" stroke-width="4" stroke-linecap="round"/>
+  <path d="M26 33c2-3 5-3 6 0 2 4 5 4 7 0" fill="none" stroke="#bd7038" stroke-width="3" stroke-linecap="round"/>
+</svg>

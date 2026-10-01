@@ -60,6 +60,9 @@ export function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [activeId, setActiveId] = useState<string | null>(storedActive);
   const [authError, setAuthError] = useState(readAuthError);
+  const signOutDialog = useRef<HTMLDialogElement>(null);
+  const signOutButton = useRef<HTMLButtonElement>(null);
+  const [signingOut, setSigningOut] = useState(false);
   const search = useRef<HTMLInputElement>(null);
   const [orderPrefill, setOrderPrefill] = useState<{ recipeId: string; servings: number } | null>(
     null,
@@ -125,11 +128,16 @@ export function App() {
     if (window.location.pathname !== path) history.pushState(null, '', path);
   }
   async function signOut() {
+    setSigningOut(true);
     try {
       await api('/auth/logout', { method: 'POST' });
-    } finally {
+      signOutDialog.current?.close();
       setCsrfToken('');
       await refreshSession();
+    } catch {
+      setAuthError('Could not sign out. Please try again.');
+    } finally {
+      setSigningOut(false);
     }
   }
   const activeHousehold = session?.authenticated
@@ -154,7 +162,12 @@ export function App() {
               <span className="preview-label" title={session.user.email ?? undefined}>
                 <span /> {activeHousehold ? activeHousehold.name : session.user.displayName}
               </span>
-              <button className="icon-button" aria-label="Sign out" onClick={signOut}>
+              <button
+                ref={signOutButton}
+                className="icon-button"
+                aria-label="Sign out"
+                onClick={() => signOutDialog.current?.showModal()}
+              >
                 <LogOut size={18} />
               </button>
             </>
@@ -169,6 +182,27 @@ export function App() {
           )}
         </div>
       </header>
+      <dialog
+        ref={signOutDialog}
+        aria-labelledby="sign-out-title"
+        aria-describedby="sign-out-description"
+        onClose={() => signOutButton.current?.focus()}
+      >
+        <h2 id="sign-out-title">Sign out?</h2>
+        <p id="sign-out-description">You can sign in again with Google at any time.</p>
+        <div className="form-actions">
+          <button
+            className="text-button"
+            disabled={signingOut}
+            onClick={() => signOutDialog.current?.close()}
+          >
+            Stay signed in
+          </button>
+          <button className="primary-button" disabled={signingOut} onClick={signOut}>
+            {signingOut ? 'Signing out…' : 'Sign out'}
+          </button>
+        </div>
+      </dialog>
       {authError && (
         <div className="alert-banner" role="alert">
           <span>{authError}</span>

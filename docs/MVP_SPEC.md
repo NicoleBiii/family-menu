@@ -1,6 +1,6 @@
 # MVP Specification — Family Menu
 
-Version: 0.1. Date: 2026-09-25. Status: owner-confirmed feature scope with explicitly labeled design defaults.
+Version: 0.2. Original date: 2026-09-25. Expanded scope approved: 2026-10-01. Status: owner-confirmed feature scope with explicitly labeled design defaults.
 
 ## Product outcome
 
@@ -21,6 +21,8 @@ A household can build an editable menu quickly, collaboratively order meals for 
 | Shopping          | Combined pending-order ingredients and grouped day/dish views                                   |
 | Completion        | Manually complete orders; view history                                                          |
 
+The owner approved the [UI expansion](proposals/2026-10-01-ui-expansion.md) on 2026-10-01. It adds English/Simplified Chinese interface switching, one primary category per household dish with AI suggestions that require member confirmation, categorized basket-style ordering, household-shared shopping purchase checks and history, desktop photo drag-and-drop, clearer phone upload, sign-out confirmation, browser branding, a generic invitation preview and a free-library photo chooser. These are first-release targets to be implemented and verified in bounded phases, not claims of existing functionality. The approval supersedes the original English-only and no-persistent-shopping-checks defaults below; automatic generated images remain deferred.
+
 Deferred by owner confirmation: virtual balances and allocations, paid memberships and billing, Instagram/YouTube or arbitrary-link import, grocery app checkout, post-meal photos. Also defer generated images, native mobile apps, offline writes, push notifications, advanced role configuration, pantry inventory, nutrition tracking, and recurrence unless a later scope decision adds them.
 
 Virtual menu prices are playful points with no cash value, purchase, redemption, balance enforcement, or payment integration. Real paid membership, if later introduced, is a separate system from these points.
@@ -29,14 +31,14 @@ Virtual menu prices are playful points with no cash value, purchase, redemption,
 
 These fill implementation gaps; they are recommendations, not additional statements made by the owner.
 
-- Mobile-first English UI; recipe titles, instructions, and notes accept Unicode, including Chinese.
+- Mobile-first English and Simplified Chinese UI; recipe titles, instructions, notes and custom category names remain member-authored Unicode content and are not automatically translated.
 - Each order has one requested meal date/time and multiple items. Any member can create multiple orders, including several on the same date. No weekly recurrence in v1.
 - Household timezone defaults to America/Toronto and is shown when scheduling. Store timestamps with timezone-aware semantics and retain the household's IANA timezone for grouping. Handle ambiguous or nonexistent local times explicitly.
 - All active members can create, read, edit, cancel, or complete pending household orders. Completed and cancelled orders are read-only in v1. Reopening is deferred.
 - A household owner manages invitations and member removal. Ordinary members still have equal menu/order editing rights. Use revocable, expiring invitation links without an email-sending subsystem initially.
 - Model membership as user-to-household relations; a minimal household selector can support switching. Business records always belong to exactly one household.
 - One optional image per dish. Target a small curated seed collection (approximately 12 recipes), with owned or appropriately licensed images and a provenance manifest. Missing images use honest placeholders, not unrelated photographs.
-- No persistent “already purchased” checkboxes in v1: a live demand calculation is simpler to keep correct after order edits. Add purchase tracking only with defined reconciliation behavior.
+- The original no-purchase-checkbox default is superseded by the 2026-10-01 expansion. Preserve live order demand as the source of truth while purchase events record what the household already bought. Added demand shows only the remaining quantity; past purchases never silently satisfy a later independent order.
 - Start with an invite-only beta, roughly 5–10 households. This is a capacity-planning assumption, not observed demand.
 
 ## Recipe and order semantics
@@ -65,6 +67,7 @@ Use idempotency keys for order creation and AI generation. Record created_by, up
 - Do not infer density, substitute ingredients, merge raw and cooked rice, or automatically convert “1 onion” into grams. Preserve incompatible or unknown quantities separately and label them.
 - Calculate shopping quantities deterministically from confirmed order data. AI is not involved in arithmetic or authorization.
 - Recompute after edits, cancellations, or completion. Fetch a consistent database snapshot so totals and grouped rows cannot represent different order revisions. Include a generated-at indicator and refresh on returning to the page; real-time collaborative subscriptions are deferred.
+- The approved shopping expansion overlays household-shared purchase events on this demand. Checked rows move below pending rows; undo/uncheck is possible. Purchase history records ingredient, quantity, time and actor. Reconcile added, edited, cancelled and completed orders without rewriting order snapshots or treating purchase history as pantry inventory.
 
 Example fixture: a two-serving recipe contains 200 g chicken. Ordering three servings requires 300 g. Another order requires 0.2 kg of the same chicken form: combined demand is 500 g. A demand for two whole chicken breasts remains a separate count line unless a verified conversion exists.
 
@@ -96,24 +99,29 @@ Use a compact bottom navigation for Menu, Orders, Shopping, and Household; histo
 
 ## Acceptance and verification matrix
 
-| ID    | Observable behavior                                                                                                                             | Verification                                              |
-| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| AC-01 | A user can sign in with the configured provider, create a household, and join via a valid invite; expired/revoked invites fail                  | Integration plus real-provider staging smoke test         |
-| AC-02 | A member of household A cannot read/change household B's recipes, orders, AI drafts, invites, or private images, even with a valid B identifier | API integration tests with two households                 |
-| AC-03 | Any active member can edit another member's pending order; removed members lose access                                                          | Authorization integration tests                           |
-| AC-04 | Two members editing revision 1 cannot silently overwrite each other: one update succeeds and the stale update receives a conflict               | Real-database concurrency test plus conflict UI check     |
-| AC-05 | Manual and preset recipes can be edited and saved; preset source records remain unchanged                                                       | Integration and browser flow                              |
-| AC-06 | AI output remains a draft until explicitly saved; discard causes no menu change; duplicate save is idempotent                                   | Mock-provider integration and limited real-provider smoke |
-| AC-07 | Duplicate order submission creates exactly one order; cancelling or completing twice causes no duplicate effect                                 | Idempotency and transaction tests                         |
-| AC-08 | A scheduled order appears under the correct household-local date; invalid/ambiguous local times receive explicit treatment                      | Timezone boundary fixtures and mobile check               |
-| AC-09 | The chicken fixture yields 500 g; incompatible count/weight and unquantified lines are not falsely merged                                       | Deterministic unit and integration tests                  |
-| AC-10 | Both shopping views derive the same demand; editing, cancelling, or completing an order changes pending totals correctly                        | API integration plus browser flow                         |
-| AC-11 | Editing/archiving a recipe cannot rewrite an existing order's snapshot or completed history                                                     | Data-integrity integration tests                          |
-| AC-12 | Oversized, unsupported, or cross-household image operations fail; valid images can be viewed only under the intended policy                     | Upload and storage-access integration tests               |
-| AC-13 | Concurrent AI requests cannot exceed configured reservations; exhausted/disabled AI leaves manual entry operational                             | Quota-concurrency and dependency-failure tests            |
-| AC-14 | A user can complete the core workflow at a 360 px viewport and with keyboard navigation without hidden required controls                        | Browser automation and manual accessibility checks        |
-| AC-15 | Staging and production are isolated; release identity, smoke result, alert delivery, and database/file restore evidence are recorded            | Release checklist and recovery drill                      |
+| ID    | Observable behavior                                                                                                                                            | Verification                                              |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| AC-01 | A user can sign in with the configured provider, create a household, and join via a valid invite; expired/revoked invites fail                                 | Integration plus real-provider staging smoke test         |
+| AC-02 | A member of household A cannot read/change household B's recipes, orders, AI drafts, invites, or private images, even with a valid B identifier                | API integration tests with two households                 |
+| AC-03 | Any active member can edit another member's pending order; removed members lose access                                                                         | Authorization integration tests                           |
+| AC-04 | Two members editing revision 1 cannot silently overwrite each other: one update succeeds and the stale update receives a conflict                              | Real-database concurrency test plus conflict UI check     |
+| AC-05 | Manual and preset recipes can be edited and saved; preset source records remain unchanged                                                                      | Integration and browser flow                              |
+| AC-06 | AI output remains a draft until explicitly saved; discard causes no menu change; duplicate save is idempotent                                                  | Mock-provider integration and limited real-provider smoke |
+| AC-07 | Duplicate order submission creates exactly one order; cancelling or completing twice causes no duplicate effect                                                | Idempotency and transaction tests                         |
+| AC-08 | A scheduled order appears under the correct household-local date; invalid/ambiguous local times receive explicit treatment                                     | Timezone boundary fixtures and mobile check               |
+| AC-09 | The chicken fixture yields 500 g; incompatible count/weight and unquantified lines are not falsely merged                                                      | Deterministic unit and integration tests                  |
+| AC-10 | Both shopping views derive the same demand; editing, cancelling, or completing an order changes pending totals correctly                                       | API integration plus browser flow                         |
+| AC-11 | Editing/archiving a recipe cannot rewrite an existing order's snapshot or completed history                                                                    | Data-integrity integration tests                          |
+| AC-12 | Oversized, unsupported, or cross-household image operations fail; valid images can be viewed only under the intended policy                                    | Upload and storage-access integration tests               |
+| AC-13 | Concurrent AI requests cannot exceed configured reservations; exhausted/disabled AI leaves manual entry operational                                            | Quota-concurrency and dependency-failure tests            |
+| AC-14 | A user can complete the core workflow at a 360 px viewport and with keyboard navigation without hidden required controls                                       | Browser automation and manual accessibility checks        |
+| AC-15 | Staging and production are isolated; release identity, smoke result, alert delivery, and database/file restore evidence are recorded                           | Release checklist and recovery drill                      |
+| AC-16 | English and Simplified Chinese interface text, errors, dates and accessibility labels switch without losing a form or basket; recipe content is unchanged      | Browser and manual bilingual checks                       |
+| AC-17 | Categorized Meals browsing adds several dishes to one basket; confirming once creates one order and preserves all-member pending-order editing                 | Browser and real-database order tests                     |
+| AC-18 | A recipe has at most one household category; preset/AI suggestions never create a category without member confirmation or cross household boundaries           | Real-database authorization and AI validation tests       |
+| AC-19 | Household purchase checks/history preserve quantities and actor/time; added demand shows only the remaining amount and closed orders do not cover later orders | Real-database reconciliation and browser tests            |
+| AC-20 | Photo drag/drop and picker share validation; free-library selection preserves provenance; invite previews reveal no household or token data                    | Browser, API isolation and real-device preview checks     |
 
 ## Definition of release-ready
 
-Applicable AC-01–AC-15 checks pass, with evidence. No known unresolved cross-household access or silent data-loss defect is accepted. A real phone test, provider failure test, and restoration into an isolated environment are recorded. Limitations and beta support hours are visible. This does not constitute a security certification or guaranteed availability.
+Applicable AC-01–AC-20 checks pass, with evidence. No known unresolved cross-household access or silent data-loss defect is accepted. A real phone test, provider failure test, and restoration into an isolated environment are recorded. Limitations and beta support hours are visible. This does not constitute a security certification or guaranteed availability.

@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type DragEvent,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import {
   Archive,
   ArchiveRestore,
@@ -522,8 +530,17 @@ function RecipeView({
   photo: { busy: boolean; error: string };
   onPhoto: (recipe: RecipeDetail, file: File | null) => Promise<void>;
 }) {
+  const [dragActive, setDragActive] = useState(false);
+  const dragDepth = useRef(0);
   const content = selected.kind === 'preset' ? selected.preset : selected.recipe;
   const recipe = selected.kind === 'recipe' ? selected.recipe : null;
+  function onPhotoDrag(event: DragEvent<HTMLDivElement>, entering: boolean) {
+    if (!event.dataTransfer.types.includes('Files')) return;
+    event.preventDefault();
+    if (entering) dragDepth.current += 1;
+    else dragDepth.current = Math.max(0, dragDepth.current - 1);
+    setDragActive(dragDepth.current > 0);
+  }
   return (
     <>
       <div className="dialog-header">
@@ -578,21 +595,40 @@ function RecipeView({
       )}
       {recipe && !recipe.archived && (
         <div className="photo-actions">
-          <label className={`text-button file-button${photo.busy ? ' busy' : ''}`}>
-            <Camera size={16} aria-hidden="true" />
-            {photo.busy ? 'Saving photo…' : recipe.imageId ? 'Change photo' : 'Add photo'}
-            <input
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              disabled={photo.busy}
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                event.target.value = '';
-                if (file) void onPhoto(recipe, file);
-              }}
-            />
-          </label>
+          <div
+            className={`photo-dropzone${dragActive ? ' dragging' : ''}`}
+            onDragEnter={(event) => onPhotoDrag(event, true)}
+            onDragLeave={(event) => onPhotoDrag(event, false)}
+            onDragOver={(event) => {
+              if (event.dataTransfer.types.includes('Files')) event.preventDefault();
+            }}
+            onDrop={(event) => {
+              event.preventDefault();
+              dragDepth.current = 0;
+              setDragActive(false);
+              const file = event.dataTransfer.files[0];
+              if (!photo.busy && file) void onPhoto(recipe, file);
+            }}
+          >
+            <span className="photo-drop-hint">Drop a photo here or</span>
+            <label
+              className={`primary-button file-button photo-upload-button${photo.busy ? ' busy' : ''}`}
+            >
+              <Camera size={18} aria-hidden="true" />
+              {photo.busy ? 'Saving photo…' : recipe.imageId ? 'Change photo' : 'Add photo'}
+              <input
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                disabled={photo.busy}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = '';
+                  if (file) void onPhoto(recipe, file);
+                }}
+              />
+            </label>
+          </div>
           {recipe.imageId && (
             <button
               className="text-button"
