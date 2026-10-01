@@ -1,8 +1,8 @@
 # Current State and Handoff
 
 Updated: 2026-10-01 by Codex. Remote: private `github.com/NicoleBiii/family-menu`.
-INFRA-001 PR #10 merged as `725a397`; the new-service runbook correction merged in PR #12 as `03a01e6`. The owner reports the Railway app service is `Active` in `staging` at `https://family-menu-staging.up.railway.app`. External checks returned HTTP 200 from `/` and HTTP 200 with `{"status":"ready"}` from `/api/health/ready` on 2026-10-01. The owner reports all six product smoke steps passed; deployment identity and device/browser details remain pending ([record](verification/2026-10-01-infra-001-staging.md)).
-Latest implementation commit: `725a397`. The owner smoke update is on `codex/staging-smoke-results`; verify the current checkout claim with `npm run handoff:status`.
+INFRA-001 PR #10 merged as `725a397`; the new-service runbook correction merged in PR #12 as `03a01e6`. The owner reports the Railway app service is `Active` in `staging` at `https://family-menu-staging.up.railway.app`. External checks returned HTTP 200 from `/` and HTTP 200 with `{"status":"ready"}` from `/api/health/ready` on 2026-10-01. The owner reports all six product smoke steps passed using desktop Chrome and Chrome on an iPhone 18 Pro Max; 200% zoom and a screen-reader check had no reported problems. The provided runtime log shows Nest listening on port 8080, but it does not establish migration success. Deployment identity, pre-deploy migration evidence and detailed UX checklist coverage remain pending ([record](verification/2026-10-01-infra-001-staging.md)).
+Latest implementation commit: `725a397`. This evidence update is on `codex/staging-device-evidence`; verify the current checkout claim with `npm run handoff:status`.
 
 The 2026-10-01 documentation-only update checked Prettier and `git diff --check`. The full local `npm run check` was not repeated; PR CI is the merge gate.
 
@@ -32,11 +32,11 @@ The 2026-10-01 documentation-only update checked Prettier and `git diff --check`
 
 On the owner's Mac (Node 24.19.0, PostgreSQL 14.18): full `npm run check` passed on `ai-001` — 68 integration tests (PostgreSQL/API, provider stubs and pure calculation) and 46 desktop/mobile browser cases (including axe scans), plus format/lint/types/builds; OpenAPI regenerated. Evidence: [AI-001](verification/2026-09-27-ai-001.md), [UX-001](verification/2026-09-27-ux-001.md), [SHOP-001](verification/2026-09-26-shop-001.md), [ORD-001](verification/2026-09-26-ord-001.md), [REC-001](verification/2026-09-26-rec-001.md), [AUTH-001](verification/2026-09-26-auth-001.md), [provider smoke](verification/2026-09-26-auth-001-provider-smoke.md), [foundation](verification/2026-09-26-foundation.md). Hosted CI results are on the PRs and `main` runs.
 
-On 2026-09-29, `npm ci --offline` and the full `npm run check` passed again on the merged INFRA-001 source plus this documentation update: 68 integration and 46 browser tests. The first check attempt was blocked by sandbox loopback `EPERM`; rerunning with permitted access to the isolated `family_menu_test` database passed. PR #10 Quality checks passed. No successful Railway deploy or staging smoke test is verified.
+On 2026-09-29, `npm ci --offline` and the full `npm run check` passed again on the merged INFRA-001 source: 68 integration and 46 browser tests. The first check attempt was blocked by sandbox loopback `EPERM`; rerunning with permitted access to the isolated `family_menu_test` database passed. PR #10 Quality checks passed. Later staging deployment and smoke evidence is recorded above.
 
 For the 2026-09-30 Railway runbook correction, Prettier and `git diff --check` passed. No application code changed; the full local `npm run check` was not repeated. PR #12 Quality checks passed before merge.
 
-Not verified: the browser AI path with real sign-in and real Gemini; forced membership-removal interleaving; real iPhone HEIC upload; rate limiting (except AI quotas); physical phone; screen reader. Google's provider-denial path is stub-only.
+Not verified independently by Codex: the browser AI path with real sign-in and real Gemini; forced membership-removal interleaving; real iPhone HEIC upload; rate limiting (except AI quotas); detailed real-phone and screen-reader workflow. The owner reports staging smoke, phone Chrome, 200% zoom and a screen-reader check passed; exact UX coverage remains open. Google's provider-denial path is stub-only.
 
 ## Location
 
@@ -53,8 +53,8 @@ The Mac's project PostgreSQL is listening at 127.0.0.1:55432 (data in ignored `.
 
 ## Next exact work
 
-1. Record the device/browser used for the six passed smoke steps, deployed commit, Railway deployment ID and pre-deploy migration result from the Railway deployment details. Keep keys, cookies and invitation tokens out of the record.
-2. Collect the owner's UI change requests while the staging experience is fresh; implement approved bounded UX changes before final regression. Complete the UX-001 real-phone, screen-reader and zoom checklist, then proceed to REL-001 recovery, alerts and release checks. INFRA-001 remains Ready for verification until its evidence gaps are closed.
+1. Record the deployed commit, Railway deployment ID and pre-deploy migration result from the Railway deployment details. Keep keys, cookies and invitation tokens out of the record.
+2. Discuss the owner's proposed bilingual UI, menu-style ordering, categories with AI suggestions, shopping checks/history, photo upload, sign-out confirmation, logo, invitation previews and optional image sourcing. The owner selected a shared order basket, household-shared shopping checks that reopen on added demand, a free photo-library chooser first, UI-only English/Chinese translation for the first phase, one primary category per household recipe, and a generic invitation card that does not expose the household name. Obtain approval before significant scope or data-model changes. Complete the remaining detailed UX-001 manual checklist after changes, then proceed to REL-001 recovery, alerts and release checks. INFRA-001 remains Ready for verification until its evidence gaps are closed.
 
 ## Switching agents
 
