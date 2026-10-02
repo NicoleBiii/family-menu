@@ -46,6 +46,23 @@ test('shopping explains sign-in when signed out and the layout fits the viewport
   );
 });
 
+test('the bottom navigation keeps Chinese labels on one line when zoomed', async ({ page }) => {
+  // 200% zoom on a laptop leaves a viewport just above the phone layout. Wider fonts than the
+  // test browser's must not squeeze the bar into one character per line.
+  await page.setViewportSize({ width: 701, height: 500 });
+  await page.goto('/meals');
+  await page.getByRole('button', { name: '简体中文' }).click();
+  await page.addStyleTag({ content: '.main-nav button { letter-spacing: 6px; }' });
+  const nav = page.getByRole('navigation', { name: '主导航' });
+  for (const name of ['订单', '购物清单', '家庭']) {
+    const label = nav.getByRole('button', { name }).locator('span');
+    const box = await label.boundingBox();
+    expect(box!.height, `${name} stays on one line`).toBeLessThan(25);
+  }
+  const bar = await nav.boundingBox();
+  expect(Math.abs(bar!.x - (701 - bar!.x - bar!.width))).toBeLessThan(2);
+});
+
 test('API errors stay JSON instead of returning the application shell', async ({ request }) => {
   const response = await request.get('/api/missing', { headers: { Accept: 'text/html' } });
   expect(response.status()).toBe(404);

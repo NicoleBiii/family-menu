@@ -401,8 +401,13 @@ h3 {
 .main-nav {
   position: fixed;
   bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  /* Centred without left: 50%, which would cap the bar at half the viewport and, at 200% zoom,
+     wrap Chinese labels one character per line. */
+  left: 0;
+  right: 0;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  margin-inline: auto;
   z-index: 5;
   display: flex;
   gap: 6px;
@@ -422,6 +427,7 @@ h3 {
   border-radius: 12px;
   min-height: 44px;
   font-size: 12px;
+  white-space: nowrap;
 }
 .main-nav button[aria-current] {
   background: #e9eddf;
@@ -1219,6 +1225,7 @@ dialog h3 {
   .main-nav {
     bottom: 0;
     width: 100%;
+    max-width: none;
     border-radius: 18px 18px 0 0;
     justify-content: space-around;
     padding: 7px 8px max(10px, env(safe-area-inset-bottom));
