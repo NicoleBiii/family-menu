@@ -1534,3 +1534,35 @@ html:has(.basket-bar) {
     bottom: 92px;
   }
 }
+
+/* Shared shopping checks (UX-002 phase 4) */
+.check-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  cursor: pointer;
+}
+.check-line input[type='checkbox'] {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: 2px 0 0;
+  accent-color: #364f36;
+  cursor: pointer;
+}
+.block {
+  display: block;
+}
+.shopping-list li.checked strong,
+.shopping-list li.checked .shopping-amounts {
+  color: #5b6b5c;
+  text-decoration: line-through;
+}
+.shopping-list li.undone {
+  opacity: 0.6;
+}
+.shopping-subheading {
+  margin: 24px 0 10px;
+  font-size: 18px;
+}

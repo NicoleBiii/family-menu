@@ -357,11 +357,45 @@ export interface ShoppingEntry {
   lineCount: number;
 }
 
+/** One checkable line: an ingredient, form and unit family (ADR 0009). */
+export interface ChecklistLine {
+  lineId: string;
+  key: string;
+  name: string;
+  form: string | null;
+  family: string;
+  unquantified: boolean;
+  notes: string[];
+  dishes: string[];
+  state: 'open' | 'bought';
+  toBuy: ShoppingAmount | null;
+  bought: ShoppingAmount | null;
+  partlyBought: boolean;
+  /** What the member saw; a check with an outdated token is refused. */
+  token: string;
+  /** Active purchases covering this line's pending demand, newest first. */
+  purchases: { id: string; by: string; at: string }[];
+}
+
+export interface Purchase {
+  id: string;
+  name: string;
+  form: string | null;
+  family: string;
+  unquantified: boolean;
+  amount: ShoppingAmount | null;
+  purchasedAt: string;
+  purchasedBy: string;
+  undoneAt: string | null;
+  undoneBy: string | null;
+}
+
 export interface ShoppingList {
   scope: { from: string | null; to: string | null };
   generatedAt: string;
   orderCount: number;
   combined: ShoppingEntry[];
+  checklist: ChecklistLine[];
   grouped: {
     mealDate: string;
     orders: {

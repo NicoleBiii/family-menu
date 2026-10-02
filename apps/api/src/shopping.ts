@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 /**
  * Deterministic shopping-list arithmetic over order snapshots. No floating point: quantities
  * are exact rationals (BigInt numerator/denominator) until display. Only fixed, exact unit
@@ -254,4 +256,199 @@ export function buildShoppingList(rows: DemandRow[]) {
       orders: [...orders.values()],
     })),
   };
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Shared shopping checks (ADR 0009). A checkable line is one ingredient, one normalized form and
+ * one unit family (or "unquantified"). Purchases are allocated to the order items they covered,
+ * so remaining = Σ max(0, required − covered) per item: later demand reappears, closed orders
+ * leave the demand, and a spare amount on one order never covers another.
+ * ------------------------------------------------------------------------------------------- */
+
+export const UNQUANTIFIED = 'unquantified';
+
+export interface LineIdentity {
+  key: string;
+  formKey: string;
+  family: string;
+}
+
+/** Opaque, URL-safe line id; the parts are validated again when it is parsed. */
+export function lineIdOf(line: LineIdentity) {
+  return Buffer.from(JSON.stringify([line.key, line.formKey, line.family])).toString('base64url');
+}
+
+export function parseLineId(value: unknown): LineIdentity | null {
+  if (typeof value !== 'string' || value.length > 400) return null;
+  try {
+    const parts = JSON.parse(Buffer.from(value, 'base64url').toString('utf8')) as unknown;
+    if (!Array.isArray(parts) || parts.length !== 3) return null;
+    const [key, formKey, family] = parts as unknown[];
+    if (
+      typeof key !== 'string' ||
+      typeof formKey !== 'string' ||
+      typeof family !== 'string' ||
+      !key ||
+      key.length > 100 ||
+      formKey.length > 60 ||
+      !family ||
+      family.length > 40
+    ) {
+      return null;
+    }
+    return { key, formKey, family };
+  } catch {
+    return null;
+  }
+}
+
+export interface AllocationRow extends LineIdentity {
+  purchaseId: string;
+  itemId: string;
+  /** Exact amount in the family's base unit; null for unquantified lines. */
+  quantity: Rational | null;
+  purchasedBy: string;
+  purchasedAt: Date;
+}
+
+interface ItemShare {
+  required: Rational;
+  covered: Rational;
+  /** Unquantified lines: whether an active purchase covered this item. */
+  coveredFlag: boolean;
+}
+
+const ZERO = rational(0n);
+const isPositive = (value: Rational) => value.n > 0n;
+const subtract = (a: Rational, b: Rational) => add(a, rational(-b.n, b.d));
+const min = (a: Rational, b: Rational) => (subtract(a, b).n <= 0n ? a : b);
+
+export function amountOf(line: SnapshotLine, servings: number, recipeServings: number) {
+  const value = scaled(line, servings, recipeServings);
+  if (value === null) return { family: UNQUANTIFIED, base: null };
+  const { family, factor } = familyOf(line.unit);
+  return { family, base: multiply(value, rational(factor)) };
+}
+
+/**
+ * The checklist for the given pending demand and the active (not undone) allocations to it.
+ * `outstanding` lists, per order item, what a check of the line would allocate now.
+ */
+export function buildChecklist(rows: DemandRow[], allocations: AllocationRow[]) {
+  interface Line extends LineIdentity {
+    name: string;
+    form: string | null;
+    notes: Set<string>;
+    dishes: Set<string>;
+    items: Map<string, ItemShare>;
+    purchases: Map<string, { id: string; by: string; at: Date }>;
+  }
+  const lines = new Map<string, Line>();
+  for (const row of rows) {
+    for (const ingredient of row.ingredients) {
+      const formKey = normalizeForm(ingredient.form) ?? '';
+      const { family, base } = amountOf(ingredient, row.servings, row.recipeServings);
+      const identity = { key: ingredient.key, formKey, family };
+      const id = lineIdOf(identity);
+      const line = lines.get(id) ?? {
+        ...identity,
+        name: ingredient.name,
+        form: ingredient.form,
+        notes: new Set<string>(),
+        dishes: new Set<string>(),
+        items: new Map<string, ItemShare>(),
+        purchases: new Map(),
+      };
+      lines.set(id, line);
+      line.dishes.add(row.recipeName);
+      if (base === null && ingredient.note) line.notes.add(ingredient.note);
+      const share = line.items.get(row.itemId) ?? {
+        required: ZERO,
+        covered: ZERO,
+        coveredFlag: false,
+      };
+      // The same ingredient twice in one dish adds up within that dish.
+      share.required = base === null ? share.required : add(share.required, base);
+      line.items.set(row.itemId, share);
+    }
+  }
+  for (const allocation of allocations) {
+    const line = lines.get(lineIdOf(allocation));
+    const share = line?.items.get(allocation.itemId);
+    if (!line || !share) continue;
+    if (allocation.quantity === null) share.coveredFlag = true;
+    else share.covered = add(share.covered, allocation.quantity);
+    line.purchases.set(allocation.purchaseId, {
+      id: allocation.purchaseId,
+      by: allocation.purchasedBy,
+      at: allocation.purchasedAt,
+    });
+  }
+
+  return [...lines.entries()]
+    .map(([lineId, line]) => {
+      const unquantified = line.family === UNQUANTIFIED;
+      const outstanding: { itemId: string; quantity: Rational | null }[] = [];
+      let toBuy = ZERO;
+      let bought = ZERO;
+      let openItems = 0;
+      let coveredItems = 0;
+      for (const [itemId, share] of line.items) {
+        if (unquantified) {
+          if (share.coveredFlag) coveredItems += 1;
+          else {
+            openItems += 1;
+            outstanding.push({ itemId, quantity: null });
+          }
+          continue;
+        }
+        const remaining = subtract(share.required, share.covered);
+        if (isPositive(remaining)) {
+          toBuy = add(toBuy, remaining);
+          outstanding.push({ itemId, quantity: remaining });
+        }
+        bought = add(bought, min(share.covered, share.required));
+      }
+      const open = unquantified ? openItems > 0 : isPositive(toBuy);
+      const anyBought = unquantified ? coveredItems > 0 : isPositive(bought);
+      // Digest of what a check would allocate; a different list cannot be checked by mistake.
+      const token = createHash('sha256')
+        .update(
+          JSON.stringify(
+            outstanding
+              .map(({ itemId, quantity }) => [
+                itemId,
+                quantity ? `${quantity.n}/${quantity.d}` : '*',
+              ])
+              .sort(),
+          ),
+        )
+        .digest('base64url')
+        .slice(0, 22);
+      return {
+        lineId,
+        key: line.key,
+        name: line.name,
+        form: line.form,
+        family: line.family,
+        unquantified,
+        notes: [...line.notes],
+        dishes: [...line.dishes].sort(),
+        state: open ? ('open' as const) : ('bought' as const),
+        toBuy: !unquantified && open ? present(toBuy, line.family) : null,
+        bought: !unquantified && anyBought ? present(bought, line.family) : null,
+        partlyBought: open && anyBought,
+        token,
+        purchases: [...line.purchases.values()].sort((a, b) => b.at.getTime() - a.at.getTime()),
+        outstanding,
+        total: unquantified ? null : toBuy,
+      };
+    })
+    .sort(
+      (a, b) =>
+        Number(a.state === 'bought') - Number(b.state === 'bought') ||
+        a.key.localeCompare(b.key, 'en') ||
+        (a.form ?? '').localeCompare(b.form ?? '', 'en') ||
+        a.family.localeCompare(b.family, 'en'),
+    );
 }

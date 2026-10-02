@@ -172,11 +172,35 @@ interface Database {
     id: Generated<string>;
     household_id: string;
     actor_id: string;
-    entity_type: 'meal_order';
+    entity_type: 'meal_order' | 'shopping_purchase';
     entity_id: string;
-    action: 'create' | 'update' | 'complete' | 'cancel';
+    action: 'create' | 'update' | 'complete' | 'cancel' | 'check' | 'undo';
     revision: number;
     created_at: Generated<Date>;
+  };
+  'app.shopping_purchases': {
+    id: Generated<string>;
+    household_id: string;
+    ingredient_key: string;
+    form_key: string;
+    family: string;
+    name: string;
+    form: string | null;
+    /** bigint: read as a string by node-postgres. */
+    quantity_num: string | null;
+    quantity_den: string | null;
+    request_id: string;
+    created_by: string;
+    created_at: Generated<Date>;
+    undone_by: string | null;
+    undone_at: Date | null;
+  };
+  'app.shopping_allocations': {
+    household_id: string;
+    purchase_id: string;
+    order_item_id: string;
+    quantity_num: string | null;
+    quantity_den: string | null;
   };
 }
 
@@ -215,7 +239,9 @@ export class DatabaseService implements OnModuleDestroy {
         and to_regclass('app.meal_orders') is not null
         and to_regclass('app.meal_order_items') is not null
         and to_regclass('app.audit_events') is not null
-        and to_regclass('app.ai_draft_requests') is not null as ready
+        and to_regclass('app.ai_draft_requests') is not null
+        and to_regclass('app.recipe_categories') is not null
+        and to_regclass('app.shopping_purchases') is not null as ready
     `.execute(this.db);
     return result.rows[0]?.ready === true;
   }

@@ -8,7 +8,9 @@ import {
   formatIngredient,
   localToday,
   signInUrl,
+  type ChecklistLine,
   type HouseholdSummary,
+  type Purchase,
   type Session,
   type ShoppingList,
 } from './api';
@@ -23,29 +25,83 @@ interface Props {
 
 /**
  * What the household needs for its pending meal orders. Both views come from one server
- * response, so they always describe the same orders.
+ * response, so they always describe the same orders. Checks are shared by the household and
+ * reconciled against the orders they covered (ADR 0009): only later demand returns.
  */
 export function ShoppingPage({ session, household, onGoMeals, onGoHousehold }: Props) {
   const { language, t, apiError } = useI18n();
-  const [view, setView] = useState<'combined' | 'grouped'>('combined');
+  const [view, setView] = useState<'combined' | 'grouped' | 'history'>('combined');
   const [range, setRange] = useState(false);
   const [from, setFrom] = useState(() => (household ? localToday(household.timezone) : ''));
   const [to, setTo] = useState(() => (household ? localToday(household.timezone, 6) : ''));
   const [list, setList] = useState<ShoppingList | null>(null);
-  const [error, setError] = useState<ApiError | 'load' | null>(null);
+  const [error, setError] = useState<ApiError | 'load' | 'update' | null>(null);
+  const [history, setHistory] = useState<Purchase[] | null>(null);
+  const [busyLine, setBusyLine] = useState<string | null>(null);
   const householdId = household?.id;
 
-  const load = useCallback(async () => {
-    if (!householdId) return;
-    if (range && (!from || !to)) return;
+  /** `keepError` keeps a check's error visible while the list is refreshed after it. */
+  const load = useCallback(
+    async (keepError = false) => {
+      if (!householdId) return;
+      if (range && (!from || !to)) return;
+      if (!keepError) setError(null);
+      try {
+        const query = range ? `?from=${from}&to=${to}` : '';
+        const [nextList, nextHistory] = await Promise.all([
+          api<ShoppingList>(`/households/${householdId}/shopping${query}`),
+          view === 'history'
+            ? api<Purchase[]>(`/households/${householdId}/shopping/purchases`)
+            : Promise.resolve(null),
+        ]);
+        setList(nextList);
+        if (nextHistory) setHistory(nextHistory);
+      } catch (caught) {
+        setError(caught instanceof ApiError ? caught : 'load');
+      }
+    },
+    [householdId, range, from, to, view],
+  );
+
+  /** Records that the member bought what this line showed, for the meals in scope. */
+  async function check(line: ChecklistLine) {
+    setBusyLine(line.lineId);
     setError(null);
     try {
-      const query = range ? `?from=${from}&to=${to}` : '';
-      setList(await api<ShoppingList>(`/households/${householdId}/shopping${query}`));
+      await api(`/households/${householdId}/shopping/purchases`, {
+        method: 'POST',
+        body: {
+          requestId: crypto.randomUUID(),
+          lineId: line.lineId,
+          token: line.token,
+          ...(range ? { from, to } : {}),
+        },
+      });
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught : 'load');
+      // Another member checked it or an order changed: show the current list instead.
+      setError(caught instanceof ApiError ? caught : 'update');
+    } finally {
+      setBusyLine(null);
+      await load(true);
     }
-  }, [householdId, range, from, to]);
+  }
+  /** Unchecking voids the purchases that cover this line; they stay in history. */
+  async function uncheck(line: ChecklistLine) {
+    setBusyLine(line.lineId);
+    setError(null);
+    try {
+      for (const purchase of line.purchases) {
+        await api(`/households/${householdId}/shopping/purchases/${purchase.id}/undo`, {
+          method: 'POST',
+        });
+      }
+    } catch (caught) {
+      setError(caught instanceof ApiError ? caught : 'update');
+    } finally {
+      setBusyLine(null);
+      await load(true);
+    }
+  }
   useEffect(() => {
     void load();
   }, [load]);
@@ -78,14 +134,67 @@ export function ShoppingPage({ session, household, onGoMeals, onGoHousehold }: P
     );
   }
 
-  const generated = list
-    ? new Intl.DateTimeFormat(language === 'zh' ? 'zh-CN' : 'en', {
-        timeZone: household.timezone,
-        hour: '2-digit',
-        minute: '2-digit',
-        hourCycle: 'h23',
-      }).format(new Date(list.generatedAt))
-    : '';
+  const clock = (value: string, withDate = false) =>
+    new Intl.DateTimeFormat(language === 'zh' ? 'zh-CN' : 'en', {
+      timeZone: household.timezone,
+      ...(withDate ? { month: 'short', day: 'numeric' } : {}),
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).format(new Date(value));
+  const generated = list ? clock(list.generatedAt) : '';
+  const lineName = (line: { name: string; form: string | null }) =>
+    line.form ? `${line.name}, ${line.form}` : line.name;
+  const open = list?.checklist.filter((line) => line.state === 'open') ?? [];
+  const bought = list?.checklist.filter((line) => line.state === 'bought') ?? [];
+  const lineAmount = (line: ChecklistLine) =>
+    line.unquantified
+      ? line.notes.join(', ') || t('shopping.amountUnknown')
+      : line.toBuy
+        ? formatAmount(line.toBuy, language)
+        : line.bought
+          ? formatAmount(line.bought, language)
+          : '';
+  const renderLine = (line: ChecklistLine) => {
+    const isBought = line.state === 'bought';
+    const latest = line.purchases[0];
+    return (
+      <li key={line.lineId} className={isBought ? 'checked' : undefined}>
+        <label className="check-line">
+          <input
+            type="checkbox"
+            // Shows the member's choice while it is saved; the reload then confirms it.
+            checked={busyLine === line.lineId ? !isBought : isBought}
+            disabled={busyLine === line.lineId}
+            aria-label={t(isBought ? 'shopping.markNotBought' : 'shopping.markBought', {
+              name: lineName(line),
+              amount: lineAmount(line),
+            })}
+            onChange={() => (isBought ? uncheck(line) : check(line))}
+          />
+          <span>
+            <strong>{line.name}</strong>
+            {line.form && <span className="muted">, {line.form}</span>}
+            <span className="muted small block">
+              {isBought && latest
+                ? t('shopping.boughtBy', { name: latest.by, time: clock(latest.at, true) })
+                : t('shopping.for', { dishes: line.dishes.join(', ') })}
+            </span>
+            {line.partlyBought && (
+              <span className="muted small block">
+                {line.bought
+                  ? t('shopping.alreadyBought', { amount: formatAmount(line.bought, language) })
+                  : t('shopping.alreadyBoughtSome')}
+              </span>
+            )}
+          </span>
+        </label>
+        <div className="shopping-amounts">
+          <span className={line.unquantified ? 'muted' : undefined}>{lineAmount(line)}</span>
+        </div>
+      </li>
+    );
+  };
 
   return (
     <div className="orders-layout">
@@ -120,6 +229,9 @@ export function ShoppingPage({ session, household, onGoMeals, onGoHousehold }: P
           <button aria-pressed={view === 'grouped'} onClick={() => setView('grouped')}>
             {t('shopping.byDay')}
           </button>
+          <button aria-pressed={view === 'history'} onClick={() => setView('history')}>
+            {t('shopping.history')}
+          </button>
         </div>
         <div className="menu-actions">
           <span className="muted" role="status">
@@ -130,17 +242,57 @@ export function ShoppingPage({ session, household, onGoMeals, onGoHousehold }: P
                 })
               : ''}
           </span>
-          <button className="icon-button" aria-label={t('shopping.refresh')} onClick={load}>
+          <button className="icon-button" aria-label={t('shopping.refresh')} onClick={() => load()}>
             <RefreshCw size={18} />
           </button>
         </div>
       </div>
       {error && (
         <p className="form-error" role="alert">
-          {error instanceof ApiError ? apiError(error) : t('shopping.loadFailed')}
+          {error instanceof ApiError
+            ? apiError(error)
+            : t(error === 'load' ? 'shopping.loadFailed' : 'shopping.updateFailed')}
         </p>
       )}
-      {list === null ? (
+      {view === 'history' ? (
+        history === null ? (
+          <p role="status">{t('shopping.adding')}</p>
+        ) : history.length === 0 ? (
+          <div className="empty-state">
+            <ShoppingBasket size={32} />
+            <h2>{t('shopping.noHistory')}</h2>
+            <p>{t('shopping.historyHint')}</p>
+          </div>
+        ) : (
+          <ul className="shopping-list history-list" aria-label={t('shopping.history')}>
+            {history.map((purchase) => (
+              <li key={purchase.id} className={purchase.undoneAt ? 'undone' : undefined}>
+                <div>
+                  <strong>{lineName(purchase)}</strong>
+                  <p className="muted small">
+                    {t('shopping.boughtBy', {
+                      name: purchase.purchasedBy,
+                      time: clock(purchase.purchasedAt, true),
+                    })}
+                    {purchase.undoneAt &&
+                      t('shopping.undoneBy', {
+                        name: purchase.undoneBy ?? '',
+                        time: clock(purchase.undoneAt, true),
+                      })}
+                  </p>
+                </div>
+                <div className="shopping-amounts">
+                  <span>
+                    {purchase.amount
+                      ? formatAmount(purchase.amount, language)
+                      : t('shopping.unquantifiedBought')}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )
+      ) : list === null ? (
         <p role="status">{t('shopping.adding')}</p>
       ) : list.orderCount === 0 ? (
         <div className="empty-state">
@@ -152,32 +304,23 @@ export function ShoppingPage({ session, household, onGoMeals, onGoHousehold }: P
           </button>
         </div>
       ) : view === 'combined' ? (
-        <ul className="shopping-list" aria-label={t('shopping.combinedList')}>
-          {list.combined.map((entry) => (
-            <li key={`${entry.key}|${entry.form ?? ''}`}>
-              <div>
-                <strong>{entry.name}</strong>
-                {entry.form && <span className="muted">, {entry.form}</span>}
-                <p className="muted small">
-                  {t('shopping.for', { dishes: entry.dishes.join(', ') })}
-                </p>
-              </div>
-              <div className="shopping-amounts">
-                {entry.amounts.map((amount) => (
-                  <span key={`${amount.unit}`}>{formatAmount(amount, language)}</span>
-                ))}
-                {entry.unquantified.length > 0 && (
-                  <span className="muted">
-                    {entry.amounts.length > 0 ? '+ ' : ''}
-                    {entry.unquantified
-                      .map((note) => note ?? t('shopping.amountUnknown'))
-                      .join(', ')}
-                  </span>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
+        <>
+          {open.length > 0 ? (
+            <ul className="shopping-list" aria-label={t('shopping.combinedList')}>
+              {open.map(renderLine)}
+            </ul>
+          ) : (
+            <p className="notice">{t('shopping.allBought')}</p>
+          )}
+          {bought.length > 0 && (
+            <>
+              <h2 className="shopping-subheading">{t('shopping.boughtHeading')}</h2>
+              <ul className="shopping-list" aria-label={t('shopping.boughtList')}>
+                {bought.map(renderLine)}
+              </ul>
+            </>
+          )}
+        </>
       ) : (
         list.grouped.map((group) => (
           <section
@@ -221,6 +364,7 @@ export function ShoppingPage({ session, household, onGoMeals, onGoHousehold }: P
         ))
       )}
       {list &&
+        view !== 'history' &&
         list.combined.some((entry) => entry.amounts.some((amount) => amount.approximate)) && (
           <p className="sample-note">{t('shopping.approximate')}</p>
         )}

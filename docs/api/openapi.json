@@ -2039,10 +2039,178 @@
         ],
         "responses": {
           "200": {
-            "description": "Ingredient demand of pending orders (all by default, including overdue ones): a combined list and the same demand grouped by meal date and order. Amounts are exact decimals; values that need rounding are rounded up and flagged approximate."
+            "description": "Ingredient demand of pending orders (all by default, including overdue ones): a combined list and the same demand grouped by meal date and order. Amounts are exact decimals; values that need rounding are rounded up and flagged approximate. `checklist` splits the combined demand into checkable lines (ingredient, form, unit family) with what is still to buy and what members already bought (ADR 0009)."
           },
           "400": {
             "description": "Invalid date range."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Not found, or the caller is not a member of the household."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Shopping"
+        ]
+      }
+    },
+    "/api/households/{householdId}/shopping/purchases": {
+      "get": {
+        "operationId": "ShoppingController_purchases",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The household's latest 100 purchases, newest first, including undone ones."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Not found, or the caller is not a member of the household."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Shopping"
+        ]
+      },
+      "post": {
+        "operationId": "ShoppingController_purchase",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "Required on state-changing requests; returned by GET /api/auth/session.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "requestId",
+                  "lineId",
+                  "token"
+                ],
+                "properties": {
+                  "requestId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Client-generated per check; retrying with the same id records one purchase."
+                  },
+                  "lineId": {
+                    "type": "string",
+                    "description": "From the checklist line."
+                  },
+                  "token": {
+                    "type": "string",
+                    "description": "From the checklist line the member saw."
+                  },
+                  "from": {
+                    "type": "string",
+                    "format": "date",
+                    "description": "Scope used for the list."
+                  },
+                  "to": {
+                    "type": "string",
+                    "format": "date"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The purchase: the line’s remaining amount, allocated to the order items in scope."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Not found, or the caller is not a member of the household."
+          },
+          "409": {
+            "description": "code shopping_changed: the line changed since it was loaded; nothing recorded."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Shopping"
+        ]
+      }
+    },
+    "/api/households/{householdId}/shopping/purchases/{purchaseId}/undo": {
+      "post": {
+        "operationId": "ShoppingController_undo",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "purchaseId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "Required on state-changing requests; returned by GET /api/auth/session.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The purchase, now undone; repeating has no further effect."
           },
           "401": {
             "description": "No valid session."

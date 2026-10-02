@@ -20,6 +20,6 @@ Date: 2026-09-26. Status: implemented and locally verified (SHOP-001).
 ## Consequences and limits
 
 - AC-09 (chicken fixture = 500 g; counts and unquantified lines separate) and AC-10 (same demand in both views; edits, cancellation and completion change totals) are covered by pure-calculation tests, API tests and a browser flow.
-- Purchase checkboxes and pantry tracking remain deferred (LATER-007).
+- Purchase checkboxes and pantry tracking remain deferred (LATER-007). _Superseded for checkboxes on 2026-10-02 by [ADR 0009](0009-shopping-purchases.md): shared checks and purchase history; pantry tracking stays deferred._
 - Spoon totals that are not whole tablespoons stay in teaspoons (e.g. 23 tsp); mixed-unit display ("7 tbsp 2 tsp") is not implemented.
 - The ingredient key is a normalized name, so "chicken breast" and "chicken breasts" are different ingredients. Synonym handling is not implemented.
