@@ -1,8 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// UX-002 phase 3 browser flows (proposal §2): Meals browses dishes by category and collects
-// them in a basket kept in this browser session; one Place order creates exactly one order,
-// and emptying the basket creates none.
+// UX-002 phase 3 and UX-003 browser flows: Home lists dishes by category beside a category
+// rail and collects them in a basket kept in this browser session; a separate confirmation page
+// places exactly one order, and emptying the basket creates none.
 
 function unique(label: string) {
   return `${label} ${test.info().project.name} ${Date.now()} ${Math.random().toString(36).slice(2, 7)}`;
@@ -42,16 +42,13 @@ async function setUp(page: Page) {
   }
   const orderCount = async () =>
     (await (await page.request.get(`/api/households/${householdId}/orders`)).json()).length;
-  await page.getByRole('navigation').getByRole('button', { name: 'Meals' }).click();
+  await page.getByRole('link', { name: 'Family Menu home' }).click();
   return { orderCount };
 }
 
 test('dishes are collected by category and placed as one order', async ({ page }) => {
   const { orderCount } = await setUp(page);
-  await expect(page.getByRole('button', { name: 'Order dishes', exact: true })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
+  await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('heading', { name: 'Soups' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Uncategorised' })).toBeVisible();
 
@@ -66,23 +63,25 @@ test('dishes are collected by category and placed as one order', async ({ page }
   }
   await expect(page.getByRole('button', { name: 'Add Lentil soup to the basket' })).toBeVisible();
   await expect(page.locator('.basket-bar')).toContainText('2 dishes · 4 servings · 10 pts');
-  await expect(page.getByRole('button', { name: 'Order dishes (2)' })).toBeVisible();
+  await expect(page.locator('.basket-count')).toHaveText('4');
 
-  // Search and category filters only change what is shown, not the basket.
+  // Search only changes what is shown, not the basket; the rail jumps to a category.
   await page.getByRole('textbox', { name: 'Search dishes' }).fill('lentil');
   await expect(page.getByRole('button', { name: /Miso soup/ })).toHaveCount(0);
   await page.getByRole('textbox', { name: 'Search dishes' }).fill('');
-  await page
-    .getByRole('group', { name: 'Filter by category' })
-    .getByRole('button', { name: 'Uncategorised' })
-    .click();
-  await expect(page.getByRole('heading', { name: 'Soups' })).toBeHidden();
+  const rail = page.getByRole('navigation', { name: 'Categories' });
+  await expect(rail.getByRole('link')).toHaveText(['Soups2', 'Uncategorised1']);
+  await rail.getByRole('link', { name: 'Uncategorised' }).click();
+  await expect(page.getByRole('heading', { name: 'Uncategorised' })).toBeInViewport();
   await expect(page.locator('.basket-bar')).toContainText('2 dishes');
 
   // The basket survives going to another page, switching language and reloading.
-  await page.getByRole('navigation').getByRole('button', { name: 'Menu' }).click();
+  await page
+    .getByRole('navigation', { name: 'Main navigation' })
+    .getByRole('button', { name: 'Shopping' })
+    .click();
   await page.getByRole('button', { name: '简体中文' }).click();
-  await page.getByRole('navigation').getByRole('button', { name: '点单' }).click();
+  await page.getByRole('link', { name: '家庭菜单首页' }).click();
   await expect(page.locator('.basket-bar')).toContainText('2 道菜 · 4 份 · 10 积分');
   await page.getByRole('button', { name: 'English' }).click();
   await page.reload();
@@ -90,12 +89,20 @@ test('dishes are collected by category and placed as one order', async ({ page }
   expect(await orderCount()).toBe(0);
 
   await page.getByRole('button', { name: 'Review basket' }).click();
+  await expect(page).toHaveURL(/\/checkout$/);
+  await expect(page.getByRole('heading', { name: 'Confirm your order', level: 1 })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'New meal order' })).toBeFocused();
   await expect(page.getByRole('spinbutton', { name: 'Servings for Miso soup' })).toHaveValue('3');
   await page.getByRole('spinbutton', { name: 'Servings for Garlic bread' }).fill('2');
   await page.getByRole('textbox', { name: 'Notes (optional)' }).fill('Dinner for the cousins');
-  // Going back for another dish keeps the review edits.
-  await page.getByRole('button', { name: 'Add more dishes' }).click();
+  // Going back for another dish (also with the browser's Back) keeps the review edits.
+  await page.goBack();
+  await expect(page.getByRole('button', { name: 'Add Lentil soup to the basket' })).toBeVisible();
+  await page.goForward();
+  await expect(page.getByRole('textbox', { name: 'Notes (optional)' })).toHaveValue(
+    'Dinner for the cousins',
+  );
+  await page.getByRole('button', { name: 'Add more dishes' }).first().click();
   await page.getByRole('button', { name: 'Add Lentil soup to the basket' }).click();
   await page.getByRole('button', { name: 'Review basket' }).click();
   await expect(page.getByRole('spinbutton', { name: 'Servings for Garlic bread' })).toHaveValue(
@@ -110,7 +117,13 @@ test('dishes are collected by category and placed as one order', async ({ page }
   );
   await page.getByRole('button', { name: 'Place order' }).click();
 
+  await expect(page).toHaveURL(/\/meals$/);
   await expect(page.getByText(/Saved: Miso soup, Garlic bread/)).toBeVisible();
+  // Orders shows only pending and past orders; dishes are browsed on Home.
+  await expect(page.getByRole('group', { name: 'Order views' }).getByRole('button')).toHaveText([
+    'Upcoming',
+    'History',
+  ]);
   const card = page.getByRole('article').first();
   await expect(card).toContainText('Miso soup');
   await expect(card).toContainText('Garlic bread');
@@ -119,7 +132,8 @@ test('dishes are collected by category and placed as one order', async ({ page }
   expect(await orderCount()).toBe(1);
 
   // The placed basket is empty again; a reload does not resubmit it.
-  await page.getByRole('button', { name: 'Order dishes', exact: true }).click();
+  await page.getByRole('link', { name: 'Family Menu home' }).click();
+  await expect(page.getByRole('button', { name: 'Add Miso soup to the basket' })).toBeVisible();
   await expect(page.locator('.basket-bar')).toHaveCount(0);
   await page.reload();
   expect(await orderCount()).toBe(1);
@@ -132,7 +146,7 @@ test('emptying the basket places no order', async ({ page }) => {
   await page.getByRole('button', { name: 'Remove Miso soup' }).click();
   await expect(page.getByText('The basket is empty. Add dishes first.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Place order' })).toBeDisabled();
-  await page.getByRole('button', { name: 'Add more dishes' }).click();
+  await page.getByRole('button', { name: 'Add more dishes' }).first().click();
   await page.getByRole('button', { name: 'Add Garlic bread to the basket' }).click();
 
   page.once('dialog', (dialog) => dialog.dismiss());
@@ -152,19 +166,32 @@ test('a dish archived after it was added leaves the basket with an explanation',
   await setUp(page);
   await page.getByRole('button', { name: 'Add Miso soup to the basket' }).click();
   await page.getByRole('button', { name: 'Add Garlic bread to the basket' }).click();
+  await page.getByRole('button', { name: 'Add Lentil soup to the basket' }).click();
   const session = await (await page.request.get('/api/auth/session')).json();
   const householdId = session.households[0].id;
-  const recipes = await (await page.request.get(`/api/households/${householdId}/recipes`)).json();
-  const miso = recipes.find((recipe: { name: string }) => recipe.name === 'Miso soup');
-  const archived = await page.request.post(
-    `/api/households/${householdId}/recipes/${miso.id}/archive`,
-    {
-      headers: { 'X-CSRF-Token': session.csrfToken, Origin: 'http://127.0.0.1:4173' },
-      data: { expectedRevision: miso.revision },
-    },
-  );
-  expect(archived.status()).toBe(200);
+  const archive = async (name: string) => {
+    const recipes = await (await page.request.get(`/api/households/${householdId}/recipes`)).json();
+    const recipe = recipes.find((candidate: { name: string }) => candidate.name === name);
+    const archived = await page.request.post(
+      `/api/households/${householdId}/recipes/${recipe.id}/archive`,
+      {
+        headers: { 'X-CSRF-Token': session.csrfToken, Origin: 'http://127.0.0.1:4173' },
+        data: { expectedRevision: recipe.revision },
+      },
+    );
+    expect(archived.status()).toBe(200);
+  };
+  await archive('Miso soup');
   await page.reload();
   await expect(page.getByText('Some dishes are no longer on the menu')).toBeVisible();
-  await expect(page.locator('.basket-bar')).toContainText('1 dish · 1 serving · 1 pts');
+  await expect(page.locator('.basket-bar')).toContainText('2 dishes · 5 servings · 9 pts');
+
+  // Opening the confirmation page directly removes it there too, before the form is filled.
+  await archive('Lentil soup');
+  await page.goto('/checkout');
+  await expect(page.getByText('Some dishes are no longer on the menu')).toBeVisible();
+  await expect(page.getByRole('spinbutton', { name: /^Servings for/ })).toHaveCount(1);
+  await expect(page.getByRole('spinbutton', { name: 'Servings for Garlic bread' })).toHaveValue(
+    '1',
+  );
 });

@@ -52,7 +52,9 @@ test('the core workflow works with the keyboard alone at 360 px', async ({ page 
   await expect(page.getByRole('button', { name: 'Create invitation link' })).toBeVisible();
 
   const nav = page.getByRole('navigation', { name: 'Main navigation' });
-  await tabTo(page, nav.getByRole('button', { name: 'Menu' }));
+  await tabTo(page, page.getByRole('link', { name: 'Family Menu home' }));
+  await page.keyboard.press('Enter');
+  await tabTo(page, page.getByRole('button', { name: 'Manage recipes & menu' }));
   await page.keyboard.press('Enter');
   await tabTo(page, page.getByRole('button', { name: 'Add recipe' }));
   await page.keyboard.press('Enter');

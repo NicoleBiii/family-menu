@@ -1,38 +1,25 @@
 import { useState } from 'react';
-import { Minus, Plus, Search, ShoppingBasket, Star } from 'lucide-react';
-import type { Category, RecipeSummary } from './api';
+import { Minus, Plus, Search, ShoppingBasket, Star, Trash2 } from 'lucide-react';
+import { recipeImageUrl, type Category, type RecipeSummary } from './api';
 import { MAX_BASKET_ITEMS, type BasketControls } from './basket';
 import { useI18n } from './i18n';
 
 interface Props {
   recipes: RecipeSummary[];
   categories: Category[];
+  householdId: string;
   basket: BasketControls;
   onReview: () => void;
 }
 
-/**
- * Meals entry point (UX-002 proposal §2): the household's active dishes by category, each with
- * an Add action, and a basket summary that leads to one Place order action.
- */
-export function DishBrowser({ recipes, categories, basket, onReview }: Props) {
+/** Home dish browser: a category rail, menu cards and a persistent order basket. */
+export function DishBrowser({ recipes, categories, householdId, basket, onReview }: Props) {
   const { t } = useI18n();
   const [query, setQuery] = useState('');
-  /** 'all', '' for Uncategorised, or a category id. */
-  const [filter, setFilter] = useState('all');
   const items = basket.basket.items;
   const inBasket = new Map(items.map((item) => [item.recipeId, item.servings]));
-  const needle = query.trim().toLowerCase();
-  const knownFilter =
-    filter === 'all' || filter === '' || categories.some((category) => category.id === filter)
-      ? filter
-      : 'all';
-  const visible = recipes.filter(
-    (recipe) =>
-      recipe.name.toLowerCase().includes(needle) &&
-      (knownFilter === 'all' || (recipe.categoryId ?? '') === knownFilter),
-  );
-  // Group by category in the household's category order, Uncategorised last.
+  const needle = query.trim().toLocaleLowerCase();
+  const visible = recipes.filter((recipe) => recipe.name.toLocaleLowerCase().includes(needle));
   const groups = [
     ...categories.map((category) => ({ id: category.id, name: category.name })),
     { id: '', name: t('category.uncategorised') },
@@ -55,16 +42,12 @@ export function DishBrowser({ recipes, categories, basket, onReview }: Props) {
     t('orders.points', { count: points }),
   ].join(' · ');
   const full = items.length >= MAX_BASKET_ITEMS;
-
-  if (recipes.length === 0) {
-    return <p className="muted">{t('orderEditor.noRecipes')}</p>;
-  }
+  const groupId = (id: string) => `dishes-${id || 'none'}`;
 
   return (
     <div className="dish-browser">
-      <p className="muted">{t('basket.hint')}</p>
-      <label className="search-field">
-        <Search size={19} />
+      <label className="search-field dish-search">
+        <Search size={19} aria-hidden="true" />
         <span className="sr-only">{t('basket.search')}</span>
         <input
           value={query}
@@ -72,104 +55,121 @@ export function DishBrowser({ recipes, categories, basket, onReview }: Props) {
           placeholder={t('basket.search')}
         />
       </label>
-      {categories.length > 0 && (
-        <div className="category-chips" role="group" aria-label={t('category.filter')}>
-          {[
-            { id: 'all', name: t('category.all') },
-            ...categories,
-            { id: '', name: t('category.uncategorised') },
-          ].map((option) => (
-            <button
-              key={option.id || 'none'}
-              className="category-chip"
-              aria-pressed={knownFilter === option.id}
-              onClick={() => setFilter(option.id)}
+      <div className="dish-menu-layout">
+        <nav className="dish-categories" aria-label={t('home.categories')}>
+          <span className="dish-rail-title" aria-hidden="true">
+            {t('home.categories')}
+          </span>
+          {groups.map((group) => (
+            <a key={group.id || 'none'} href={`#${groupId(group.id)}`}>
+              {group.name}
+              <span aria-hidden="true">{group.recipes.length}</span>
+            </a>
+          ))}
+        </nav>
+        <div className="dish-results">
+          {groups.length === 0 && <p className="muted">{t('basket.noMatch')}</p>}
+          {groups.map((group) => (
+            <section
+              key={group.id || 'none'}
+              id={groupId(group.id)}
+              aria-labelledby={`${groupId(group.id)}-title`}
             >
-              {option.name}
-            </button>
+              <h3 className="dish-group" id={`${groupId(group.id)}-title`}>
+                {group.name}
+              </h3>
+              <ul className="dish-list">
+                {group.recipes.map((recipe) => {
+                  const count = inBasket.get(recipe.id);
+                  return (
+                    <li key={recipe.id}>
+                      <div className="dish-photo">
+                        {recipe.imageId ? (
+                          <img
+                            src={recipeImageUrl(householdId, recipe.id, recipe.imageId)}
+                            alt=""
+                            loading="lazy"
+                          />
+                        ) : (
+                          <span aria-hidden="true">{Array.from(recipe.name.trim())[0] ?? '?'}</span>
+                        )}
+                      </div>
+                      <div className="dish-text">
+                        <strong className="dish-name">{recipe.name}</strong>
+                        {recipe.description && (
+                          <span className="muted dish-description">{recipe.description}</span>
+                        )}
+                        <span className="dish-points">
+                          <Star size={13} aria-hidden="true" />{' '}
+                          {t('menu.pointsPerServing', { count: recipe.pricePoints })}
+                        </span>
+                      </div>
+                      {count === undefined ? (
+                        <button
+                          className="secondary-button dish-add"
+                          aria-label={t('basket.addLabel', { name: recipe.name })}
+                          disabled={full}
+                          onClick={() => basket.add(recipe)}
+                        >
+                          <Plus size={17} aria-hidden="true" /> {t('basket.add')}
+                        </button>
+                      ) : (
+                        <span className="stepper">
+                          <button
+                            className="icon-button small"
+                            aria-label={t('basket.less', { name: recipe.name })}
+                            onClick={() => basket.setServings(recipe.id, count - 1)}
+                          >
+                            <Minus size={16} />
+                          </button>
+                          <span className="stepper-count">{count}</span>
+                          <button
+                            className="icon-button small"
+                            aria-label={t('basket.more', { name: recipe.name })}
+                            disabled={count >= 100}
+                            onClick={() => basket.add(recipe)}
+                          >
+                            <Plus size={16} />
+                          </button>
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
           ))}
         </div>
-      )}
-      {groups.length === 0 && <p className="muted">{t('basket.noMatch')}</p>}
-      {groups.map((group) => (
-        <section key={group.id || 'none'} aria-labelledby={`dishes-${group.id || 'none'}`}>
-          <h2 className="dish-group" id={`dishes-${group.id || 'none'}`}>
-            {group.name}
-          </h2>
-          <ul className="dish-list">
-            {group.recipes.map((recipe) => {
-              const count = inBasket.get(recipe.id);
-              return (
-                <li key={recipe.id}>
-                  <span className="dish-text">
-                    <span className="dish-name">{recipe.name}</span>
-                    <span className="muted">
-                      <Star size={12} aria-hidden="true" />{' '}
-                      {t('menu.pointsPerServing', { count: recipe.pricePoints })}
-                    </span>
-                  </span>
-                  {count === undefined ? (
-                    <button
-                      className="secondary-button"
-                      aria-label={t('basket.addLabel', { name: recipe.name })}
-                      disabled={full}
-                      onClick={() => basket.add(recipe)}
-                    >
-                      <Plus size={16} aria-hidden="true" /> {t('basket.add')}
-                    </button>
-                  ) : (
-                    <span className="stepper">
-                      <button
-                        className="icon-button small"
-                        aria-label={t('basket.less', { name: recipe.name })}
-                        onClick={() => basket.setServings(recipe.id, count - 1)}
-                      >
-                        <Minus size={16} />
-                      </button>
-                      <span className="stepper-count">
-                        {count === 1 ? t('orders.oneServing') : t('orders.servings', { count })}
-                      </span>
-                      <button
-                        className="icon-button small"
-                        aria-label={t('basket.more', { name: recipe.name })}
-                        disabled={count >= 100}
-                        onClick={() => basket.add(recipe)}
-                      >
-                        <Plus size={16} />
-                      </button>
-                    </span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ))}
-      <p className="sr-only" role="status">
-        {items.length > 0 ? `${t('basket.title')}: ${summary}` : ''}
-      </p>
-      {items.length > 0 && (
-        <div className="basket-bar">
-          <span>
-            <ShoppingBasket size={18} aria-hidden="true" /> <strong>{t('basket.title')}</strong>
-            <br />
-            <span className="muted">{summary}</span>
-          </span>
-          <span className="basket-actions">
-            <button
-              className="text-button"
-              onClick={() => {
-                if (window.confirm(t('basket.clearConfirm'))) basket.clear();
-              }}
-            >
-              {t('basket.clear')}
-            </button>
-            <button className="primary-button" onClick={onReview}>
-              {t('basket.review')}
-            </button>
-          </span>
-        </div>
-      )}
+        {items.length > 0 && (
+          <aside className="basket-bar" aria-label={t('basket.title')}>
+            <div className="basket-summary" role="status">
+              <span className="basket-icon">
+                <ShoppingBasket size={20} aria-hidden="true" />
+                <span className="basket-count">{servings}</span>
+              </span>
+              <span>
+                <strong>{t('basket.title')}</strong>
+                <span className="muted block">{summary}</span>
+              </span>
+            </div>
+            <div className="basket-actions">
+              <button
+                className="text-button basket-clear"
+                aria-label={t('basket.clear')}
+                onClick={() => {
+                  if (window.confirm(t('basket.clearConfirm'))) basket.clear();
+                }}
+              >
+                <Trash2 size={17} aria-hidden="true" />
+                <span className="basket-clear-text">{t('basket.clear')}</span>
+              </button>
+              <button className="primary-button" onClick={onReview}>
+                {t('basket.review')}
+              </button>
+            </div>
+          </aside>
+        )}
+      </div>
     </div>
   );
 }

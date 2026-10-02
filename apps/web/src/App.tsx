@@ -1,17 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ArrowRight,
   CalendarDays,
   ChefHat,
   CookingPot,
   House,
-  Leaf,
   LogIn,
   LogOut,
   ShoppingBasket,
-  Utensils,
 } from 'lucide-react';
-import { api, SESSION_EXPIRED_EVENT, setCsrfToken, signInUrl, type Session } from './api';
+import {
+  api,
+  SESSION_EXPIRED_EVENT,
+  setCsrfToken,
+  signInUrl,
+  type MealOrderDetail,
+  type Session,
+} from './api';
+import { CheckoutPage } from './CheckoutPage';
+import { HomePage } from './HomePage';
 import { HouseholdPage } from './HouseholdPage';
 import { JoinPage } from './JoinPage';
 import { MenuPage } from './MenuPage';
@@ -21,12 +27,11 @@ import { clearStoredBaskets, useBasket } from './basket';
 import { useI18n, type MessageKey } from './i18n';
 
 const navigation = [
-  { label: 'Menu', text: 'nav.menu', icon: Utensils },
   { label: 'Meals', text: 'nav.meals', icon: CalendarDays },
   { label: 'Shopping', text: 'nav.shopping', icon: ShoppingBasket },
   { label: 'Household', text: 'nav.household', icon: House },
 ] as const;
-type Page = (typeof navigation)[number]['label'] | 'Join';
+type Page = (typeof navigation)[number]['label'] | 'Home' | 'Recipes' | 'Checkout' | 'Join';
 const ACTIVE_KEY = 'family-menu.active-household';
 
 function initialPage(): Page {
@@ -34,7 +39,9 @@ function initialPage(): Page {
   if (window.location.pathname === '/household') return 'Household';
   if (window.location.pathname === '/meals') return 'Meals';
   if (window.location.pathname === '/shopping') return 'Shopping';
-  return 'Menu';
+  if (window.location.pathname === '/recipes') return 'Recipes';
+  if (window.location.pathname === '/checkout') return 'Checkout';
+  return 'Home';
 }
 function readAuthError(): MessageKey | null {
   const code = new URLSearchParams(window.location.search).get('authError');
@@ -66,8 +73,9 @@ export function App() {
   const signOutButton = useRef<HTMLButtonElement>(null);
   const [signingOut, setSigningOut] = useState(false);
   const search = useRef<HTMLInputElement>(null);
+  const [placedOrder, setPlacedOrder] = useState<MealOrderDetail | null>(null);
+  /** A dish just added from the Recipes dialog, confirmed once on Home. */
   const [addedToBasket, setAddedToBasket] = useState<string | null>(null);
-  const clearAdded = useCallback(() => setAddedToBasket(null), []);
 
   const refreshSession = useCallback(async () => {
     try {
@@ -97,11 +105,20 @@ export function App() {
     return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
   }, [refreshSession]);
   useEffect(() => {
-    const pageKey = navigation.find((item) => item.label === page)?.text ?? 'nav.household';
+    const pageKey = navigation.find((item) => item.label === page)?.text;
     document.title =
-      page === 'Menu'
+      page === 'Home'
         ? t('app.titleHome')
-        : t('app.titlePage', { page: page === 'Join' ? t('join.title') : t(pageKey) });
+        : t('app.titlePage', {
+            page:
+              page === 'Join'
+                ? t('join.title')
+                : page === 'Recipes'
+                  ? t('nav.menu')
+                  : page === 'Checkout'
+                    ? t('checkout.title')
+                    : t(pageKey!),
+          });
   }, [page, t]);
   useEffect(() => {
     const onPop = () => setPageState(initialPage());
@@ -118,17 +135,27 @@ export function App() {
 
   function setPage(next: Page) {
     setPageState(next);
+    setAddedToBasket(null);
     const path =
       next === 'Household'
         ? '/household'
         : next === 'Join'
           ? '/join'
-          : next === 'Meals'
-            ? '/meals'
-            : next === 'Shopping'
-              ? '/shopping'
-              : '/';
+          : next === 'Recipes'
+            ? '/recipes'
+            : next === 'Checkout'
+              ? '/checkout'
+              : next === 'Meals'
+                ? '/meals'
+                : next === 'Shopping'
+                  ? '/shopping'
+                  : '/';
     if (window.location.pathname !== path) history.pushState(null, '', path);
+  }
+  /** Home, scrolled to the dish browser. */
+  function goOrdering() {
+    setPage('Home');
+    requestAnimationFrame(() => document.getElementById('order-menu')?.scrollIntoView());
   }
   async function signOut() {
     setSigningOut(true);
@@ -156,7 +183,18 @@ export function App() {
         {t('app.skip')}
       </a>
       <header className="site-header">
-        <a className="brand" href="/" aria-label={t('app.home')}>
+        <a
+          className="brand"
+          href="/"
+          aria-label={t('app.home')}
+          onClick={(event) => {
+            // Stay in the app (keeping unsaved page state) unless a new tab or window is wanted.
+            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey) return;
+            event.preventDefault();
+            setPage('Home');
+            window.scrollTo({ top: 0 });
+          }}
+        >
           <span className="brand-mark">
             <CookingPot size={24} />
           </span>
@@ -256,56 +294,35 @@ export function App() {
               onChanged={refreshSession}
             />
           </section>
-        ) : page === 'Menu' ? (
-          <MenuPage
-            hero={
-              <section className="hero" aria-labelledby="welcome-title">
-                <div className="hero-copy">
-                  <p className="eyebrow">
-                    <Leaf size={15} /> {t('app.heroEyebrow')}
-                  </p>
-                  <h1 id="welcome-title">
-                    {t('app.heroTitleFirst')}
-                    <br />
-                    <em>{t('app.heroTitleSecond')}</em>
-                  </h1>
-                  <p className="hero-description">
-                    {t('app.heroDescriptionFirst')}
-                    <br className="desktop-break" /> {t('app.heroDescriptionSecond')}
-                  </p>
-                  <button
-                    className="primary-button"
-                    onClick={() => {
-                      search.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                      search.current?.focus({ preventScroll: true });
-                    }}
-                  >
-                    {t('app.explore')} <ArrowRight size={18} />
-                  </button>
-                </div>
-                <div className="table-art" aria-hidden="true">
-                  <div className="cloth-line" />
-                  <div className="plate">
-                    <span className="art-leaf leaf-one" />
-                    <span className="art-leaf leaf-two" />
-                    <span className="art-tomato tomato-one" />
-                    <span className="art-tomato tomato-two" />
-                    <span className="art-lemon" />
-                  </div>
-                  <div className="art-caption">{t('app.artCaption')}</div>
-                </div>
-              </section>
-            }
+        ) : page === 'Recipes' ? (
+          <div className="page-panel">
+            <p className="eyebrow">{t('app.sharedTable')}</p>
+            <h1>{t('home.manageRecipes')}</h1>
+            <MenuPage
+              hero={null}
+              session={session}
+              household={activeHousehold}
+              onGoHousehold={() => setPage('Household')}
+              onOrder={(recipe) => {
+                basket.add(recipe);
+                goOrdering();
+                setAddedToBasket(recipe.name);
+              }}
+              searchRef={search}
+            />
+          </div>
+        ) : page === 'Checkout' ? (
+          <CheckoutPage
             session={session}
             household={activeHousehold}
-            onGoHousehold={() => setPage('Household')}
-            onOrder={(recipe) => {
-              basket.add(recipe);
-              setAddedToBasket(recipe.name);
+            basket={basket}
+            onBack={goOrdering}
+            onSaved={(order) => {
+              basket.clear();
+              setPlacedOrder(order);
               setPage('Meals');
               window.scrollTo({ top: 0 });
             }}
-            searchRef={search}
           />
         ) : page === 'Meals' ? (
           <section className="page-panel">
@@ -314,23 +331,38 @@ export function App() {
             <OrdersPage
               session={session}
               household={activeHousehold}
-              basket={basket}
-              added={addedToBasket}
-              onAddedShown={clearAdded}
+              placed={placedOrder}
+              onPlacedShown={() => setPlacedOrder(null)}
               onGoHousehold={() => setPage('Household')}
             />
           </section>
-        ) : (
+        ) : page === 'Shopping' ? (
           <section className="page-panel">
             <p className="eyebrow">{t('app.sharedTable')}</p>
             <h1>{t('nav.shopping')}</h1>
             <ShoppingPage
               session={session}
               household={activeHousehold}
-              onGoMeals={() => setPage('Meals')}
+              onGoMeals={goOrdering}
               onGoHousehold={() => setPage('Household')}
             />
           </section>
+        ) : (
+          <HomePage
+            session={session}
+            household={activeHousehold}
+            basket={basket}
+            added={addedToBasket}
+            onManage={() => {
+              setPage('Recipes');
+              window.scrollTo({ top: 0 });
+            }}
+            onGoHousehold={() => setPage('Household')}
+            onCheckout={() => {
+              setPage('Checkout');
+              window.scrollTo({ top: 0 });
+            }}
+          />
         )}
         <footer className="page-footer">
           <ChefHat size={18} />

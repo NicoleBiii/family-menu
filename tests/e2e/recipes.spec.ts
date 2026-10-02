@@ -15,7 +15,8 @@ async function signInWithHousehold(page: Page) {
   await page.getByRole('textbox', { name: 'Household name' }).fill(unique('Kitchen'));
   await page.getByRole('button', { name: 'Create household' }).click();
   await expect(page.getByRole('button', { name: 'Create invitation link' })).toBeVisible();
-  await page.getByRole('navigation').getByRole('button', { name: 'Menu' }).click();
+  await page.getByRole('link', { name: 'Family Menu home' }).click();
+  await page.getByRole('button', { name: 'Manage recipes & menu' }).click();
   await expect(page.getByRole('heading', { name: 'Your household menu' })).toBeVisible();
 }
 

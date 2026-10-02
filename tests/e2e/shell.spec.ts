@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 test('starter recipes can be searched, inspected and closed with focus restored', async ({
   page,
 }) => {
-  await page.goto('/');
+  await page.goto('/recipes');
   const cards = page.getByRole('button', { name: /^View / });
   await expect(cards).toHaveCount(12);
   await page.getByRole('textbox', { name: 'Search recipes' }).fill('sesame');
@@ -33,7 +33,13 @@ test('shopping explains sign-in when signed out and the layout fits the viewport
     page.getByText('Sign in to see what your household needs to buy for its planned meals.'),
   ).toBeVisible();
   await expect(page).toHaveURL(/\/shopping$/);
-  await page.getByRole('navigation').getByRole('button', { name: 'Menu' }).click();
+  // Home sits outside the bottom tabs; signed-out visitors still reach the starter recipes.
+  await page.getByRole('link', { name: 'Family Menu home' }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('heading', { name: 'Your household menu' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Sign in with Google' })).toBeVisible();
+  await page.getByRole('button', { name: 'Manage recipes & menu' }).click();
+  await expect(page).toHaveURL(/\/recipes$/);
   await expect(page.getByRole('heading', { name: 'Starter recipes' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,

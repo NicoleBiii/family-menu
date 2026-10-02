@@ -5,49 +5,32 @@ import {
   ApiError,
   dayLabel,
   signInUrl,
-  type Category,
   type HouseholdSummary,
   type MealOrder,
   type MealOrderDetail,
   type RecipeSummary,
   type Session,
 } from './api';
-import type { BasketControls } from './basket';
-import { DishBrowser } from './DishBrowser';
 import { OrderEditor, type OrderStart } from './OrderEditor';
 import { useI18n } from './i18n';
 
 type Notice =
   | { kind: 'saved'; names: string; date: string; timezone: string; time: string }
-  | { kind: 'added'; name: string }
-  | { kind: 'done' | 'cancel' | 'unavailable' };
+  | { kind: 'done' | 'cancel' };
 
 interface Props {
   session: Session | null;
   household: HouseholdSummary | undefined;
-  /** The household's unsent order. */
-  basket: BasketControls;
-  /** Name of a dish just added to the basket from the Menu, to confirm once. */
-  added: string | null;
-  onAddedShown: () => void;
+  placed: MealOrderDetail | null;
+  onPlacedShown: () => void;
   onGoHousehold: () => void;
 }
 
-export function OrdersPage({
-  session,
-  household,
-  basket,
-  added,
-  onAddedShown,
-  onGoHousehold,
-}: Props) {
+export function OrdersPage({ session, household, placed, onPlacedShown, onGoHousehold }: Props) {
   const { language, t, apiError } = useI18n();
-  const [view, setView] = useState<'browse' | 'pending' | 'history'>('browse');
+  const [view, setView] = useState<'pending' | 'history'>('pending');
   const [orders, setOrders] = useState<MealOrder[] | null>(null);
   const [recipes, setRecipes] = useState<RecipeSummary[] | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
-  /** The household the loaded recipes belong to; a switch must not prune the new basket. */
-  const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [editor, setEditor] = useState<OrderStart | null>(null);
   const [error, setError] = useState<ApiError | 'load' | 'update' | 'open' | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -57,17 +40,12 @@ export function OrdersPage({
   const load = useCallback(async () => {
     if (!householdId) return;
     try {
-      const [nextOrders, nextRecipes, nextCategories] = await Promise.all([
-        view === 'browse'
-          ? Promise.resolve([])
-          : api<MealOrder[]>(`/households/${householdId}/orders?view=${view}`),
+      const [nextOrders, nextRecipes] = await Promise.all([
+        api<MealOrder[]>(`/households/${householdId}/orders?view=${view}`),
         api<RecipeSummary[]>(`/households/${householdId}/recipes`),
-        api<Category[]>(`/households/${householdId}/categories`),
       ]);
       setOrders(nextOrders);
       setRecipes(nextRecipes.filter((recipe) => !recipe.archived));
-      setCategories(nextCategories);
-      setLoadedFor(householdId);
     } catch (caught) {
       setError(caught instanceof ApiError ? caught : 'load');
     }
@@ -85,20 +63,17 @@ export function OrdersPage({
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [load, editor]);
   useEffect(() => {
-    if (added) {
-      setNotice({ kind: 'added', name: added });
-      onAddedShown();
-    }
-  }, [added, onAddedShown]);
-  // Dishes archived since they were added cannot be ordered; take them out and say so.
-  const { basket: unsent, setServings } = basket;
-  useEffect(() => {
-    if (!recipes || loadedFor !== householdId) return;
-    const gone = unsent.items.filter((item) => !recipes.some((r) => r.id === item.recipeId));
-    if (gone.length === 0) return;
-    for (const item of gone) setServings(item.recipeId, 0);
-    setNotice({ kind: 'unavailable' });
-  }, [recipes, loadedFor, householdId, unsent.items, setServings]);
+    if (!placed) return;
+    setView('pending');
+    setNotice({
+      kind: 'saved',
+      names: placed.items.map((item) => item.recipeName).join(', '),
+      date: placed.mealDate,
+      timezone: placed.timezone,
+      time: placed.mealTime,
+    });
+    onPlacedShown();
+  }, [placed, onPlacedShown]);
 
   if (!session) return <p role="status">{t('join.loading')}</p>;
   if (!session.authenticated || !household) {
@@ -127,10 +102,8 @@ export function OrdersPage({
         timezone={household.timezone}
         recipes={recipes}
         start={editor}
-        basket={editor.mode === 'basket' ? basket : undefined}
         onCancel={() => setEditor(null)}
         onSaved={async (saved) => {
-          if (editor.mode === 'basket') basket.clear();
           setEditor(null);
           setView('pending');
           setNotice({
@@ -187,11 +160,6 @@ export function OrdersPage({
     <div className="orders-layout">
       <div className="menu-tools">
         <div className="filters" role="group" aria-label={t('orders.views')}>
-          <button aria-pressed={view === 'browse'} onClick={() => setView('browse')}>
-            {unsent.items.length > 0
-              ? t('orders.browseCount', { count: unsent.items.length })
-              : t('orders.browse')}
-          </button>
           <button aria-pressed={view === 'pending'} onClick={() => setView('pending')}>
             {t('orders.upcoming')}
           </button>
@@ -208,15 +176,7 @@ export function OrdersPage({
                 day: dayLabel(notice.date, notice.timezone, language).toLowerCase(),
                 time: notice.time,
               })
-            : notice.kind === 'added'
-              ? t('basket.addedNotice', { name: notice.name })
-              : t(
-                  notice.kind === 'done'
-                    ? 'orders.doneNotice'
-                    : notice.kind === 'cancel'
-                      ? 'orders.cancelNotice'
-                      : 'basket.unavailable',
-                )}
+            : t(notice.kind === 'done' ? 'orders.doneNotice' : 'orders.cancelNotice')}
         </p>
       )}
       {error && (
@@ -232,22 +192,7 @@ export function OrdersPage({
               )}
         </p>
       )}
-      {view === 'browse' ? (
-        recipes === null ? (
-          <p role="status">{t('menu.loading')}</p>
-        ) : (
-          <DishBrowser
-            recipes={recipes}
-            categories={categories}
-            basket={basket}
-            onReview={() => {
-              setNotice(null);
-              setEditor({ mode: 'basket' });
-              window.scrollTo({ top: 0 });
-            }}
-          />
-        )
-      ) : orders === null ? (
+      {orders === null ? (
         <p role="status">{t('orders.loading')}</p>
       ) : orders.length === 0 ? (
         <div className="empty-state">

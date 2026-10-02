@@ -28,7 +28,7 @@ test('an ended session returns the user to sign-in with an explanation', async (
   });
   expect(logout.status()).toBe(204);
 
-  await nav(page, 'Meals').click();
+  await nav(page, 'Orders').click();
   const banner = page
     .getByRole('alert')
     .filter({ has: page.getByRole('button', { name: 'Dismiss' }) });
@@ -59,8 +59,7 @@ test('offline and server failures show plain messages and recover', async ({ pag
       body: JSON.stringify({ statusCode: 500, message: 'Internal server error' }),
     }),
   );
-  await nav(page, 'Meals').click();
-  await page.getByRole('button', { name: 'Upcoming' }).click();
+  await nav(page, 'Orders').click();
   await expect(page.getByRole('alert')).toHaveText(
     'Something went wrong on our side. Please try again in a moment.',
   );
@@ -69,8 +68,14 @@ test('offline and server failures show plain messages and recover', async ({ pag
 test('each page has its own document title', async ({ page }) => {
   await page.goto('/');
   await expect(page).toHaveTitle('Family Menu — A little more together');
-  for (const name of ['Meals', 'Shopping', 'Household']) {
+  for (const name of ['Orders', 'Shopping', 'Household']) {
     await nav(page, name).click();
     await expect(page).toHaveTitle(`${name} · Family Menu`);
   }
+  await page.getByRole('link', { name: 'Family Menu home' }).click();
+  await expect(page).toHaveTitle('Family Menu — A little more together');
+  await page.getByRole('button', { name: 'Manage recipes & menu' }).click();
+  await expect(page).toHaveTitle('Recipes · Family Menu');
+  await page.goto('/checkout');
+  await expect(page).toHaveTitle('Confirm your order · Family Menu');
 });
