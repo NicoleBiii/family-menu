@@ -4,7 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import helmet from 'helmet';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { AiDraftsController } from './ai-drafts.controller.js';
@@ -72,6 +72,29 @@ export async function createApplication(config: AppConfig, quiet = false) {
 
   const webRoot = fileURLToPath(new URL('../../web/dist/', import.meta.url));
   if (existsSync(new URL('../../web/dist/index.html', import.meta.url))) {
+    const indexHtml = readFileSync(new URL('../../web/dist/index.html', import.meta.url), 'utf8');
+    app.getHttpAdapter().get('/join', (request: Request, response: Response) => {
+      if (!request.accepts('html')) {
+        response.sendStatus(406);
+        return;
+      }
+      const origin = config.appOrigin;
+      const preview = origin
+        ? [
+            '<meta property="og:type" content="website" />',
+            '<meta property="og:site_name" content="Family Menu" />',
+            '<meta property="og:title" content="You’re invited to Family Menu" />',
+            '<meta property="og:description" content="Share recipes, plan meals, and shop together with your household." />',
+            `<meta property="og:url" content="${origin}/join" />`,
+            `<meta property="og:image" content="${origin}/invite-preview.png" />`,
+            '<meta property="og:image:alt" content="Family Menu invitation card" />',
+            '<meta property="og:image:width" content="1200" />',
+            '<meta property="og:image:height" content="630" />',
+            '<meta name="twitter:card" content="summary_large_image" />',
+          ].join('\n    ')
+        : '';
+      response.type('html').send(indexHtml.replace('</head>', `    ${preview}\n  </head>`));
+    });
     app.use(express.static(webRoot, { index: false }));
     app.use((request: Request, response: Response, next: NextFunction) => {
       const isApi = request.path === '/api' || request.path.startsWith('/api/');

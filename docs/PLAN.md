@@ -1,7 +1,7 @@
 # Three-Week Plan and Backlog
 
-Version: 0.1. Updated: 2026-10-01.
-Current phase: AI-001 done (2026-09-28; Gemini 3.1 Flash-Lite chosen). INFRA-001 staging service is `Active`; the public readiness endpoint returned HTTP 200, and the owner reports all six manual smoke steps passed using desktop Chrome and Chrome on an iPhone 18 Pro Max (docs/verification/2026-10-01-infra-001-staging.md). The owner also reports no problems with 200% zoom or a screen reader; UX-001's detailed manual checklist remains open because the exact coverage was not specified. Deployment identity and pre-deploy migration evidence remain to be recorded. The owner approved the UX-002 expansion proposal on 2026-10-01; implementation is in progress by bounded phases. Branch protection is unavailable on the free private plan (PR-plus-CI convention instead). The repository moved to /Users/bibi/Bibi_Dev/family-menu on 2026-09-26.
+Version: 0.1. Updated: 2026-10-02.
+Current phase: AI-001 done (2026-09-28; Gemini 3.1 Flash-Lite chosen). INFRA-001 staging service is `Active`; the public readiness endpoint returned HTTP 200, and the owner reports all six manual smoke steps passed using desktop Chrome and Chrome on an iPhone 18 Pro Max (docs/verification/2026-10-01-infra-001-staging.md). The owner also reports no problems with 200% zoom or a screen reader; UX-001's detailed manual checklist remains open because the exact coverage was not specified. Deployment identity and pre-deploy migration evidence remain to be recorded. The owner approved the UX-002 expansion proposal on 2026-10-01; the first interaction checkpoint merged in PR #17 and the invitation-preview checkpoint is in progress. Branch protection is unavailable on the free private plan (PR-plus-CI convention instead). The repository moved to /Users/bibi/Bibi_Dev/family-menu on 2026-09-26.
 Working window: 2026-09-25 to 2026-10-16, assuming a start on the document date.
 
 ## Planning assumptions
@@ -59,15 +59,15 @@ Days are calendar sequencing slots, not a requirement to work without breaks.
 
 ## Later backlog
 
-| ID        | Capability                   | Additional design required                                                            |
-| --------- | ---------------------------- | ------------------------------------------------------------------------------------- |
-| LATER-001 | Household virtual wallet     | Ledger, allocation authority, edit/refund semantics, atomic balance checks            |
-| LATER-002 | Paid AI membership           | Separate real-money billing, entitlements, webhook idempotency, cancellation rules    |
-| LATER-003 | Social-link recipe import    | Supported sources and permissions, fetching limits, SSRF defenses, preview/provenance |
-| LATER-004 | Grocery checkout             | Vendor integration, item mapping, explicit purchase confirmation                      |
-| LATER-005 | Meal photos                  | Storage/retention, history attachments, privacy                                       |
-| LATER-006 | Granular permissions         | Explicit roles and migration from shared editing                                      |
-| LATER-007 | Purchase checkboxes / pantry | Reconciliation when order quantities or dates change                                  |
+| ID        | Capability                | Additional design required                                                            |
+| --------- | ------------------------- | ------------------------------------------------------------------------------------- |
+| LATER-001 | Household virtual wallet  | Ledger, allocation authority, edit/refund semantics, atomic balance checks            |
+| LATER-002 | Paid AI membership        | Separate real-money billing, entitlements, webhook idempotency, cancellation rules    |
+| LATER-003 | Social-link recipe import | Supported sources and permissions, fetching limits, SSRF defenses, preview/provenance |
+| LATER-004 | Grocery checkout          | Vendor integration, item mapping, explicit purchase confirmation                      |
+| LATER-005 | Meal photos               | Storage/retention, history attachments, privacy                                       |
+| LATER-006 | Granular permissions      | Explicit roles and migration from shared editing                                      |
+| LATER-007 | Pantry inventory          | Pantry quantities and reconciliation beyond the approved shopping purchase history    |
 
 ## Release checklist
 
