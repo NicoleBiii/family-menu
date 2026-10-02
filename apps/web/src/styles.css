@@ -560,6 +560,26 @@ select:focus-visible {
   gap: 8px;
   min-width: 0;
 }
+.language-switch {
+  display: inline-flex;
+  border: 1px solid #bdc8b6;
+  border-radius: 10px;
+  overflow: hidden;
+  flex: none;
+}
+.language-switch button {
+  min-width: 40px;
+  min-height: 44px;
+  padding: 0 7px;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+}
+.language-switch button[aria-pressed='true'] {
+  background: #364f36;
+  color: white;
+}
 .account-bar .preview-label {
   max-width: 220px;
   overflow: hidden;
@@ -1084,6 +1104,8 @@ dialog h3 {
 @media (max-width: 600px) {
   .site-header {
     padding: 20px;
+    flex-wrap: wrap;
+    gap: 8px;
   }
   .brand {
     font-size: 20px;

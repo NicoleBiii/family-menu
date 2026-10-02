@@ -12,6 +12,11 @@ import {
   type Session,
 } from './api';
 import { OrderEditor, type OrderStart } from './OrderEditor';
+import { useI18n } from './i18n';
+
+type Notice =
+  | { kind: 'saved'; names: string; date: string; timezone: string; time: string }
+  | { kind: 'done' | 'cancel' };
 
 interface Props {
   session: Session | null;
@@ -23,12 +28,13 @@ interface Props {
 }
 
 export function OrdersPage({ session, household, prefill, onPrefillUsed, onGoHousehold }: Props) {
+  const { language, t, apiError } = useI18n();
   const [view, setView] = useState<'pending' | 'history'>('pending');
   const [orders, setOrders] = useState<MealOrder[] | null>(null);
   const [recipes, setRecipes] = useState<RecipeSummary[] | null>(null);
   const [editor, setEditor] = useState<OrderStart | null>(null);
-  const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
+  const [error, setError] = useState<ApiError | 'load' | 'update' | 'open' | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const householdId = household?.id;
 
@@ -42,7 +48,7 @@ export function OrdersPage({ session, household, prefill, onPrefillUsed, onGoHou
       setOrders(nextOrders);
       setRecipes(nextRecipes.filter((recipe) => !recipe.archived));
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : 'Could not load meal orders.');
+      setError(caught instanceof ApiError ? caught : 'load');
     }
   }, [householdId, view]);
   useEffect(() => {
@@ -64,24 +70,20 @@ export function OrdersPage({ session, household, prefill, onPrefillUsed, onGoHou
     }
   }, [prefill, householdId, recipes, onPrefillUsed]);
 
-  if (!session) return <p role="status">Loading…</p>;
+  if (!session) return <p role="status">{t('join.loading')}</p>;
   if (!session.authenticated || !household) {
     return (
       <div className="empty-state">
         <CalendarDays size={36} />
-        <h2>Good meals start with a plan.</h2>
-        <p>
-          {session.authenticated
-            ? 'Create or join a household to plan meals together.'
-            : 'Sign in to plan meals with your household.'}
-        </p>
+        <h2>{t('orders.welcome')}</h2>
+        <p>{session.authenticated ? t('orders.needHousehold') : t('orders.signInPrompt')}</p>
         {session.authenticated ? (
           <button className="primary-button" onClick={onGoHousehold}>
-            Go to Household
+            {t('menu.goHousehold')}
           </button>
         ) : session.signInAvailable ? (
           <a className="primary-button" href={signInUrl('/meals')}>
-            <LogIn size={18} /> Sign in with Google
+            <LogIn size={18} /> {t('join.signInGoogle')}
           </a>
         ) : null}
       </div>
@@ -99,9 +101,13 @@ export function OrdersPage({ session, household, prefill, onPrefillUsed, onGoHou
         onSaved={async (saved) => {
           setEditor(null);
           setView('pending');
-          setNotice(
-            `Saved: ${saved.items.map((item) => item.recipeName).join(', ')} for ${dayLabel(saved.mealDate, saved.timezone).toLowerCase()} at ${saved.mealTime}.`,
-          );
+          setNotice({
+            kind: 'saved',
+            names: saved.items.map((item) => item.recipeName).join(', '),
+            date: saved.mealDate,
+            timezone: saved.timezone,
+            time: saved.mealTime,
+          });
           await load();
         }}
       />
@@ -109,32 +115,32 @@ export function OrdersPage({ session, household, prefill, onPrefillUsed, onGoHou
   }
 
   async function close(order: MealOrder, action: 'complete' | 'cancel') {
-    if (action === 'cancel' && !window.confirm('Cancel this meal order?')) return;
+    if (action === 'cancel' && !window.confirm(t('orders.cancelConfirm'))) return;
     setBusyId(order.id);
-    setError('');
-    setNotice('');
+    setError(null);
+    setNotice(null);
     try {
       await api(`/households/${householdId}/orders/${order.id}/${action}`, {
         method: 'POST',
         body: { expectedRevision: order.revision },
       });
-      setNotice(action === 'complete' ? 'Marked as done. Enjoy!' : 'Order cancelled.');
+      setNotice({ kind: action === 'complete' ? 'done' : 'cancel' });
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : 'Could not update the order.');
+      setError(caught instanceof ApiError ? caught : 'update');
     } finally {
       setBusyId(null);
       await load();
     }
   }
   async function edit(order: MealOrder) {
-    setError('');
+    setError(null);
     try {
       setEditor({
         mode: 'edit',
         order: await api<MealOrderDetail>(`/households/${householdId}/orders/${order.id}`),
       });
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : 'Could not open the order.');
+      setError(caught instanceof ApiError ? caught : 'open');
       await load();
     }
   }
@@ -148,52 +154,62 @@ export function OrdersPage({ session, household, prefill, onPrefillUsed, onGoHou
   return (
     <div className="orders-layout">
       <div className="menu-tools">
-        <div className="filters" aria-label="Order views">
+        <div className="filters" aria-label={t('orders.views')}>
           <button aria-pressed={view === 'pending'} onClick={() => setView('pending')}>
-            Upcoming
+            {t('orders.upcoming')}
           </button>
           <button aria-pressed={view === 'history'} onClick={() => setView('history')}>
-            History
+            {t('orders.history')}
           </button>
         </div>
         <div className="menu-actions">
           <button
             className="primary-button"
             onClick={() => {
-              setNotice('');
+              setNotice(null);
               setEditor({ mode: 'create' });
             }}
           >
-            <Plus size={18} /> New meal order
+            <Plus size={18} /> {t('orders.new')}
           </button>
         </div>
       </div>
       {notice && (
         <p className="notice" role="status">
-          {notice}
+          {notice.kind === 'saved'
+            ? t('orders.saved', {
+                names: notice.names,
+                day: dayLabel(notice.date, notice.timezone, language).toLowerCase(),
+                time: notice.time,
+              })
+            : t(notice.kind === 'done' ? 'orders.doneNotice' : 'orders.cancelNotice')}
         </p>
       )}
       {error && (
         <p className="form-error" role="alert">
-          {error}
+          {error instanceof ApiError
+            ? apiError(error)
+            : t(
+                error === 'load'
+                  ? 'orders.loadFailed'
+                  : error === 'update'
+                    ? 'orders.updateFailed'
+                    : 'orders.openFailed',
+              )}
         </p>
       )}
       {orders === null ? (
-        <p role="status">Loading meal orders…</p>
+        <p role="status">{t('orders.loading')}</p>
       ) : orders.length === 0 ? (
         <div className="empty-state">
           <CalendarDays size={32} />
-          <h2>{view === 'pending' ? 'Nothing planned yet' : 'No finished meals yet'}</h2>
-          <p>
-            {view === 'pending'
-              ? 'Order dishes from your household menu for now or for later. Everyone in the household can change pending orders.'
-              : 'Completed and cancelled orders appear here.'}
-          </p>
+          <h2>{t(view === 'pending' ? 'orders.emptyPending' : 'orders.emptyHistory')}</h2>
+          <p>{view === 'pending' ? t('orders.pendingHint') : t('orders.historyHint')}</p>
         </div>
       ) : (
         [...groups.entries()].map(([date, dayOrders]) => (
           <section key={date} className="order-day" aria-labelledby={`day-${date}`}>
-            <h2 id={`day-${date}`}>{dayLabel(date, household.timezone)}</h2>
+            <h2 id={`day-${date}`}>{dayLabel(date, household.timezone, language)}</h2>
             {dayOrders.map((order) => {
               const overdue =
                 order.status === 'pending' &&
@@ -202,7 +218,7 @@ export function OrdersPage({ session, household, prefill, onPrefillUsed, onGoHou
                 <article
                   className="order-card"
                   key={order.id}
-                  aria-label={`Meal at ${order.mealTime}`}
+                  aria-label={t('orders.mealAt', { time: order.mealTime })}
                 >
                   <div className="order-head">
                     <strong className="order-time">{order.mealTime}</strong>
@@ -211,14 +227,15 @@ export function OrdersPage({ session, household, prefill, onPrefillUsed, onGoHou
                         {order.timezone} (UTC{order.utcOffset})
                       </span>
                     )}
-                    {overdue && <span className="status-tag overdue">Overdue</span>}
+                    {overdue && <span className="status-tag overdue">{t('orders.overdue')}</span>}
                     {order.status !== 'pending' && (
                       <span className={`status-tag ${order.status}`}>
-                        {order.status === 'completed' ? 'Done' : 'Cancelled'}
+                        {t(order.status === 'completed' ? 'orders.done' : 'orders.cancelled')}
                       </span>
                     )}
                     <span className="order-points">
-                      <Star size={13} aria-hidden="true" /> {order.totalPoints} pts
+                      <Star size={13} aria-hidden="true" />{' '}
+                      {t('orders.points', { count: order.totalPoints })}
                     </span>
                   </div>
                   <ul className="order-items">
@@ -226,19 +243,23 @@ export function OrdersPage({ session, household, prefill, onPrefillUsed, onGoHou
                       <li key={item.id}>
                         <span>{item.recipeName}</span>
                         <span className="muted">
-                          {item.servings} serving{item.servings === 1 ? '' : 's'}
+                          {t(item.servings === 1 ? 'orders.oneServing' : 'orders.servings', {
+                            count: item.servings,
+                          })}
                         </span>
                       </li>
                     ))}
                   </ul>
                   {order.notes && <p className="order-notes">“{order.notes}”</p>}
                   <p className="muted">
-                    Ordered by {order.createdBy}
+                    {t('orders.orderedBy', { name: order.createdBy })}
                     {order.revision > 1 && order.status === 'pending'
-                      ? ` · changed by ${order.updatedBy}`
+                      ? t('orders.changedBy', { name: order.updatedBy })
                       : ''}
                     {order.closedBy
-                      ? ` · ${order.status === 'completed' ? 'done' : 'cancelled'} by ${order.closedBy}`
+                      ? t(order.status === 'completed' ? 'orders.doneBy' : 'orders.cancelledBy', {
+                          name: order.closedBy,
+                        })
                       : ''}
                   </p>
                   {order.status === 'pending' && (
@@ -248,17 +269,17 @@ export function OrdersPage({ session, household, prefill, onPrefillUsed, onGoHou
                         disabled={busyId === order.id}
                         onClick={() => close(order, 'complete')}
                       >
-                        <Check size={16} /> Done
+                        <Check size={16} /> {t('orders.done')}
                       </button>
                       <button className="text-button" onClick={() => edit(order)}>
-                        <Pencil size={16} /> Edit
+                        <Pencil size={16} /> {t('menu.edit')}
                       </button>
                       <button
                         className="text-button"
                         disabled={busyId === order.id}
                         onClick={() => close(order, 'cancel')}
                       >
-                        <X size={16} /> Cancel order
+                        <X size={16} /> {t('orders.cancel')}
                       </button>
                     </div>
                   )}

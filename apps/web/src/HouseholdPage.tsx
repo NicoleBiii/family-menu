@@ -9,6 +9,7 @@ import {
   type Invitation,
   type Session,
 } from './api';
+import { useI18n } from './i18n';
 
 interface Props {
   session: Session | null;
@@ -18,19 +19,20 @@ interface Props {
 }
 
 export function HouseholdPage({ session, activeId, onSelect, onChanged }: Props) {
-  if (!session) return <p role="status">Loading your household…</p>;
+  const { t } = useI18n();
+  if (!session) return <p role="status">{t('household.loadingYour')}</p>;
   if (!session.authenticated) {
     return (
       <div className="empty-state">
         <House size={36} />
-        <h2>A place for your favourite people.</h2>
-        <p>Sign in to create a household, invite the people you cook for, and share one menu.</p>
+        <h2>{t('household.welcome')}</h2>
+        <p>{t('household.signInDescription')}</p>
         {session.signInAvailable ? (
           <a className="primary-button" href={signInUrl('/household')}>
-            <LogIn size={18} /> Sign in with Google
+            <LogIn size={18} /> {t('join.signInGoogle')}
           </a>
         ) : (
-          <p className="sample-note">Sign-in is not configured on this server yet.</p>
+          <p className="sample-note">{t('join.notConfigured')}</p>
         )}
       </div>
     );
@@ -40,7 +42,7 @@ export function HouseholdPage({ session, activeId, onSelect, onChanged }: Props)
     <div className="household-layout">
       {households.length > 1 && (
         <label className="field">
-          <span>Current household</span>
+          <span>{t('household.current')}</span>
           <select value={activeId ?? ''} onChange={(event) => onSelect(event.target.value)}>
             {households.map((household) => (
               <option key={household.id} value={household.id}>
@@ -60,10 +62,8 @@ export function HouseholdPage({ session, activeId, onSelect, onChanged }: Props)
       ) : (
         <div className="empty-state">
           <House size={36} />
-          <h2>Start your household</h2>
-          <p>
-            Create one for your home, or open an invitation link from someone who already has one.
-          </p>
+          <h2>{t('household.start')}</h2>
+          <p>{t('household.startDescription')}</p>
         </div>
       )}
       <CreateHousehold
@@ -84,13 +84,14 @@ function CreateHousehold({
   compact: boolean;
   onCreated: (household: HouseholdSummary) => Promise<void>;
 }) {
+  const { t, apiError } = useI18n();
   const [name, setName] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState<ApiError | 'create' | null>(null);
   const [busy, setBusy] = useState(false);
   async function submit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
-    setError('');
+    setError(null);
     try {
       const household = await api<HouseholdSummary>('/households', {
         method: 'POST',
@@ -99,31 +100,31 @@ function CreateHousehold({
       setName('');
       await onCreated(household);
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : 'Could not create the household.');
+      setError(caught instanceof ApiError ? caught : 'create');
     } finally {
       setBusy(false);
     }
   }
   return (
     <form className="card-panel" onSubmit={submit}>
-      <h2>{compact ? 'Create another household' : 'Create a household'}</h2>
+      <h2>{compact ? t('household.createAnother') : t('household.create')}</h2>
       <label className="field">
-        <span>Household name</span>
+        <span>{t('household.name')}</span>
         <input
           value={name}
           onChange={(event) => setName(event.target.value)}
           maxLength={100}
           required
-          placeholder="e.g. The Wang family"
+          placeholder={t('household.namePlaceholder')}
         />
       </label>
       {error && (
         <p className="form-error" role="alert">
-          {error}
+          {error instanceof ApiError ? apiError(error) : t('household.createFailed')}
         </p>
       )}
       <button className="primary-button" disabled={busy || !name.trim()}>
-        Create household
+        {t('household.createButton')}
       </button>
     </form>
   );
@@ -138,11 +139,12 @@ function HouseholdPanel({
   userId: string;
   onChanged: () => Promise<void>;
 }) {
+  const { language, t, apiError } = useI18n();
   const [detail, setDetail] = useState<HouseholdDetail | null>(null);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [newLink, setNewLink] = useState('');
   const [copied, setCopied] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<ApiError | 'load' | 'action' | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -154,7 +156,7 @@ function HouseholdPanel({
           : [],
       );
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : 'Could not load the household.');
+      setError(caught instanceof ApiError ? caught : 'load');
       if (caught instanceof ApiError && caught.status === 404) await onChanged();
     }
   }, [householdId, onChanged]);
@@ -163,50 +165,64 @@ function HouseholdPanel({
   }, [load]);
 
   async function run(action: () => Promise<unknown>) {
-    setError('');
+    setError(null);
     try {
       await action();
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : 'Something went wrong.');
+      setError(caught instanceof ApiError ? caught : 'action');
     }
   }
 
   if (!detail) {
     return error ? (
       <p className="form-error" role="alert">
-        {error}
+        {error instanceof ApiError
+          ? apiError(error)
+          : t(error === 'load' ? 'household.loadFailed' : 'household.actionFailed')}
       </p>
     ) : (
-      <p role="status">Loading household…</p>
+      <p role="status">{t('household.loading')}</p>
     );
   }
   const isOwner = detail.role === 'owner';
   return (
     <>
       <section className="card-panel" aria-labelledby="household-name">
-        <p className="eyebrow">YOUR HOUSEHOLD</p>
+        <p className="eyebrow">{t('household.eyebrow')}</p>
         <h2 id="household-name">{detail.name}</h2>
         <p className="muted">
-          Time zone: {detail.timezone} · You are {isOwner ? 'the owner' : 'a member'}
+          {t('household.timezoneRole', {
+            timezone: detail.timezone,
+            role: t(isOwner ? 'household.ownerRole' : 'household.memberRole'),
+          })}
         </p>
         <h3>
-          <Users size={16} /> Members ({detail.members.length})
+          <Users size={16} /> {t('household.members', { count: detail.members.length })}
         </h3>
         <ul className="member-list">
           {detail.members.map((member) => (
             <li key={member.userId}>
               <span>
                 {member.displayName}
-                {member.userId === userId && ' (you)'}
-                {member.role === 'owner' && <span className="role-tag">Owner</span>}
+                {member.userId === userId && t('household.you')}
+                {member.role === 'owner' && (
+                  <span className="role-tag">{t('household.owner')}</span>
+                )}
               </span>
               {isOwner && member.role !== 'owner' && (
                 <button
                   className="icon-button small"
-                  aria-label={`Remove ${member.displayName}`}
+                  aria-label={t('household.remove', { name: member.displayName })}
                   onClick={() =>
                     run(async () => {
-                      if (!window.confirm(`Remove ${member.displayName} from ${detail.name}?`))
+                      if (
+                        !window.confirm(
+                          t('household.removeConfirm', {
+                            name: member.displayName,
+                            household: detail.name,
+                          }),
+                        )
+                      )
                         return;
                       await api(`/households/${householdId}/members/${member.userId}`, {
                         method: 'DELETE',
@@ -226,28 +242,27 @@ function HouseholdPanel({
             className="text-button"
             onClick={() =>
               run(async () => {
-                if (!window.confirm(`Leave ${detail.name}?`)) return;
+                if (!window.confirm(t('household.leaveConfirm', { name: detail.name }))) return;
                 await api(`/households/${householdId}/members/${userId}`, { method: 'DELETE' });
                 await onChanged();
               })
             }
           >
-            Leave household
+            {t('household.leave')}
           </button>
         )}
         {error && (
           <p className="form-error" role="alert">
-            {error}
+            {error instanceof ApiError
+              ? apiError(error)
+              : t(error === 'load' ? 'household.loadFailed' : 'household.actionFailed')}
           </p>
         )}
       </section>
       {isOwner && (
         <section className="card-panel" aria-labelledby="invite-title">
-          <h2 id="invite-title">Invite someone</h2>
-          <p className="muted">
-            Each link works once and expires in 7 days. Anyone who joins can edit the shared menu
-            and household orders.
-          </p>
+          <h2 id="invite-title">{t('household.invite')}</h2>
+          <p className="muted">{t('household.inviteDescription')}</p>
           <button
             className="primary-button"
             onClick={() =>
@@ -262,17 +277,17 @@ function HouseholdPanel({
               })
             }
           >
-            <Link2 size={18} /> Create invitation link
+            <Link2 size={18} /> {t('household.createLink')}
           </button>
           {newLink && (
             <div className="invite-link">
               <label className="field">
-                <span>New invitation link (shown once)</span>
+                <span>{t('household.newLink')}</span>
                 <input readOnly value={newLink} onFocus={(event) => event.target.select()} />
               </label>
               <button
                 className="icon-button"
-                aria-label="Copy invitation link"
+                aria-label={t('household.copyLink')}
                 onClick={() =>
                   run(async () => {
                     await navigator.clipboard.writeText(newLink);
@@ -283,20 +298,26 @@ function HouseholdPanel({
                 <Copy size={18} />
               </button>
               <span role="status" className="muted">
-                {copied ? 'Copied.' : ''}
+                {copied ? t('household.copied') : ''}
               </span>
             </div>
           )}
           {invitations.length > 0 && (
             <>
-              <h3>Active links ({invitations.length})</h3>
+              <h3>{t('household.activeLinks', { count: invitations.length })}</h3>
               <ul className="member-list">
                 {invitations.map((invitation) => (
                   <li key={invitation.id}>
-                    <span>Expires {new Date(invitation.expiresAt).toLocaleDateString()}</span>
+                    <span>
+                      {t('household.expires', {
+                        date: new Date(invitation.expiresAt).toLocaleDateString(
+                          language === 'zh' ? 'zh-CN' : 'en',
+                        ),
+                      })}
+                    </span>
                     <button
                       className="icon-button small"
-                      aria-label="Revoke invitation link"
+                      aria-label={t('household.revokeLink')}
                       onClick={() =>
                         run(async () => {
                           await api(`/households/${householdId}/invitations/${invitation.id}`, {
