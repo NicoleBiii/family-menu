@@ -86,3 +86,16 @@ test('a provider failure explains itself and offers manual entry', async ({ page
   await page.getByRole('button', { name: 'Enter the recipe by hand instead' }).click();
   await expect(page.getByRole('heading', { name: 'New recipe' })).toBeFocused();
 });
+
+test('a provider failure is explained in Chinese from its error code', async ({ page }) => {
+  await signInWithHousehold(page);
+  await page.getByRole('button', { name: '简体中文' }).click();
+  await page.getByRole('button', { name: '用 AI 起草' }).click();
+  await page.getByRole('textbox', { name: '菜名' }).fill('Mock provider failure');
+  await page.getByRole('button', { name: '生成草稿' }).click();
+  await expect(page.getByRole('alert')).toContainText('无法连接 AI 服务，或服务返回了错误。', {
+    timeout: 15_000,
+  });
+  await page.getByRole('button', { name: '改为手动输入菜谱' }).click();
+  await expect(page.getByRole('heading', { name: '新建菜谱' })).toBeFocused();
+});

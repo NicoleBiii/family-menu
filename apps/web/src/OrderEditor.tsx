@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { api, ApiError, localToday, type MealOrderDetail, type RecipeSummary } from './api';
+import { useI18n } from './i18n';
 
 export type OrderStart =
   | { mode: 'create'; recipeId?: string; servings?: number }
@@ -21,6 +22,13 @@ interface Choice {
   utcOffset: string;
 }
 
+type ErrorState =
+  | ApiError
+  | 'save'
+  | 'load'
+  | { kind: 'closed'; status: 'completed' | 'cancelled'; actor: string }
+  | null;
+
 let nextKey = 1;
 
 interface Props {
@@ -37,6 +45,7 @@ interface Props {
  * daylight-saving change makes it ambiguous, the member chooses which occurrence they mean.
  */
 export function OrderEditor({ householdId, timezone, recipes, start, onCancel, onSaved }: Props) {
+  const { language, t, apiError } = useI18n();
   const editing = start.mode === 'edit' ? start.order : null;
   const [timing, setTiming] = useState<'now' | 'scheduled'>(editing ? 'scheduled' : 'now');
   const [date, setDate] = useState(editing?.mealDate ?? localToday(timezone));
@@ -66,7 +75,7 @@ export function OrderEditor({ householdId, timezone, recipes, start, onCancel, o
   const [choices, setChoices] = useState<Choice[] | null>(null);
   const [disambiguation, setDisambiguation] = useState<'earlier' | 'later' | ''>('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<ErrorState>(null);
   const [conflict, setConflict] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
 
@@ -86,7 +95,7 @@ export function OrderEditor({ householdId, timezone, recipes, start, onCancel, o
   async function submit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
-    setError('');
+    setError(null);
     setConflict(false);
     const when =
       timing === 'now'
@@ -112,7 +121,7 @@ export function OrderEditor({ householdId, timezone, recipes, start, onCancel, o
       if (caught instanceof ApiError && caught.body?.code === 'ambiguous_time') {
         setChoices(caught.body.options as Choice[]);
       }
-      setError(caught instanceof ApiError ? caught.message : 'Could not save the order.');
+      setError(caught instanceof ApiError ? caught : 'save');
       setConflict(caught instanceof ApiError && caught.status === 409 && editing !== null);
     } finally {
       setBusy(false);
@@ -121,12 +130,12 @@ export function OrderEditor({ householdId, timezone, recipes, start, onCancel, o
 
   async function loadLatest() {
     if (!editing) return;
-    setError('');
+    setError(null);
     setConflict(false);
     try {
       const latest = await api<MealOrderDetail>(`/households/${householdId}/orders/${editing.id}`);
       if (latest.status !== 'pending') {
-        setError(`This order was ${latest.status} by ${latest.closedBy}.`);
+        setError({ kind: 'closed', status: latest.status, actor: latest.closedBy ?? '' });
         return;
       }
       setDate(latest.mealDate);
@@ -142,20 +151,20 @@ export function OrderEditor({ householdId, timezone, recipes, start, onCancel, o
       );
       setRevision(latest.revision);
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : 'Could not load the order.');
+      setError(caught instanceof ApiError ? caught : 'load');
     }
   }
 
   const noRecipes = recipes.length === 0;
   return (
     <form className="card-panel recipe-editor" onSubmit={submit} aria-labelledby="order-title">
-      <p className="eyebrow">MEAL ORDER</p>
+      <p className="eyebrow">{t('orderEditor.eyebrow')}</p>
       <h2 id="order-title" tabIndex={-1} ref={heading}>
-        {editing ? 'Edit meal order' : 'New meal order'}
+        {t(editing ? 'orderEditor.editTitle' : 'orders.new')}
       </h2>
 
       <fieldset className="choice-group">
-        <legend>When</legend>
+        <legend>{t('orderEditor.when')}</legend>
         {!editing && (
           <label className="choice">
             <input
@@ -164,7 +173,7 @@ export function OrderEditor({ householdId, timezone, recipes, start, onCancel, o
               checked={timing === 'now'}
               onChange={() => changeTime(() => setTiming('now'))}
             />
-            As soon as possible
+            {t('orderEditor.now')}
           </label>
         )}
         <label className="choice">
@@ -174,12 +183,12 @@ export function OrderEditor({ householdId, timezone, recipes, start, onCancel, o
             checked={timing === 'scheduled'}
             onChange={() => changeTime(() => setTiming('scheduled'))}
           />
-          {editing ? 'Planned for' : 'Plan for later'}
+          {t(editing ? 'orderEditor.plannedFor' : 'orderEditor.later')}
         </label>
         {timing === 'scheduled' && (
           <div className="field-row">
             <label className="field">
-              <span>Date</span>
+              <span>{t('orderEditor.date')}</span>
               <input
                 type="date"
                 value={date}
@@ -188,7 +197,7 @@ export function OrderEditor({ householdId, timezone, recipes, start, onCancel, o
               />
             </label>
             <label className="field">
-              <span>Time</span>
+              <span>{t('orderEditor.time')}</span>
               <input
                 type="time"
                 value={time}
@@ -198,12 +207,12 @@ export function OrderEditor({ householdId, timezone, recipes, start, onCancel, o
             </label>
           </div>
         )}
-        <p className="muted">Times are in the household time zone, {timezone}.</p>
+        <p className="muted">{t('orderEditor.timezone', { timezone })}</p>
       </fieldset>
 
       {choices && timing === 'scheduled' && (
         <fieldset className="choice-group">
-          <legend>{time} happens twice that day. Which one do you mean?</legend>
+          <legend>{t('orderEditor.ambiguous', { time })}</legend>
           {choices.map((choice) => (
             <label className="choice" key={choice.disambiguation}>
               <input
@@ -212,28 +221,28 @@ export function OrderEditor({ householdId, timezone, recipes, start, onCancel, o
                 checked={disambiguation === choice.disambiguation}
                 onChange={() => setDisambiguation(choice.disambiguation)}
               />
-              {choice.disambiguation === 'earlier' ? 'The first' : 'The second'} {time} (UTC
-              {choice.utcOffset})
+              {t(choice.disambiguation === 'earlier' ? 'orderEditor.first' : 'orderEditor.second', {
+                time,
+                offset: choice.utcOffset,
+              })}
             </label>
           ))}
         </fieldset>
       )}
 
-      <h3>Dishes</h3>
-      {noRecipes && !editing && (
-        <p className="muted">Add a recipe to your menu first; orders are made from the menu.</p>
-      )}
+      <h3>{t('orderEditor.dishes')}</h3>
+      {noRecipes && !editing && <p className="muted">{t('orderEditor.noRecipes')}</p>}
       {lines.map((line, index) => (
         <fieldset className="order-line" key={line.key}>
-          <legend className="sr-only">Dish {index + 1}</legend>
+          <legend className="sr-only">{t('orderEditor.dish', { number: index + 1 })}</legend>
           {line.itemId ? (
             <p className="order-line-name">
               {line.name}
-              <span className="muted"> · as ordered</span>
+              <span className="muted">{t('orderEditor.asOrdered')}</span>
             </p>
           ) : (
             <label className="field wide">
-              <span>Dish {index + 1}</span>
+              <span>{t('orderEditor.dish', { number: index + 1 })}</span>
               <select
                 value={line.recipeId}
                 required
@@ -254,7 +263,11 @@ export function OrderEditor({ householdId, timezone, recipes, start, onCancel, o
             </label>
           )}
           <label className="field servings-field">
-            <span>Servings{line.itemId ? ` for ${line.name}` : ''}</span>
+            <span>
+              {line.itemId
+                ? t('orderEditor.servingsFor', { name: line.name ?? '' })
+                : t('orderEditor.servings')}
+            </span>
             <input
               type="number"
               inputMode="numeric"
@@ -269,7 +282,7 @@ export function OrderEditor({ householdId, timezone, recipes, start, onCancel, o
           <button
             type="button"
             className="icon-button small"
-            aria-label={`Remove dish ${index + 1}`}
+            aria-label={t('orderEditor.removeDish', { number: index + 1 })}
             disabled={lines.length === 1}
             onClick={() => setLines(lines.filter((_, i) => i !== index))}
           >
@@ -292,11 +305,11 @@ export function OrderEditor({ householdId, timezone, recipes, start, onCancel, o
           ])
         }
       >
-        <Plus size={16} /> Add dish
+        <Plus size={16} /> {t('orderEditor.addDish')}
       </button>
 
       <label className="field wide">
-        <span>Notes (optional)</span>
+        <span>{t('orderEditor.notes')}</span>
         <textarea
           value={notes}
           rows={2}
@@ -307,10 +320,22 @@ export function OrderEditor({ householdId, timezone, recipes, start, onCancel, o
 
       {error && (
         <div className="form-error" role="alert">
-          <p>{error}</p>
+          <p>
+            {error instanceof ApiError
+              ? apiError(error)
+              : typeof error === 'object'
+                ? t('orderEditor.closed', {
+                    status:
+                      language === 'zh'
+                        ? t(error.status === 'completed' ? 'orders.done' : 'orders.cancelled')
+                        : error.status,
+                    name: error.actor,
+                  })
+                : t(error === 'save' ? 'orderEditor.saveFailed' : 'orderEditor.loadFailed')}
+          </p>
           {conflict && (
             <button type="button" className="text-button" onClick={loadLatest}>
-              Load the latest version (discards your changes)
+              {t('orderEditor.latest')}
             </button>
           )}
         </div>
@@ -320,10 +345,10 @@ export function OrderEditor({ householdId, timezone, recipes, start, onCancel, o
           className="primary-button"
           disabled={busy || (noRecipes && !editing) || (choices !== null && !disambiguation)}
         >
-          {busy ? 'Saving…' : editing ? 'Save changes' : 'Place order'}
+          {t(busy ? 'orderEditor.saving' : editing ? 'orderEditor.save' : 'orderEditor.place')}
         </button>
         <button type="button" className="text-button" onClick={onCancel}>
-          Cancel
+          {t('orderEditor.cancel')}
         </button>
       </div>
     </form>

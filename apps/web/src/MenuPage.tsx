@@ -38,7 +38,7 @@ import {
   type Session,
 } from './api';
 import { AiDraftPanel } from './AiDraftPanel';
-import { prepareImage } from './image';
+import { ImageError, prepareImage } from './image';
 import { RecipeEditor, type EditorStart } from './RecipeEditor';
 import { useI18n } from './i18n';
 
@@ -50,6 +50,10 @@ function tone(id: string) {
 }
 
 type Selected = { kind: 'preset'; preset: RecipePreset } | { kind: 'recipe'; recipe: RecipeDetail };
+type MenuError = ApiError | 'load' | 'open' | 'update' | null;
+type MenuNotice =
+  { kind: 'archived' | 'restored' | 'saved'; name: string } | { kind: 'discarded' } | null;
+type PhotoState = { busy: boolean; error: ApiError | ImageError | 'update' | null };
 
 interface Props {
   session: Session | null;
@@ -62,7 +66,7 @@ interface Props {
 }
 
 export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef, hero }: Props) {
-  const { t } = useI18n();
+  const { t, apiError } = useI18n();
   const [presets, setPresets] = useState<RecipePreset[] | null>(null);
   const [recipes, setRecipes] = useState<RecipeSummary[] | null>(null);
   const [query, setQuery] = useState('');
@@ -70,9 +74,9 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
   const [editor, setEditor] = useState<EditorStart | null>(null);
   const [aiPanel, setAiPanel] = useState(false);
   const [selected, setSelected] = useState<Selected | null>(null);
-  const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
-  const [photo, setPhoto] = useState({ busy: false, error: '' });
+  const [error, setError] = useState<MenuError>(null);
+  const [notice, setNotice] = useState<MenuNotice>(null);
+  const [photo, setPhoto] = useState<PhotoState>({ busy: false, error: null });
   const dialog = useRef<HTMLDialogElement>(null);
   const opener = useRef<HTMLElement | null>(null);
   const householdId = household?.id;
@@ -87,7 +91,7 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
     try {
       setRecipes(await api<RecipeSummary[]>(`/households/${householdId}/recipes`));
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : 'Could not load your menu.');
+      setError(caught instanceof ApiError ? caught : 'load');
     }
   }, [householdId]);
   useEffect(() => {
@@ -101,23 +105,23 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
   function closeDialog() {
     dialog.current?.close();
     setSelected(null);
-    setPhoto({ busy: false, error: '' });
+    setPhoto({ busy: false, error: null });
     opener.current?.focus();
   }
   async function openRecipe(id: string, from: HTMLElement) {
     opener.current = from;
-    setError('');
+    setError(null);
     try {
       setSelected({
         kind: 'recipe',
         recipe: await api<RecipeDetail>(`/households/${householdId}/recipes/${id}`),
       });
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : 'Could not open the recipe.');
+      setError(caught instanceof ApiError ? caught : 'open');
     }
   }
   async function setArchived(recipe: RecipeDetail, archived: boolean) {
-    setError('');
+    setError(null);
     try {
       const next = await api<RecipeDetail>(
         `/households/${householdId}/recipes/${recipe.id}/${archived ? 'archive' : 'restore'}`,
@@ -129,17 +133,17 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
           ? { kind: 'recipe', recipe: next }
           : current,
       );
-      setNotice(archived ? `${next.name} was archived.` : `${next.name} is back on the menu.`);
+      setNotice({ kind: archived ? 'archived' : 'restored', name: next.name });
       await loadRecipes();
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : 'Could not update the recipe.');
+      setError(caught instanceof ApiError ? caught : 'update');
       closeDialog();
       await loadRecipes();
     }
   }
   /** Uploads a new photo, or removes the current one when `file` is null. */
   async function changePhoto(recipe: RecipeDetail, file: File | null) {
-    setPhoto({ busy: true, error: '' });
+    setPhoto({ busy: true, error: null });
     try {
       const path = `/households/${householdId}/recipes/${recipe.id}`;
       if (file) await uploadImage(`${path}/image`, await prepareImage(file));
@@ -150,12 +154,12 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
           ? { kind: 'recipe', recipe: next }
           : current,
       );
-      setPhoto({ busy: false, error: '' });
+      setPhoto({ busy: false, error: null });
       await loadRecipes();
     } catch (caught) {
       setPhoto({
         busy: false,
-        error: caught instanceof Error ? caught.message : 'Could not update the photo.',
+        error: caught instanceof ApiError || caught instanceof ImageError ? caught : 'update',
       });
     }
   }
@@ -165,7 +169,7 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
   function startEditor(start: EditorStart) {
     dialog.current?.close();
     setSelected(null);
-    setNotice('');
+    setNotice(null);
     setAiPanel(false);
     setEditor(start);
     window.scrollTo({ top: 0 });
@@ -184,12 +188,12 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
           }}
           onSaved={async (saved) => {
             setEditor(null);
-            setNotice(`Saved ${saved.name}.`);
+            setNotice({ kind: 'saved', name: saved.name });
             await loadRecipes();
           }}
           onDiscarded={() => {
             setEditor(null);
-            setNotice('Draft discarded. Your menu is unchanged.');
+            setNotice({ kind: 'discarded' });
           }}
         />
       </section>
@@ -263,7 +267,7 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
               <button
                 className="archive-toggle ai-toggle"
                 onClick={() => {
-                  setNotice('');
+                  setNotice(null);
                   setAiPanel(true);
                   window.scrollTo({ top: 0 });
                 }}
@@ -283,12 +287,29 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
         </p>
         {notice && (
           <p className="notice" role="status">
-            {notice}
+            {notice.kind === 'discarded'
+              ? t('menu.discardedNotice')
+              : t(
+                  notice.kind === 'archived'
+                    ? 'menu.archivedNotice'
+                    : notice.kind === 'restored'
+                      ? 'menu.restoredNotice'
+                      : 'menu.savedNotice',
+                  { name: notice.name },
+                )}
           </p>
         )}
         {error && (
           <p className="form-error" role="alert">
-            {error}
+            {error instanceof ApiError
+              ? apiError(error)
+              : t(
+                  error === 'load'
+                    ? 'menu.loadFailed'
+                    : error === 'open'
+                      ? 'menu.openFailed'
+                      : 'menu.updateFailed',
+                )}
           </p>
         )}
 
@@ -539,10 +560,10 @@ function RecipeView({
   onOrder: (recipe: RecipeDetail) => void;
   onArchive: (recipe: RecipeDetail, archived: boolean) => Promise<void>;
   imageUrl?: string;
-  photo: { busy: boolean; error: string };
+  photo: PhotoState;
   onPhoto: (recipe: RecipeDetail, file: File | null) => Promise<void>;
 }) {
-  const { t } = useI18n();
+  const { t, language, apiError } = useI18n();
   const [dragActive, setDragActive] = useState(false);
   const dragDepth = useRef(0);
   const content = selected.kind === 'preset' ? selected.preset : selected.recipe;
@@ -591,7 +612,7 @@ function RecipeView({
       {content.ingredients.length > 0 ? (
         <ul>
           {content.ingredients.map((line, index) => (
-            <li key={index}>{formatIngredient(line)}</li>
+            <li key={index}>{formatIngredient(line, language)}</li>
           ))}
         </ul>
       ) : (
@@ -668,7 +689,17 @@ function RecipeView({
           )}
           {photo.error && (
             <p className="form-error" role="alert">
-              {photo.error}
+              {photo.error instanceof ApiError
+                ? apiError(photo.error)
+                : photo.error instanceof ImageError
+                  ? t(
+                      photo.error.code === 'tooLarge'
+                        ? 'image.tooLarge'
+                        : photo.error.code === 'unreadable'
+                          ? 'image.unreadable'
+                          : 'image.unsupported',
+                    )
+                  : t('menu.photoFailed')}
             </p>
           )}
         </div>

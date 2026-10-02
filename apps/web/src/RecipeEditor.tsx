@@ -4,11 +4,13 @@ import {
   api,
   ApiError,
   UNITS,
+  unitLabel,
   type AiDraft,
   type Ingredient,
   type RecipeContent,
   type RecipeDetail,
 } from './api';
+import { useI18n } from './i18n';
 
 export type EditorStart =
   | { mode: 'create'; presetId?: string; content?: RecipeContent }
@@ -97,6 +99,7 @@ interface Props {
  * member is reported instead of overwritten.
  */
 export function RecipeEditor({ householdId, start, onCancel, onSaved, onDiscarded }: Props) {
+  const { language, t, apiError } = useI18n();
   const [draft, setDraft] = useState<Draft>(() =>
     start.mode === 'edit'
       ? toDraft(start.recipe)
@@ -108,7 +111,7 @@ export function RecipeEditor({ householdId, start, onCancel, onSaved, onDiscarde
   // One id per editor session: retries of the same save cannot create a second recipe.
   const [requestId] = useState(() => crypto.randomUUID());
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<ApiError | 'save' | 'discard' | 'load' | null>(null);
   const [conflict, setConflict] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const recipeId = start.mode === 'edit' ? start.recipe.id : null;
@@ -132,7 +135,7 @@ export function RecipeEditor({ householdId, start, onCancel, onSaved, onDiscarde
   async function submit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
-    setError('');
+    setError(null);
     setConflict(false);
     try {
       const saved = recipeId
@@ -156,7 +159,7 @@ export function RecipeEditor({ householdId, start, onCancel, onSaved, onDiscarde
             });
       onSaved(saved);
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : 'Could not save the recipe.');
+      setError(caught instanceof ApiError ? caught : 'save');
       setConflict(caught instanceof ApiError && caught.status === 409 && recipeId !== null);
     } finally {
       setBusy(false);
@@ -166,14 +169,14 @@ export function RecipeEditor({ householdId, start, onCancel, onSaved, onDiscarde
   async function discardDraft() {
     if (start.mode !== 'ai') return;
     setBusy(true);
-    setError('');
+    setError(null);
     try {
       await api(`/households/${householdId}/ai-drafts/${start.draft.id}/discard`, {
         method: 'POST',
       });
       onDiscarded?.();
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : 'Could not discard the draft.');
+      setError(caught instanceof ApiError ? caught : 'discard');
     } finally {
       setBusy(false);
     }
@@ -181,46 +184,46 @@ export function RecipeEditor({ householdId, start, onCancel, onSaved, onDiscarde
 
   async function loadLatest() {
     if (!recipeId) return;
-    setError('');
+    setError(null);
     setConflict(false);
     try {
       const latest = await api<RecipeDetail>(`/households/${householdId}/recipes/${recipeId}`);
       setDraft(toDraft(latest));
       setRevision(latest.revision);
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : 'Could not load the recipe.');
+      setError(caught instanceof ApiError ? caught : 'load');
     }
   }
 
-  const title =
+  const title = t(
     start.mode === 'edit'
-      ? 'Edit recipe'
+      ? 'recipeEditor.edit'
       : start.mode === 'ai'
-        ? 'Review the AI draft'
+        ? 'recipeEditor.reviewAi'
         : start.presetId
-          ? 'Save a starter recipe'
-          : 'New recipe';
+          ? 'recipeEditor.saveStarter'
+          : 'recipeEditor.new',
+  );
 
   return (
     <form className="card-panel recipe-editor" onSubmit={submit} aria-labelledby="editor-title">
-      <p className="eyebrow">YOUR HOUSEHOLD MENU</p>
+      <p className="eyebrow">{t('recipeEditor.eyebrow')}</p>
       <h2 id="editor-title" tabIndex={-1} ref={heading}>
         {title}
       </h2>
       {start.mode === 'ai' && (
         <p className="notice ai-notice">
-          Written by AI ({start.draft.model}) from “{start.draft.dishName}”. It is not in your menu
-          yet. Check the amounts, cooking times and any allergens, set a price, then save it or
-          discard it.
+          {t('recipeEditor.aiNotice', {
+            model: start.draft.model,
+            dish: start.draft.dishName,
+          })}
         </p>
       )}
       {start.mode === 'create' && start.presetId && (
-        <p className="muted">
-          This saves your own copy. Change anything you like; the starter recipe stays as it is.
-        </p>
+        <p className="muted">{t('recipeEditor.starterNotice')}</p>
       )}
       <label className="field">
-        <span>Recipe name</span>
+        <span>{t('recipeEditor.name')}</span>
         <input
           value={draft.name}
           onChange={(event) => update({ name: event.target.value })}
@@ -229,7 +232,7 @@ export function RecipeEditor({ householdId, start, onCancel, onSaved, onDiscarde
         />
       </label>
       <label className="field">
-        <span>Short description (optional)</span>
+        <span>{t('recipeEditor.description')}</span>
         <input
           value={draft.description}
           onChange={(event) => update({ description: event.target.value })}
@@ -238,7 +241,7 @@ export function RecipeEditor({ householdId, start, onCancel, onSaved, onDiscarde
       </label>
       <div className="field-row">
         <label className="field">
-          <span>Serves</span>
+          <span>{t('recipeEditor.serves')}</span>
           <input
             type="number"
             inputMode="numeric"
@@ -251,7 +254,7 @@ export function RecipeEditor({ householdId, start, onCancel, onSaved, onDiscarde
           />
         </label>
         <label className="field">
-          <span>Points per serving</span>
+          <span>{t('recipeEditor.points')}</span>
           <input
             type="number"
             inputMode="numeric"
@@ -265,18 +268,16 @@ export function RecipeEditor({ householdId, start, onCancel, onSaved, onDiscarde
         </label>
       </div>
       <p className="muted" id="points-help">
-        Points are a playful menu price with no cash value.
+        {t('recipeEditor.pointsHelp')}
       </p>
 
-      <h3>Ingredients</h3>
-      <p className="muted">
-        Amounts are for the number of servings above. Leave the amount blank for “to taste”.
-      </p>
+      <h3>{t('recipeEditor.ingredients')}</h3>
+      <p className="muted">{t('recipeEditor.amountsHelp')}</p>
       {draft.ingredients.map((line, index) => (
         <fieldset className="ingredient-row" key={line.key}>
-          <legend>Ingredient {index + 1}</legend>
+          <legend>{t('recipeEditor.ingredient', { number: index + 1 })}</legend>
           <label className="field wide">
-            <span>Name</span>
+            <span>{t('recipeEditor.ingredientName')}</span>
             <input
               value={line.name}
               onChange={(event) => updateLine(index, { name: event.target.value })}
@@ -285,51 +286,51 @@ export function RecipeEditor({ householdId, start, onCancel, onSaved, onDiscarde
             />
           </label>
           <label className="field">
-            <span>Amount</span>
+            <span>{t('recipeEditor.amount')}</span>
             <input
               inputMode="decimal"
               pattern="\d+(\.\d{1,3})?"
-              title="A number such as 2 or 0.25"
+              title={t('recipeEditor.amountTitle')}
               value={line.quantity}
               onChange={(event) => updateLine(index, { quantity: event.target.value })}
             />
           </label>
           <label className="field">
-            <span>Unit</span>
+            <span>{t('recipeEditor.unit')}</span>
             <select
               value={line.unit}
               onChange={(event) => updateLine(index, { unit: event.target.value })}
             >
-              <option value="">none</option>
+              <option value="">{t('recipeEditor.none')}</option>
               {UNITS.map((unit) => (
                 <option key={unit} value={unit}>
-                  {unit}
+                  {unitLabel(unit, language)}
                 </option>
               ))}
             </select>
           </label>
           <label className="field">
-            <span>Preparation</span>
+            <span>{t('recipeEditor.preparation')}</span>
             <input
               value={line.form}
               onChange={(event) => updateLine(index, { form: event.target.value })}
               maxLength={60}
-              placeholder="e.g. diced"
+              placeholder={t('recipeEditor.preparationPlaceholder')}
             />
           </label>
           <label className="field">
-            <span>Note</span>
+            <span>{t('recipeEditor.note')}</span>
             <input
               value={line.note}
               onChange={(event) => updateLine(index, { note: event.target.value })}
               maxLength={200}
-              placeholder="e.g. to taste"
+              placeholder={t('recipeEditor.notePlaceholder')}
             />
           </label>
           <button
             type="button"
             className="icon-button small"
-            aria-label={`Remove ingredient ${index + 1}`}
+            aria-label={t('recipeEditor.removeIngredient', { number: index + 1 })}
             onClick={() => update({ ingredients: draft.ingredients.filter((_, i) => i !== index) })}
           >
             <Trash2 size={18} />
@@ -342,14 +343,14 @@ export function RecipeEditor({ householdId, start, onCancel, onSaved, onDiscarde
         disabled={draft.ingredients.length >= 60}
         onClick={() => update({ ingredients: [...draft.ingredients, emptyLine()] })}
       >
-        <Plus size={16} /> Add ingredient
+        <Plus size={16} /> {t('recipeEditor.addIngredient')}
       </button>
 
-      <h3>Method</h3>
+      <h3>{t('menu.method')}</h3>
       {draft.steps.map((step, index) => (
         <div className="step-row" key={step.key}>
           <label className="field wide">
-            <span>Step {index + 1}</span>
+            <span>{t('recipeEditor.step', { number: index + 1 })}</span>
             <textarea
               value={step.text}
               rows={2}
@@ -366,7 +367,7 @@ export function RecipeEditor({ householdId, start, onCancel, onSaved, onDiscarde
           <button
             type="button"
             className="icon-button small"
-            aria-label={`Remove step ${index + 1}`}
+            aria-label={t('recipeEditor.removeStep', { number: index + 1 })}
             onClick={() => update({ steps: draft.steps.filter((_, i) => i !== index) })}
           >
             <Trash2 size={18} />
@@ -379,30 +380,40 @@ export function RecipeEditor({ householdId, start, onCancel, onSaved, onDiscarde
         disabled={draft.steps.length >= 30}
         onClick={() => update({ steps: [...draft.steps, { key: key(), text: '' }] })}
       >
-        <Plus size={16} /> Add step
+        <Plus size={16} /> {t('recipeEditor.addStep')}
       </button>
 
       {error && (
         <div className="form-error" role="alert">
-          <p>{error}</p>
+          <p>
+            {error instanceof ApiError
+              ? apiError(error)
+              : t(
+                  error === 'save'
+                    ? 'recipeEditor.saveFailed'
+                    : error === 'discard'
+                      ? 'recipeEditor.discardFailed'
+                      : 'recipeEditor.loadFailed',
+                )}
+          </p>
           {conflict && (
             <button type="button" className="text-button" onClick={loadLatest}>
-              Load the latest version (discards your changes)
+              {t('recipeEditor.latest')}
             </button>
           )}
         </div>
       )}
       <div className="form-actions">
         <button className="primary-button" disabled={busy}>
-          {busy ? 'Saving…' : 'Save recipe'}
+          {t(busy ? 'recipeEditor.saving' : 'recipeEditor.save')}
         </button>
         {start.mode === 'ai' && (
           <button type="button" className="text-button" disabled={busy} onClick={discardDraft}>
-            Discard draft
+            {t('recipeEditor.discard')}
           </button>
         )}
         <button type="button" className="text-button" onClick={onCancel}>
-          {start.mode === 'ai' ? 'Decide later' : 'Cancel'}
+          {t(start.mode === 'ai' ? 'recipeEditor.later' : 'orderEditor.cancel')}
         </button>
       </div>
     </form>

@@ -1,6 +1,17 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Sparkles } from 'lucide-react';
 import { api, ApiError, type AiDraft, type AiOverview } from './api';
+import { useI18n } from './i18n';
+
+type ErrorState =
+  | ApiError
+  | 'load'
+  | 'failed'
+  | 'slow'
+  | 'start'
+  | 'discard'
+  | { kind: 'provider'; code: string | null; message: string }
+  | null;
 
 interface Props {
   householdId: string;
@@ -21,13 +32,14 @@ const GIVE_UP_MS = 90_000;
  * saves or discards it.
  */
 export function AiDraftPanel({ householdId, onReview, onManual, onClose }: Props) {
+  const { language, t, apiError, errorCode } = useI18n();
   const [overview, setOverview] = useState<AiOverview | null>(null);
   const [dishName, setDishName] = useState('');
   const [preferences, setPreferences] = useState('');
   // Kept across a network failure so that retrying cannot start a second draft.
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const [pending, setPending] = useState<AiDraft | null>(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<ErrorState>(null);
   const [failed, setFailed] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const base = `/households/${householdId}/ai-drafts`;
@@ -36,7 +48,7 @@ export function AiDraftPanel({ householdId, onReview, onManual, onClose }: Props
     try {
       setOverview(await api<AiOverview>(base));
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : 'Could not load AI drafts.');
+      setError(caught instanceof ApiError ? caught : 'load');
     }
   }, [base]);
 
@@ -61,7 +73,11 @@ export function AiDraftPanel({ householdId, onReview, onManual, onClose }: Props
         if (latest.status === 'failed') {
           setPending(null);
           setFailed(true);
-          setError(latest.errorMessage ?? 'The draft could not be written.');
+          setError(
+            latest.errorMessage
+              ? { kind: 'provider', code: latest.errorCode, message: latest.errorMessage }
+              : 'failed',
+          );
           void load();
           return;
         }
@@ -70,9 +86,7 @@ export function AiDraftPanel({ householdId, onReview, onManual, onClose }: Props
       }
       if (Date.now() - started > GIVE_UP_MS) {
         setPending(null);
-        setError(
-          'This is taking longer than expected. The draft will appear below if it finishes.',
-        );
+        setError('slow');
         void load();
         return;
       }
@@ -87,7 +101,7 @@ export function AiDraftPanel({ householdId, onReview, onManual, onClose }: Props
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    setError('');
+    setError(null);
     setFailed(false);
     try {
       const draft = await api<AiDraft>(base, {
@@ -98,23 +112,27 @@ export function AiDraftPanel({ householdId, onReview, onManual, onClose }: Props
       if (draft.status === 'succeeded') onReview(draft);
       else if (draft.status === 'failed') {
         setFailed(true);
-        setError(draft.errorMessage ?? 'The draft could not be written.');
+        setError(
+          draft.errorMessage
+            ? { kind: 'provider', code: draft.errorCode, message: draft.errorMessage }
+            : 'failed',
+        );
       } else setPending(draft);
     } catch (caught) {
       if (!(caught instanceof ApiError) || caught.status !== 0) setRequestId(crypto.randomUUID());
       setFailed(caught instanceof ApiError && caught.status !== 0 && caught.status !== 400);
-      setError(caught instanceof ApiError ? caught.message : 'Could not start the draft.');
+      setError(caught instanceof ApiError ? caught : 'start');
       void load();
     }
   }
 
   async function discard(draft: AiDraft) {
-    setError('');
+    setError(null);
     try {
       await api(`${base}/${draft.id}/discard`, { method: 'POST' });
       await load();
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : 'Could not discard the draft.');
+      setError(caught instanceof ApiError ? caught : 'discard');
     }
   }
 
@@ -122,48 +140,44 @@ export function AiDraftPanel({ householdId, onReview, onManual, onClose }: Props
 
   return (
     <section className="card-panel ai-panel" aria-labelledby="ai-title">
-      <p className="eyebrow">YOUR HOUSEHOLD MENU</p>
+      <p className="eyebrow">{t('recipeEditor.eyebrow')}</p>
       <h2 id="ai-title" tabIndex={-1} ref={heading}>
-        Draft a recipe with AI
+        {t('ai.title')}
       </h2>
-      {overview === null && !error && <p role="status">Loading…</p>}
-      {overview?.enabled === false && (
-        <p>AI drafts are turned off at the moment. You can still add recipes by hand.</p>
-      )}
+      {overview === null && !error && <p role="status">{t('join.loading')}</p>}
+      {overview?.enabled === false && <p>{t('ai.disabled')}</p>}
       {overview?.enabled && (
         <>
-          <p className="muted">
-            Name a dish and the AI writes a first draft of ingredients and steps. You review and
-            edit it before anything is added to your menu. AI drafts can contain mistakes, so check
-            amounts, cooking times and allergens yourself.
-          </p>
+          <p className="muted">{t('ai.description')}</p>
           <form className="ai-form" onSubmit={submit}>
             <label className="field">
-              <span>Dish name</span>
+              <span>{t('ai.dishName')}</span>
               <input
                 value={dishName}
                 onChange={(event) => setDishName(event.target.value)}
                 maxLength={80}
                 required
                 disabled={pending !== null}
-                placeholder="e.g. Mapo tofu"
+                placeholder={t('ai.dishPlaceholder')}
               />
             </label>
             <label className="field">
-              <span>Preferences (optional)</span>
+              <span>{t('ai.preferences')}</span>
               <textarea
                 value={preferences}
                 onChange={(event) => setPreferences(event.target.value)}
                 maxLength={300}
                 rows={2}
                 disabled={pending !== null}
-                placeholder="e.g. mild, no peanuts, for four"
+                placeholder={t('ai.preferencesPlaceholder')}
               />
             </label>
             <p className="muted" id="ai-privacy">
-              Only the dish name and preferences are sent to the AI service ({overview.model}).{' '}
-              {overview.remainingToday} of {overview.householdDailyLimit} household drafts left in
-              the last 24 hours.
+              {t('ai.privacy', {
+                model: overview.model ?? '',
+                remaining: overview.remainingToday,
+                limit: overview.householdDailyLimit,
+              })}
             </p>
             <div className="form-actions">
               <button
@@ -172,38 +186,54 @@ export function AiDraftPanel({ householdId, onReview, onManual, onClose }: Props
                 aria-describedby="ai-privacy"
               >
                 <Sparkles size={16} aria-hidden="true" />
-                {pending ? 'Writing…' : 'Write a draft'}
+                {t(pending ? 'ai.writing' : 'ai.write')}
               </button>
               <button type="button" className="text-button" onClick={onClose}>
-                Back to menu
+                {t('ai.back')}
               </button>
             </div>
           </form>
         </>
       )}
       <p role="status" className={pending ? 'notice' : 'sr-only'}>
-        {pending
-          ? `Writing a draft for ${pending.dishName}… this usually takes a few seconds.`
-          : ''}
+        {pending ? t('ai.pending', { name: pending.dishName }) : ''}
       </p>
       {error && (
         <div className="form-error" role="alert">
-          <p>{error}</p>
+          <p>
+            {error instanceof ApiError
+              ? apiError(error)
+              : typeof error === 'object'
+                ? language === 'en'
+                  ? error.message
+                  : (errorCode(error.code) ?? t('ai.draftFailed'))
+                : t(
+                    error === 'load'
+                      ? 'ai.loadFailed'
+                      : error === 'failed'
+                        ? 'ai.draftFailed'
+                        : error === 'slow'
+                          ? 'ai.slow'
+                          : error === 'start'
+                            ? 'ai.startFailed'
+                            : 'ai.discardFailed',
+                  )}
+          </p>
         </div>
       )}
       {(failed || exhausted || overview?.enabled === false) && (
         <button type="button" className="text-button" onClick={onManual}>
-          Enter the recipe by hand instead
+          {t('ai.manual')}
         </button>
       )}
       {overview?.enabled === false && (
         <button type="button" className="text-button" onClick={onClose}>
-          Back to menu
+          {t('ai.back')}
         </button>
       )}
       {overview && overview.drafts.some((draft) => draft.id !== pending?.id) && (
         <>
-          <h3>Unfinished drafts</h3>
+          <h3>{t('ai.unfinished')}</h3>
           <ul className="ai-drafts">
             {overview.drafts
               .filter((draft) => draft.id !== pending?.id)
@@ -213,7 +243,15 @@ export function AiDraftPanel({ householdId, onReview, onManual, onClose }: Props
                     <strong>{draft.dishName}</strong>
                     <span className="muted">
                       {' '}
-                      · {draftState(draft)} · by {draft.createdBy}
+                      ·{' '}
+                      {t(
+                        draft.status === 'succeeded'
+                          ? 'ai.ready'
+                          : draft.status === 'failed'
+                            ? 'ai.failedState'
+                            : 'ai.runningState',
+                      )}
+                      {t('ai.by', { name: draft.createdBy })}
                     </span>
                   </span>
                   <span className="ai-draft-actions">
@@ -222,9 +260,9 @@ export function AiDraftPanel({ householdId, onReview, onManual, onClose }: Props
                         type="button"
                         className="text-button"
                         onClick={() => onReview(draft)}
-                        aria-label={`Review draft for ${draft.dishName}`}
+                        aria-label={t('ai.reviewLabel', { name: draft.dishName })}
                       >
-                        Review
+                        {t('ai.review')}
                       </button>
                     )}
                     {draft.status !== 'running' && draft.status !== 'queued' && (
@@ -232,9 +270,9 @@ export function AiDraftPanel({ householdId, onReview, onManual, onClose }: Props
                         type="button"
                         className="text-button"
                         onClick={() => discard(draft)}
-                        aria-label={`Discard draft for ${draft.dishName}`}
+                        aria-label={t('ai.discardLabel', { name: draft.dishName })}
                       >
-                        Discard
+                        {t('ai.discard')}
                       </button>
                     )}
                   </span>
@@ -245,10 +283,4 @@ export function AiDraftPanel({ householdId, onReview, onManual, onClose }: Props
       )}
     </section>
   );
-}
-
-function draftState(draft: AiDraft) {
-  if (draft.status === 'succeeded') return 'ready to review';
-  if (draft.status === 'failed') return 'failed';
-  return 'being written';
 }

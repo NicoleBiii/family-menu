@@ -105,13 +105,6 @@ export function signInUrl(returnTo: string) {
   return `/api/auth/login?returnTo=${encodeURIComponent(returnTo)}`;
 }
 
-export const authErrorMessages: Record<string, string> = {
-  state_invalid: 'Your sign-in attempt expired or was interrupted. Please try again.',
-  provider_denied: 'Google sign-in was cancelled.',
-  exchange_failed: 'We could not confirm your Google sign-in. Please try again.',
-  not_configured: 'Sign-in is not configured on this server yet.',
-};
-
 export const UNITS = [
   'g',
   'kg',
@@ -219,11 +212,35 @@ export const PLURAL_UNITS: Partial<Record<(typeof UNITS)[number], string>> = {
   pinch: 'pinches',
 };
 
-export function formatIngredient(line: Ingredient) {
+const ZH_UNITS: Record<(typeof UNITS)[number], string> = {
+  g: '克',
+  kg: '千克',
+  oz: '盎司',
+  lb: '磅',
+  ml: '毫升',
+  l: '升',
+  tsp: '茶匙',
+  tbsp: '汤匙',
+  cup: '杯',
+  piece: '个',
+  clove: '瓣',
+  slice: '片',
+  can: '罐',
+  bunch: '把',
+  pinch: '撮',
+};
+
+export function unitLabel(unit: (typeof UNITS)[number], language: 'en' | 'zh' = 'en') {
+  return language === 'zh' ? ZH_UNITS[unit] : unit;
+}
+
+export function formatIngredient(line: Ingredient, language: 'en' | 'zh' = 'en') {
   const unit =
-    line.unit && line.quantity && Number(line.quantity) > 1
-      ? (PLURAL_UNITS[line.unit] ?? line.unit)
-      : line.unit;
+    language === 'zh' && line.unit
+      ? ZH_UNITS[line.unit]
+      : line.unit && line.quantity && Number(line.quantity) > 1
+        ? (PLURAL_UNITS[line.unit] ?? line.unit)
+        : line.unit;
   const amount = [line.quantity, unit].filter(Boolean).join(' ');
   return [
     amount ? `${amount} ${line.name}` : line.name,
@@ -282,11 +299,11 @@ export function localToday(timeZone: string, offsetDays = 0) {
 }
 
 /** "Today", "Tomorrow" or e.g. "Sat, Oct 3" for a household-local date. */
-export function dayLabel(date: string, timeZone: string) {
-  if (date === localToday(timeZone)) return 'Today';
-  if (date === localToday(timeZone, 1)) return 'Tomorrow';
-  if (date === localToday(timeZone, -1)) return 'Yesterday';
-  return new Intl.DateTimeFormat('en', {
+export function dayLabel(date: string, timeZone: string, language: 'en' | 'zh' = 'en') {
+  if (date === localToday(timeZone)) return language === 'zh' ? '今天' : 'Today';
+  if (date === localToday(timeZone, 1)) return language === 'zh' ? '明天' : 'Tomorrow';
+  if (date === localToday(timeZone, -1)) return language === 'zh' ? '昨天' : 'Yesterday';
+  return new Intl.DateTimeFormat(language === 'zh' ? 'zh-CN' : 'en', {
     timeZone: 'UTC',
     weekday: 'short',
     month: 'short',
@@ -335,12 +352,16 @@ export interface ShoppingList {
   }[];
 }
 
-export function formatAmount(amount: ShoppingAmount) {
+export function formatAmount(amount: ShoppingAmount, language: 'en' | 'zh' = 'en') {
   const unit =
     amount.unit === null
-      ? 'whole'
-      : Number(amount.quantity) > 1
-        ? (PLURAL_UNITS[amount.unit as (typeof UNITS)[number]] ?? amount.unit)
-        : amount.unit;
+      ? language === 'zh'
+        ? '个'
+        : 'whole'
+      : language === 'zh'
+        ? (ZH_UNITS[amount.unit as (typeof UNITS)[number]] ?? amount.unit)
+        : Number(amount.quantity) > 1
+          ? (PLURAL_UNITS[amount.unit as (typeof UNITS)[number]] ?? amount.unit)
+          : amount.unit;
   return `${amount.approximate ? '≈ ' : ''}${amount.quantity} ${unit}`;
 }
