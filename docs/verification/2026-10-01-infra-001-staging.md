@@ -1,18 +1,19 @@
 # INFRA-001 Staging Verification — 2026-10-01
 
-Status: public readiness verified; owner reports all six manual smoke steps passed on 2026-10-01 using desktop Chrome and Chrome on an iPhone 18 Pro Max. Deployment identity and migration evidence remain pending. This preview uses synthetic data only.
+Status: public readiness verified; owner reports all six manual smoke steps passed on 2026-10-01 using desktop Chrome and Chrome on an iPhone 18 Pro Max. A 2026-10-02 GitHub deployment record identifies the latest source commit and reports success; Railway's own deployment ID and pre-deploy migration logs remain pending. This preview uses synthetic data only.
 
 ## Environment and release identity
 
-| Field                 | Value                                                   |
-| --------------------- | ------------------------------------------------------- |
-| Railway environment   | `staging`                                               |
-| Public origin         | `https://family-menu-staging.up.railway.app`            |
-| Git branch            | `main` (owner-reported Railway service setting)         |
-| Deployed commit       | Pending: copy from Railway deployment details           |
-| Railway deployment ID | Pending: copy from Railway deployment details           |
-| Applied migration     | Pending: confirm from pre-deploy logs                   |
-| Database service      | PostgreSQL, connected via `DATABASE_URL` (owner report) |
+| Field                 | Value                                                                                                            |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Railway environment   | `staging`                                                                                                        |
+| Public origin         | `https://family-menu-staging.up.railway.app`                                                                     |
+| Git branch            | `main` (owner-reported Railway service setting)                                                                  |
+| Deployed commit       | GitHub deployment record reports `42a4c04` on 2026-10-02; Railway details not independently inspected            |
+| GitHub deployment ID  | `6818873585` for `42a4c04`, status `success` at 21:40:27 UTC; previous `6817641570` for `00770f6` also succeeded |
+| Railway deployment ID | Pending: copy from Railway deployment details                                                                    |
+| Applied migration     | Pending: confirm from pre-deploy logs                                                                            |
+| Database service      | PostgreSQL, connected via `DATABASE_URL` (owner report)                                                          |
 
 Do not paste variable values, API keys, session cookies, invitation tokens or personal records into this file.
 
@@ -27,6 +28,8 @@ The successful sign-in and Gemini smoke imply that the relevant app variables an
 | Public frontend       | PASS: external `curl` returned HTTP 200 from `/` on 2026-10-01 at approximately 17:35 UTC; owner browser smoke is recorded below                                                                                                |
 | Dockerfile build      | PASS: owner-provided build log shows Dockerfile stages, `npm ci`, `npm run build`, and image push                                                                                                                               |
 | Runtime startup       | Owner-provided Railway log shows Nest started successfully and listened on `0.0.0.0:8080` at 18:12:44 UTC. A `Stopping Container` line has no error or surrounding deployment identity. This is not a pre-deploy migration log. |
+
+On 2026-10-02, GitHub's deployment API reported staging deployment `6817641570` for shopping merge `00770f6` as successful at 20:30:53 UTC, and `6818873585` for photo-library merge `42a4c04` as successful at 21:40:27 UTC. These are **GitHub deployment IDs**, not Railway deployment IDs. After the latter status, external requests returned HTTP 200 with `{"status":"ready"}` from `/api/health/ready`, and public `/api/openapi.json` listed both new photo-library routes. This supports that the new server source is reachable, but does not show the Railway pre-deploy migration output or prove a live Pexels key is configured.
 
 ## Owner manual smoke — fill Pass, Fail or Not run
 
@@ -48,4 +51,4 @@ The owner also reported that 200% zoom and a screen-reader check showed no probl
 ## Outcome and next action
 
 - Staging infrastructure is reachable, and the owner reports the six product smoke steps passed on desktop and phone browsers in aggregate, with no problems reported at 200% zoom or in a screen-reader check. This does not establish that every step ran on each device or close the detailed UX-001 checklist.
-- Record the deployed commit, Railway deployment ID and pre-deploy migration result when available. Resolve any later failures without overwriting this first result.
+- Match the GitHub deployment for `42a4c04` to Railway's own deployment ID and record the pre-deploy results for migrations 007–009 from Railway details. Resolve any later failures without overwriting this first result.

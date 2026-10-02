@@ -22,3 +22,7 @@ Scope: the owner-approved [UI expansion](../proposals/2026-10-01-ui-expansion.md
 
 - No real Pexels key or provider request was used locally. Staging needs a server-side key, migration 009 result and a manual search/import check before calling the live integration verified.
 - Owner review on a physical phone, the detailed UX-001 screen-reader checklist, and real iMessage preview remain open.
+
+## Merge and staging signal
+
+PR #23 passed GitHub Quality checks and was squash-merged to `main` as `42a4c04`. GitHub's staging deployment record `6818873585` marked that commit successful at 21:40:27 UTC on 2026-10-02. Public staging readiness returned `{"status":"ready"}`, and its OpenAPI listed both photo-library routes. These checks do not include an authenticated import, a live Pexels request or the Railway pre-deploy migration log; see the [staging record](2026-10-01-infra-001-staging.md).
