@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, BookOpen, Leaf, LogIn } from 'lucide-react';
+import { ArrowRight, BookOpen, ChevronRight, Leaf, LogIn } from 'lucide-react';
 import {
   api,
   ApiError,
@@ -112,8 +112,15 @@ export function HomePage({
             <h2 id="home-menu-title">{t('menu.yours')}</h2>
             <p className="muted">{t('home.orderHint')}</p>
           </div>
-          <button className="secondary-button" onClick={onManage}>
-            <BookOpen size={17} aria-hidden="true" /> {t('home.manageRecipes')}
+          <button className="manage-button" onClick={onManage}>
+            <span className="manage-icon" aria-hidden="true">
+              <BookOpen size={20} />
+            </span>
+            <span className="manage-text">
+              <strong>{t('home.manageRecipes')}</strong>
+              <span>{t('home.manageHint')}</span>
+            </span>
+            <ChevronRight size={18} aria-hidden="true" />
           </button>
         </div>
         {!session ? (

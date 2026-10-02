@@ -401,8 +401,13 @@ h3 {
 .main-nav {
   position: fixed;
   bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
+  /* Centred without left: 50%, which would cap the bar at half the viewport and, at 200% zoom,
+     wrap Chinese labels one character per line. */
+  left: 0;
+  right: 0;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  margin-inline: auto;
   z-index: 5;
   display: flex;
   gap: 6px;
@@ -422,6 +427,7 @@ h3 {
   border-radius: 12px;
   min-height: 44px;
   font-size: 12px;
+  white-space: nowrap;
 }
 .main-nav button[aria-current] {
   background: #e9eddf;
@@ -1219,6 +1225,7 @@ dialog h3 {
   .main-nav {
     bottom: 0;
     width: 100%;
+    max-width: none;
     border-radius: 18px 18px 0 0;
     justify-content: space-around;
     padding: 7px 8px max(10px, env(safe-area-inset-bottom));
@@ -1449,6 +1456,54 @@ dialog h3 {
 }
 .notice-slot .notice {
   display: block;
+}
+
+/* Home: the way into recipe management (UX-003 owner review) */
+.manage-button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 10px 14px 10px 10px;
+  border: 0;
+  border-radius: 14px;
+  background: #364f36;
+  color: #fff;
+  text-align: left;
+  box-shadow: 0 6px 18px #263d2426;
+}
+.manage-button:hover {
+  background: #253e27;
+}
+.manage-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 10px;
+  background: #fffef71f;
+}
+.manage-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 14px;
+}
+.manage-text span {
+  color: #e6ecdc;
+  font-size: 12px;
+}
+.back-button {
+  margin-left: -12px;
+}
+@media (max-width: 600px) {
+  .manage-button {
+    width: 100%;
+  }
+  .manage-button > svg {
+    margin-left: auto;
+  }
 }
 
 /* Meals dish browser and basket (UX-002 phase 3) */

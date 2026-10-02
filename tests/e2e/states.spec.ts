@@ -72,7 +72,7 @@ test('each page has its own document title', async ({ page }) => {
     await nav(page, name).click();
     await expect(page).toHaveTitle(`${name} · Family Menu`);
   }
-  await page.getByRole('link', { name: 'Family Menu home' }).click();
+  await nav(page, 'Menu').click();
   await expect(page).toHaveTitle('Family Menu — A little more together');
   await page.getByRole('button', { name: 'Manage recipes & menu' }).click();
   await expect(page).toHaveTitle('Recipes · Family Menu');
