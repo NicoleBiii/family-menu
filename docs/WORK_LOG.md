@@ -332,3 +332,13 @@ Use dates in YYYY-MM-DD format, with America/Toronto as the reporting timezone. 
 - PR #21 (Meals basket) passed Quality checks and was squash-merged as `8264565` at the owner's request.
 - Wrote ADR 0009 (proposed, awaiting owner review) for UX-002 phase 4. Each check records a purchase plus exact-rational allocations to the pending order items it covers. Remaining = Σ max(0, required − covered) per (ingredient, form, unit family) line. Check and undo are appended to `audit_events`. A per-line token with a household advisory lock makes stale or concurrent checks fail with 409 instead of double-recording. This satisfies the egg example, closed orders not covering later ones, and unit/form separation without pantry semantics.
 - Open owner questions: partial purchase amounts, whether spare amounts after an order shrinks should carry over, and history length. No code or migration has been written for this phase; implementation waits for approval.
+
+## 2026-10-02 — UX-002 shared shopping checks implemented (Claude Code)
+
+- The owner accepted ADR 0009 with the recommended answers: no partial amounts, no carry-over of spare amounts, history limited to the latest 100 purchases. ADR 0005's checkbox deferral is marked superseded.
+- Implemented on `claude/ux-002-shopping-design`:
+  - additive migration 008 (purchase and allocation tables, an order-item composite key, widened audit checks) and readiness for the new tables;
+  - pure exact-rational reconciliation (`buildChecklist`);
+  - check, undo and history routes under a household advisory lock, with a per-line token and 409 `shopping_changed`;
+  - the shared checklist UI with a History view in both languages.
+- Validation: full `npm run check` on Node 24.19.0 passed (83 integration, 76 browser). Migration 008 is not yet on the development database or staging. Evidence: `verification/2026-10-02-ux-002-shopping-checks.md`. Next UX-002 phase: the free photo-library chooser.

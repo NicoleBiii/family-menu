@@ -1,6 +1,6 @@
 # ADR 0009 — Shared shopping checks, reconciliation and purchase history
 
-Date: 2026-10-02. Status: **proposed; awaiting owner review before implementation** (UX-002 phase 4). Source: the owner-approved [UI expansion proposal](../proposals/2026-10-01-ui-expansion.md) §4, which asks for this focused data-model decision before rollout. It extends [ADR 0005](0005-shopping-list.md) and supersedes its "purchase checkboxes deferred" limit for this scope.
+Date: 2026-10-02. Status: **accepted by the owner on 2026-10-02** with the recommended answers below; implemented on `claude/ux-002-shopping-design` (UX-002 phase 4). Source: the owner-approved [UI expansion proposal](../proposals/2026-10-01-ui-expansion.md) §4, which asks for this focused data-model decision before rollout. It extends [ADR 0005](0005-shopping-list.md) and supersedes its "purchase checkboxes deferred" limit for this scope.
 
 ## Owner-confirmed requirements (proposal §4 and 2026-10-01 discussion)
 
@@ -65,13 +65,13 @@ This gives the confirmed behaviour without special cases:
 - **Copying purchases into order snapshots.** It would mutate demand records and break the append-only rule (requirement 7).
 - **Pantry stock that carries spare amounts.** Out of scope; the proposal keeps purchases separate from inventory.
 
-## Questions for the owner
+## Owner answers (2026-10-02)
 
-1. **Partial purchases.** This design records "bought what the list showed". Should a member be able to enter a smaller amount (for example 1 of 2 eggs) in this phase? Recommendation: not now; the remaining amount returns automatically when demand grows.
-2. **Spare amounts.** When an order shrinks after buying, the spare amount is not applied to other orders (the conservative choice). Is that acceptable for the first release?
-3. **History length.** Is the latest 100 purchases enough, or should history cover a time window such as 90 days?
+1. **Partial purchases:** not in this phase. A check means "bought what the list showed"; later growth in demand returns automatically.
+2. **Spare amounts:** an order that shrinks after buying does not pass its spare amount to other orders.
+3. **History length:** the latest 100 purchases.
 
-## Implementation and verification plan (after approval)
+## Implementation and verification plan
 
 Add an additive migration 008 (two tables, indexes and the widened audit checks), a pure reconciliation function next to `buildShoppingList` with exact-rational unit tests, the API routes, and the Shopping UI (unchecked first, checked below, "already bought" notes, a History view, undo) in both languages. Real-database tests should cover:
 
