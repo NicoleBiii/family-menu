@@ -34,6 +34,8 @@ The owner does the account steps, because they involve creating accounts and ent
 
    Keep `DATABASE_URL` from step 4. `HOST` and `PORT` come from the image and from Railway. Never put secrets in frontend build variables. The app reads none.
 
+   Optional after the photo-library PR is deployed: set a sealed `PEXELS_API_KEY` on the app service to enable explicit Pexels search. Without it, the library chooser reports that it is unavailable; manual photo upload and recipe saving still work. Keep the key out of frontend variables and logs. Apply migration 009 before running that release.
+
 8. **Sign-in redirect.** In Supabase, open Authentication → URL Configuration → Redirect URLs and add `https://<generated-domain>/api/auth/callback`, keeping the local entry. The Google OAuth client does not change: it redirects to Supabase. Only accounts listed as Google test users can sign in.
 9. **Redeploy and check.**
    1. Redeploy after setting the variables.

@@ -23,6 +23,7 @@ import { SupabaseIdentityProvider } from './identity-provider.js';
 import { RecipePresetsController, RecipesController } from './recipes.controller.js';
 import { RecipesService } from './recipes.service.js';
 import { RecipeImagesService } from './recipe-images.service.js';
+import { PhotoLibraryController, PhotoLibraryService } from './photo-library.js';
 import { OrdersController } from './orders.controller.js';
 import { OrdersService } from './orders.service.js';
 import { ShoppingController } from './shopping.controller.js';
@@ -40,6 +41,7 @@ class AppModule {
         InvitationsController,
         RecipePresetsController,
         RecipesController,
+        PhotoLibraryController,
         CategoriesController,
         OrdersController,
         ShoppingController,
@@ -54,6 +56,7 @@ class AppModule {
         RecipesService,
         CategoriesService,
         RecipeImagesService,
+        PhotoLibraryService,
         OrdersService,
         ShoppingService,
         AiDraftsService,

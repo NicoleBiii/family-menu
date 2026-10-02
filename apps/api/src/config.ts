@@ -46,6 +46,8 @@ export interface AppConfig {
   auth?: AuthProviderConfig;
   /** Absent when AI drafts are switched off (AI_PROVIDER unset or "off"). */
   ai?: AiConfig;
+  /** Optional server-side Pexels integration. Origins are fixed in production. */
+  photoLibrary?: { apiKey: string; apiOrigin: string; imageOrigin: string };
 }
 
 export function readConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -78,7 +80,22 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     if (!appOrigin) throw new Error('APP_ORIGIN is required when sign-in is configured.');
     auth = { supabaseUrl: parseOrigin(supabaseUrl, 'SUPABASE_URL')!, supabasePublishableKey: key };
   }
-  return { databaseUrl: url.href, port, host, appOrigin, auth, ai: readAiConfig(env, appOrigin) };
+  const pexelsKey = env.PEXELS_API_KEY?.trim();
+  return {
+    databaseUrl: url.href,
+    port,
+    host,
+    appOrigin,
+    auth,
+    ai: readAiConfig(env, appOrigin),
+    photoLibrary: pexelsKey
+      ? {
+          apiKey: pexelsKey,
+          apiOrigin: 'https://api.pexels.com',
+          imageOrigin: 'https://images.pexels.com',
+        }
+      : undefined,
+  };
 }
 
 function readAiConfig(env: NodeJS.ProcessEnv, appOrigin: string | undefined): AiConfig | undefined {

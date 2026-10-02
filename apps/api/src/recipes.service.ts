@@ -224,6 +224,16 @@ export class RecipesService {
         sql<string | null>`(select m.id from app.recipe_images m where m.recipe_id = r.id)`.as(
           'imageId',
         ),
+        sql<{
+          provider: 'pexels';
+          sourceUrl: string;
+          photographer: string;
+          photographerUrl: string;
+        } | null>`(
+          select json_build_object('provider', m.source_provider, 'sourceUrl', m.source_url,
+            'photographer', m.photographer, 'photographerUrl', m.photographer_url)
+          from app.recipe_images m where m.recipe_id = r.id and m.source_provider is not null
+        )`.as('imageCredit'),
       ])
       .where('r.household_id', '=', householdId)
       .orderBy(sql`lower(r.name)`)
@@ -499,6 +509,16 @@ export class RecipesService {
         sql<string | null>`(select m.id from app.recipe_images m where m.recipe_id = r.id)`.as(
           'imageId',
         ),
+        sql<{
+          provider: 'pexels';
+          sourceUrl: string;
+          photographer: string;
+          photographerUrl: string;
+        } | null>`(
+          select json_build_object('provider', m.source_provider, 'sourceUrl', m.source_url,
+            'photographer', m.photographer, 'photographerUrl', m.photographer_url)
+          from app.recipe_images m where m.recipe_id = r.id and m.source_provider is not null
+        )`.as('imageCredit'),
       ])
       .where('r.id', '=', recipeId)
       .where('r.household_id', '=', householdId)

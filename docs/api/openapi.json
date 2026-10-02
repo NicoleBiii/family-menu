@@ -1253,6 +1253,109 @@
         ]
       }
     },
+    "/api/households/{householdId}/photo-library/search": {
+      "get": {
+        "operationId": "PhotoLibraryController_search",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pexels previews with photographer and source attribution."
+          },
+          "404": {
+            "description": "Household or recipe not found, or caller is not a member."
+          },
+          "503": {
+            "description": "Library key absent or provider unavailable."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Photo library"
+        ]
+      }
+    },
+    "/api/households/{householdId}/recipes/{recipeId}/photo-library": {
+      "post": {
+        "operationId": "PhotoLibraryController_import",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recipeId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "photoId"
+                ],
+                "properties": {
+                  "photoId": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Chosen Pexels photo normalized and stored privately with credit."
+          },
+          "404": {
+            "description": "Household or recipe not found, or caller is not a member."
+          },
+          "503": {
+            "description": "Library or selected image unavailable."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Photo library"
+        ]
+      }
+    },
     "/api/households/{householdId}/categories": {
       "get": {
         "operationId": "CategoriesController_list",

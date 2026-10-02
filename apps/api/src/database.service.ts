@@ -104,6 +104,10 @@ interface Database {
     height: number;
     created_by: string;
     created_at: Generated<Date>;
+    source_provider: 'pexels' | null;
+    source_url: string | null;
+    photographer: string | null;
+    photographer_url: string | null;
   };
   'app.meal_orders': {
     id: Generated<string>;
