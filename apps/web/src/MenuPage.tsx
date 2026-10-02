@@ -40,6 +40,7 @@ import {
 import { AiDraftPanel } from './AiDraftPanel';
 import { prepareImage } from './image';
 import { RecipeEditor, type EditorStart } from './RecipeEditor';
+import { useI18n } from './i18n';
 
 const TONES = ['lemon', 'sesame', 'tomato', 'greens'] as const;
 function tone(id: string) {
@@ -61,6 +62,7 @@ interface Props {
 }
 
 export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef, hero }: Props) {
+  const { t } = useI18n();
   const [presets, setPresets] = useState<RecipePreset[] | null>(null);
   const [recipes, setRecipes] = useState<RecipeSummary[] | null>(null);
   const [query, setQuery] = useState('');
@@ -226,25 +228,27 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
         <div className="section-heading">
           <div>
             <p className="eyebrow">
-              {household ? household.name.toUpperCase() : 'SOMETHING FOR EVERYONE'}
+              {household ? household.name.toUpperCase() : t('menu.eyebrow')}
             </p>
-            <h2 id="menu-title">{household ? 'Your household menu' : 'Starter recipes'}</h2>
+            <h2 id="menu-title">{household ? t('menu.yours') : t('menu.starters')}</h2>
           </div>
           <span className="recipe-count">
             {household
-              ? `${active.length} recipe${active.length === 1 ? '' : 's'}`
-              : `${presets?.length ?? 0} starter recipes`}
+              ? active.length === 1
+                ? t('menu.oneRecipe')
+                : t('menu.recipeCount', { count: active.length })
+              : t('menu.starterCount', { count: presets?.length ?? 0 })}
           </span>
         </div>
         <div className="menu-tools">
           <label className="search-field">
             <Search size={19} />
-            <span className="sr-only">Search recipes</span>
+            <span className="sr-only">{t('menu.search')}</span>
             <input
               ref={searchRef}
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Find something delicious..."
+              placeholder={t('menu.searchPlaceholder')}
             />
           </label>
           {household && (
@@ -254,7 +258,7 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
                 aria-pressed={showArchived}
                 onClick={() => setShowArchived((value) => !value)}
               >
-                <Archive size={14} /> Archived ({archived.length})
+                <Archive size={14} /> {t('menu.archivedCount', { count: archived.length })}
               </button>
               <button
                 className="archive-toggle ai-toggle"
@@ -264,16 +268,18 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
                   window.scrollTo({ top: 0 });
                 }}
               >
-                <Sparkles size={14} aria-hidden="true" /> Draft with AI
+                <Sparkles size={14} aria-hidden="true" /> {t('menu.draftAi')}
               </button>
               <button className="primary-button" onClick={() => startEditor({ mode: 'create' })}>
-                <Plus size={18} /> Add recipe
+                <Plus size={18} /> {t('menu.addRecipe')}
               </button>
             </div>
           )}
         </div>
         <p className="sr-only" role="status">
-          {`${household ? visibleRecipes.length : visiblePresets.length} recipes found`}
+          {t('menu.found', {
+            count: household ? visibleRecipes.length : visiblePresets.length,
+          })}
         </p>
         {notice && (
           <p className="notice" role="status">
@@ -288,7 +294,7 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
 
         {household ? (
           recipes === null ? (
-            <p role="status">Loading your menu…</p>
+            <p role="status">{t('menu.loading')}</p>
           ) : visibleRecipes.length > 0 ? (
             <div className="recipe-grid">
               {visibleRecipes.map((recipe) => (
@@ -298,7 +304,11 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
                   name={recipe.name}
                   description={recipe.description}
                   servings={recipe.servings}
-                  label={recipe.archived ? 'Archived' : `${recipe.pricePoints} pts / serving`}
+                  label={
+                    recipe.archived
+                      ? t('menu.archived')
+                      : t('menu.pointsPerServing', { count: recipe.pricePoints })
+                  }
                   imageUrl={imageUrl(recipe.id, recipe.imageId)}
                   onOpen={(target) => openRecipe(recipe.id, target)}
                 />
@@ -309,21 +319,21 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
               <BookOpen size={28} />
               <h3>
                 {needle
-                  ? 'No recipes found'
+                  ? t('menu.noResults')
                   : showArchived
-                    ? 'Nothing archived'
-                    : 'Your menu is empty'}
+                    ? t('menu.noArchived')
+                    : t('menu.empty')}
               </h3>
               <p>
                 {needle
-                  ? 'Try another name.'
+                  ? t('menu.tryAnother')
                   : showArchived
-                    ? 'Archived recipes stay here, ready to restore.'
-                    : 'Add a family favourite, or save one of the starter recipes below and make it yours.'}
+                    ? t('menu.archivedHint')
+                    : t('menu.emptyHint')}
               </p>
               {needle && (
                 <button className="text-button" onClick={() => setQuery('')}>
-                  Clear search
+                  {t('menu.clearSearch')}
                 </button>
               )}
             </div>
@@ -332,9 +342,9 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
           <>
             {signedIn && (
               <p className="sample-note">
-                Create or join a household to save and edit your own copies.{' '}
+                {t('menu.signInHint')}{' '}
                 <button className="text-button inline" onClick={onGoHousehold}>
-                  Go to Household
+                  {t('menu.goHousehold')}
                 </button>
               </p>
             )}
@@ -355,10 +365,10 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
         <section className="menu-section" aria-labelledby="starter-title">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">NEED IDEAS?</p>
-              <h2 id="starter-title">Starter recipes</h2>
+              <p className="eyebrow">{t('menu.needIdeas')}</p>
+              <h2 id="starter-title">{t('menu.starters')}</h2>
             </div>
-            <span className="recipe-count">Save a copy, then make it yours</span>
+            <span className="recipe-count">{t('menu.saveCopy')}</span>
           </div>
           <PresetGrid
             presets={presets}
@@ -432,11 +442,12 @@ function RecipeCard({
   imageUrl?: string;
   onOpen: (target: HTMLElement) => void;
 }) {
+  const { t } = useI18n();
   return (
     <button
       className="recipe-card"
       onClick={(event) => onOpen(event.currentTarget)}
-      aria-label={`View ${name}`}
+      aria-label={t('menu.view', { name })}
     >
       <div className={`recipe-art ${tone(id)}`}>
         {imageUrl ? (
@@ -455,7 +466,7 @@ function RecipeCard({
         <div className="recipe-meta">
           <span>
             <Users size={14} />
-            Serves {servings}
+            {t('menu.serves', { count: servings })}
           </span>
           <ArrowRight size={17} className="card-arrow" />
         </div>
@@ -475,15 +486,16 @@ function PresetGrid({
   onOpen: (preset: RecipePreset, target: HTMLElement) => void;
   onClear: () => void;
 }) {
-  if (presets === null) return <p role="status">Loading starter recipes…</p>;
+  const { t } = useI18n();
+  if (presets === null) return <p role="status">{t('menu.loadingStarters')}</p>;
   if (visible.length === 0) {
     return (
       <div className="empty-state">
         <Search size={28} />
-        <h3>No starter recipes found</h3>
-        <p>Try another name.</p>
+        <h3>{t('menu.noStarters')}</h3>
+        <p>{t('menu.tryAnother')}</p>
         <button className="text-button" onClick={onClear}>
-          Clear search
+          {t('menu.clearSearch')}
         </button>
       </div>
     );
@@ -497,7 +509,7 @@ function PresetGrid({
           name={preset.name}
           description={preset.description}
           servings={preset.servings}
-          label="Starter"
+          label={t('menu.starter')}
           onOpen={(target) => onOpen(preset, target)}
         />
       ))}
@@ -530,6 +542,7 @@ function RecipeView({
   photo: { busy: boolean; error: string };
   onPhoto: (recipe: RecipeDetail, file: File | null) => Promise<void>;
 }) {
+  const { t } = useI18n();
   const [dragActive, setDragActive] = useState(false);
   const dragDepth = useRef(0);
   const content = selected.kind === 'preset' ? selected.preset : selected.recipe;
@@ -545,25 +558,36 @@ function RecipeView({
     <>
       <div className="dialog-header">
         <span className="eyebrow">
-          {recipe ? (recipe.archived ? 'ARCHIVED RECIPE' : 'YOUR MENU') : 'STARTER RECIPE'}
+          {recipe
+            ? recipe.archived
+              ? t('menu.archivedRecipe')
+              : t('menu.yourMenu')
+            : t('menu.starterRecipe')}
         </span>
-        <button className="icon-button" aria-label="Close recipe" onClick={onClose}>
+        <button className="icon-button" aria-label={t('menu.closeRecipe')} onClick={onClose}>
           <X size={22} />
         </button>
       </div>
-      {imageUrl && <img className="dialog-photo" src={imageUrl} alt={`Photo of ${content.name}`} />}
+      {imageUrl && (
+        <img
+          className="dialog-photo"
+          src={imageUrl}
+          alt={t('menu.photoOf', { name: content.name })}
+        />
+      )}
       <h2 id="recipe-dialog-title">{content.name}</h2>
       <p className="dialog-subtitle">
-        Serves {content.servings}
+        {t('menu.serves', { count: content.servings })}
         {recipe && (
           <>
             {' · '}
-            <Star size={13} aria-hidden="true" /> {recipe.pricePoints} points per serving
+            <Star size={13} aria-hidden="true" />{' '}
+            {t('menu.fullPoints', { count: recipe.pricePoints })}
           </>
         )}
       </p>
       {content.description && <p className="dialog-description">{content.description}</p>}
-      <h3>What you’ll need</h3>
+      <h3>{t('menu.ingredients')}</h3>
       {content.ingredients.length > 0 ? (
         <ul>
           {content.ingredients.map((line, index) => (
@@ -571,11 +595,11 @@ function RecipeView({
           ))}
         </ul>
       ) : (
-        <p className="muted">No ingredients listed yet.</p>
+        <p className="muted">{t('menu.noIngredients')}</p>
       )}
       {content.steps.length > 0 && (
         <>
-          <h3>Method</h3>
+          <h3>{t('menu.method')}</h3>
           <ol>
             {content.steps.map((step, index) => (
               <li key={index}>{step}</li>
@@ -585,12 +609,12 @@ function RecipeView({
       )}
       {recipe && (
         <p className="muted">
-          Added by {recipe.createdBy}
+          {t('menu.addedBy', { name: recipe.createdBy })}
           {recipe.updatedBy !== recipe.createdBy || recipe.revision > 1
-            ? ` · last changed by ${recipe.updatedBy}`
+            ? t('menu.changedBy', { name: recipe.updatedBy })
             : ''}
-          {recipe.presetId ? ' · from a starter recipe' : ''}
-          {recipe.source === 'ai' ? ' · started from an AI draft' : ''}
+          {recipe.presetId ? t('menu.fromStarter') : ''}
+          {recipe.source === 'ai' ? t('menu.fromAi') : ''}
         </p>
       )}
       {recipe && !recipe.archived && (
@@ -610,12 +634,16 @@ function RecipeView({
               if (!photo.busy && file) void onPhoto(recipe, file);
             }}
           >
-            <span className="photo-drop-hint">Drop a photo here or</span>
+            <span className="photo-drop-hint">{t('menu.dropPhoto')}</span>
             <label
               className={`primary-button file-button photo-upload-button${photo.busy ? ' busy' : ''}`}
             >
               <Camera size={18} aria-hidden="true" />
-              {photo.busy ? 'Saving photo…' : recipe.imageId ? 'Change photo' : 'Add photo'}
+              {photo.busy
+                ? t('menu.savingPhoto')
+                : recipe.imageId
+                  ? t('menu.changePhoto')
+                  : t('menu.addPhoto')}
               <input
                 type="file"
                 accept="image/*"
@@ -635,7 +663,7 @@ function RecipeView({
               disabled={photo.busy}
               onClick={() => onPhoto(recipe, null)}
             >
-              <ImageOff size={16} /> Remove photo
+              <ImageOff size={16} /> {t('menu.removePhoto')}
             </button>
           )}
           {photo.error && (
@@ -649,34 +677,33 @@ function RecipeView({
         {selected.kind === 'preset' &&
           (canSave ? (
             <button className="primary-button" onClick={() => onUsePreset(selected.preset)}>
-              <Plus size={18} /> Save to our menu
+              <Plus size={18} /> {t('menu.saveToMenu')}
             </button>
           ) : signInHref ? (
             <a className="primary-button" href={signInHref}>
-              Sign in to save recipes
+              {t('menu.signInToSave')}
             </a>
           ) : (
             <p className="sample-note">
-              <ChefHat size={14} aria-hidden="true" /> Create or join a household to save your own
-              copy.
+              <ChefHat size={14} aria-hidden="true" /> {t('menu.createToSave')}
             </p>
           ))}
         {recipe && !recipe.archived && (
           <>
             <button className="primary-button" onClick={() => onOrder(recipe)}>
-              <CalendarPlus size={18} /> Order
+              <CalendarPlus size={18} /> {t('menu.order')}
             </button>
             <button className="text-button" onClick={() => onEdit(recipe)}>
-              <Pencil size={16} /> Edit
+              <Pencil size={16} /> {t('menu.edit')}
             </button>
             <button className="text-button" onClick={() => onArchive(recipe, true)}>
-              <Archive size={16} /> Archive
+              <Archive size={16} /> {t('menu.archive')}
             </button>
           </>
         )}
         {recipe?.archived && (
           <button className="primary-button" onClick={() => onArchive(recipe, false)}>
-            <ArchiveRestore size={18} /> Restore to menu
+            <ArchiveRestore size={18} /> {t('menu.restore')}
           </button>
         )}
       </div>

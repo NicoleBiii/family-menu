@@ -11,25 +11,19 @@ import {
   ShoppingBasket,
   Utensils,
 } from 'lucide-react';
-import {
-  api,
-  authErrorMessages,
-  SESSION_EXPIRED_EVENT,
-  setCsrfToken,
-  signInUrl,
-  type Session,
-} from './api';
+import { api, SESSION_EXPIRED_EVENT, setCsrfToken, signInUrl, type Session } from './api';
 import { HouseholdPage } from './HouseholdPage';
 import { JoinPage } from './JoinPage';
 import { MenuPage } from './MenuPage';
 import { OrdersPage } from './OrdersPage';
 import { ShoppingPage } from './ShoppingPage';
+import { useI18n, type MessageKey } from './i18n';
 
 const navigation = [
-  { label: 'Menu', icon: Utensils },
-  { label: 'Meals', icon: CalendarDays },
-  { label: 'Shopping', icon: ShoppingBasket },
-  { label: 'Household', icon: House },
+  { label: 'Menu', text: 'nav.menu', icon: Utensils },
+  { label: 'Meals', text: 'nav.meals', icon: CalendarDays },
+  { label: 'Shopping', text: 'nav.shopping', icon: ShoppingBasket },
+  { label: 'Household', text: 'nav.household', icon: House },
 ] as const;
 type Page = (typeof navigation)[number]['label'] | 'Join';
 const ACTIVE_KEY = 'family-menu.active-household';
@@ -41,11 +35,17 @@ function initialPage(): Page {
   if (window.location.pathname === '/shopping') return 'Shopping';
   return 'Menu';
 }
-function readAuthError() {
+function readAuthError(): MessageKey | null {
   const code = new URLSearchParams(window.location.search).get('authError');
-  if (!code) return '';
+  if (!code) return null;
   history.replaceState(null, '', window.location.pathname);
-  return authErrorMessages[code] ?? 'Sign-in failed. Please try again.';
+  const messages: Record<string, MessageKey> = {
+    state_invalid: 'app.authStateInvalid',
+    provider_denied: 'app.authProviderDenied',
+    exchange_failed: 'app.authExchangeFailed',
+    not_configured: 'app.authNotConfigured',
+  };
+  return messages[code] ?? 'app.authFailed';
 }
 function storedActive() {
   try {
@@ -56,6 +56,7 @@ function storedActive() {
 }
 
 export function App() {
+  const { language, setLanguage, t } = useI18n();
   const [page, setPageState] = useState<Page>(initialPage);
   const [session, setSession] = useState<Session | null>(null);
   const [activeId, setActiveId] = useState<string | null>(storedActive);
@@ -90,16 +91,19 @@ export function App() {
   }, [refreshSession]);
   useEffect(() => {
     const onExpired = () => {
-      setAuthError('Your session has ended. Please sign in again.');
+      setAuthError('app.authExpired');
       void refreshSession();
     };
     window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
     return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
   }, [refreshSession]);
   useEffect(() => {
+    const pageKey = navigation.find((item) => item.label === page)?.text ?? 'nav.household';
     document.title =
-      page === 'Menu' ? 'Family Menu — A little more together' : `${page} · Family Menu`;
-  }, [page]);
+      page === 'Menu'
+        ? t('app.titleHome')
+        : t('app.titlePage', { page: page === 'Join' ? t('join.title') : t(pageKey) });
+  }, [page, t]);
   useEffect(() => {
     const onPop = () => setPageState(initialPage());
     window.addEventListener('popstate', onPop);
@@ -135,7 +139,7 @@ export function App() {
       setCsrfToken('');
       await refreshSession();
     } catch {
-      setAuthError('Could not sign out. Please try again.');
+      setAuthError('app.signOutFailed');
     } finally {
       setSigningOut(false);
     }
@@ -147,16 +151,34 @@ export function App() {
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main">
-        Skip to content
+        {t('app.skip')}
       </a>
       <header className="site-header">
-        <a className="brand" href="/" aria-label="Family Menu home">
+        <a className="brand" href="/" aria-label={t('app.home')}>
           <span className="brand-mark">
             <CookingPot size={24} />
           </span>
           family menu<span className="brand-dot">.</span>
         </a>
         <div className="account-bar">
+          <div className="language-switch" role="group" aria-label={t('app.language')}>
+            <button
+              type="button"
+              aria-label={t('app.chinese')}
+              aria-pressed={language === 'zh'}
+              onClick={() => setLanguage('zh')}
+            >
+              中
+            </button>
+            <button
+              type="button"
+              aria-label={t('app.english')}
+              aria-pressed={language === 'en'}
+              onClick={() => setLanguage('en')}
+            >
+              EN
+            </button>
+          </div>
           {session?.authenticated ? (
             <>
               <span className="preview-label" title={session.user.email ?? undefined}>
@@ -165,7 +187,7 @@ export function App() {
               <button
                 ref={signOutButton}
                 className="icon-button"
-                aria-label="Sign out"
+                aria-label={t('app.signOut')}
                 onClick={() => signOutDialog.current?.showModal()}
               >
                 <LogOut size={18} />
@@ -173,11 +195,11 @@ export function App() {
             </>
           ) : session?.signInAvailable ? (
             <a className="sign-in-link" href={signInUrl(window.location.pathname)}>
-              <LogIn size={16} /> Sign in
+              <LogIn size={16} /> {t('app.signIn')}
             </a>
           ) : (
             <span className="preview-label">
-              <span /> Sample household
+              <span /> {t('app.sample')}
             </span>
           )}
         </div>
@@ -188,26 +210,26 @@ export function App() {
         aria-describedby="sign-out-description"
         onClose={() => signOutButton.current?.focus()}
       >
-        <h2 id="sign-out-title">Sign out?</h2>
-        <p id="sign-out-description">You can sign in again with Google at any time.</p>
+        <h2 id="sign-out-title">{t('app.signOutQuestion')}</h2>
+        <p id="sign-out-description">{t('app.signOutDescription')}</p>
         <div className="form-actions">
           <button
             className="text-button"
             disabled={signingOut}
             onClick={() => signOutDialog.current?.close()}
           >
-            Stay signed in
+            {t('app.staySignedIn')}
           </button>
           <button className="primary-button" disabled={signingOut} onClick={signOut}>
-            {signingOut ? 'Signing out…' : 'Sign out'}
+            {signingOut ? t('app.signingOut') : t('app.signOut')}
           </button>
         </div>
       </dialog>
       {authError && (
         <div className="alert-banner" role="alert">
-          <span>{authError}</span>
-          <button className="text-button" onClick={() => setAuthError('')}>
-            Dismiss
+          <span>{t(authError)}</span>
+          <button className="text-button" onClick={() => setAuthError(null)}>
+            {t('app.dismiss')}
           </button>
         </div>
       )}
@@ -223,8 +245,8 @@ export function App() {
           />
         ) : page === 'Household' ? (
           <section className="page-panel">
-            <p className="eyebrow">YOUR SHARED TABLE</p>
-            <h1>Household</h1>
+            <p className="eyebrow">{t('app.sharedTable')}</p>
+            <h1>{t('nav.household')}</h1>
             <HouseholdPage
               session={session}
               activeId={activeId}
@@ -238,16 +260,16 @@ export function App() {
               <section className="hero" aria-labelledby="welcome-title">
                 <div className="hero-copy">
                   <p className="eyebrow">
-                    <Leaf size={15} /> GOOD FOOD, SHARED DAILY
+                    <Leaf size={15} /> {t('app.heroEyebrow')}
                   </p>
                   <h1 id="welcome-title">
-                    A little planning.
+                    {t('app.heroTitleFirst')}
                     <br />
-                    <em>A lot of together.</em>
+                    <em>{t('app.heroTitleSecond')}</em>
                   </h1>
                   <p className="hero-description">
-                    Keep the recipes you love, decide what’s for dinner,
-                    <br className="desktop-break" /> and make room for more time around the table.
+                    {t('app.heroDescriptionFirst')}
+                    <br className="desktop-break" /> {t('app.heroDescriptionSecond')}
                   </p>
                   <button
                     className="primary-button"
@@ -256,7 +278,7 @@ export function App() {
                       search.current?.focus({ preventScroll: true });
                     }}
                   >
-                    Explore the menu <ArrowRight size={18} />
+                    {t('app.explore')} <ArrowRight size={18} />
                   </button>
                 </div>
                 <div className="table-art" aria-hidden="true">
@@ -268,7 +290,7 @@ export function App() {
                     <span className="art-tomato tomato-two" />
                     <span className="art-lemon" />
                   </div>
-                  <div className="art-caption">made to be shared</div>
+                  <div className="art-caption">{t('app.artCaption')}</div>
                 </div>
               </section>
             }
@@ -284,8 +306,8 @@ export function App() {
           />
         ) : page === 'Meals' ? (
           <section className="page-panel">
-            <p className="eyebrow">YOUR SHARED TABLE</p>
-            <h1>Meals</h1>
+            <p className="eyebrow">{t('app.sharedTable')}</p>
+            <h1>{t('nav.meals')}</h1>
             <OrdersPage
               session={session}
               household={activeHousehold}
@@ -296,8 +318,8 @@ export function App() {
           </section>
         ) : (
           <section className="page-panel">
-            <p className="eyebrow">YOUR SHARED TABLE</p>
-            <h1>Shopping</h1>
+            <p className="eyebrow">{t('app.sharedTable')}</p>
+            <h1>{t('nav.shopping')}</h1>
             <ShoppingPage
               session={session}
               household={activeHousehold}
@@ -308,14 +330,12 @@ export function App() {
         )}
         <footer className="page-footer">
           <ChefHat size={18} />
-          <p>A shared menu for the people you call home.</p>
-          <span>
-            Starter recipes are written for Family Menu · Virtual points have no cash value
-          </span>
+          <p>{t('app.footer')}</p>
+          <span>{t('app.footerNote')}</span>
         </footer>
       </main>
-      <nav className="main-nav" aria-label="Main navigation">
-        {navigation.map(({ label, icon: Icon }) => (
+      <nav className="main-nav" aria-label={t('nav.main')}>
+        {navigation.map(({ label, text, icon: Icon }) => (
           <button
             key={label}
             aria-current={page === label ? 'page' : undefined}
@@ -325,7 +345,7 @@ export function App() {
             }}
           >
             <Icon size={20} />
-            <span>{label}</span>
+            <span>{t(text)}</span>
           </button>
         ))}
       </nav>

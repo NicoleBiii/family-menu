@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { LogIn, Users } from 'lucide-react';
 import { api, ApiError, signInUrl, type HouseholdSummary, type Session } from './api';
+import { useI18n } from './i18n';
 
 const STORAGE_KEY = 'family-menu.pending-invitation';
 
@@ -32,11 +33,12 @@ interface Props {
 }
 
 export function JoinPage({ session, onJoined }: Props) {
+  const { t, apiError } = useI18n();
   const [token] = useState(readToken);
   const [preview, setPreview] = useState<{ householdName: string; alreadyMember: boolean } | null>(
     null,
   );
-  const [error, setError] = useState('');
+  const [error, setError] = useState<ApiError | 'open' | 'join' | null>(null);
   const [busy, setBusy] = useState(false);
   const signedIn = session?.authenticated === true;
 
@@ -49,16 +51,14 @@ export function JoinPage({ session, onJoined }: Props) {
       .then(setPreview)
       .catch((caught: unknown) => {
         forgetToken();
-        setError(
-          caught instanceof ApiError ? caught.message : 'This invitation could not be opened.',
-        );
+        setError(caught instanceof ApiError ? caught : 'open');
       });
   }, [token, signedIn]);
 
   async function join() {
     if (!token) return;
     setBusy(true);
-    setError('');
+    setError(null);
     try {
       const household = await api<HouseholdSummary>('/invitations/accept', {
         method: 'POST',
@@ -67,7 +67,7 @@ export function JoinPage({ session, onJoined }: Props) {
       forgetToken();
       await onJoined(household);
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : 'Could not join the household.');
+      setError(caught instanceof ApiError ? caught : 'join');
     } finally {
       setBusy(false);
     }
@@ -75,49 +75,47 @@ export function JoinPage({ session, onJoined }: Props) {
 
   let content;
   if (!token) {
-    content = <p>This invitation link is incomplete. Ask for a new link.</p>;
+    content = <p>{t('join.incomplete')}</p>;
   } else if (!session) {
-    content = <p role="status">Loading…</p>;
+    content = <p role="status">{t('join.loading')}</p>;
   } else if (!session.authenticated) {
     content = session.signInAvailable ? (
       <>
-        <p>Sign in to see which household invited you.</p>
+        <p>{t('join.signInToSee')}</p>
         <a className="primary-button" href={signInUrl('/join')}>
-          <LogIn size={18} /> Sign in with Google
+          <LogIn size={18} /> {t('join.signInGoogle')}
         </a>
       </>
     ) : (
-      <p className="sample-note">Sign-in is not configured on this server yet.</p>
+      <p className="sample-note">{t('join.notConfigured')}</p>
     );
   } else if (error) {
     content = null;
   } else if (!preview) {
-    content = <p role="status">Checking your invitation…</p>;
+    content = <p role="status">{t('join.checking')}</p>;
   } else {
     content = (
       <>
         <h2>{preview.householdName}</h2>
-        <p>
-          {preview.alreadyMember
-            ? 'You are already a member of this household.'
-            : 'You have been invited to share this household’s menu and meal orders.'}
-        </p>
+        <p>{preview.alreadyMember ? t('join.alreadyMember') : t('join.invited')}</p>
         <button className="primary-button" disabled={busy} onClick={join}>
-          {preview.alreadyMember ? 'Open household' : 'Join household'}
+          {preview.alreadyMember ? t('join.open') : t('join.join')}
         </button>
       </>
     );
   }
   return (
     <section className="page-panel">
-      <p className="eyebrow">INVITATION</p>
-      <h1>Join a household</h1>
+      <p className="eyebrow">{t('join.eyebrow')}</p>
+      <h1>{t('join.title')}</h1>
       <div className="empty-state">
         <Users size={36} />
         {content}
         {error && (
           <p className="form-error" role="alert">
-            {error}
+            {error instanceof ApiError
+              ? apiError(error)
+              : t(error === 'open' ? 'join.openFailed' : 'join.joinFailed')}
           </p>
         )}
       </div>
