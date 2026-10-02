@@ -69,7 +69,8 @@ test('Chinese recipe and order forms keep member content when switching language
     await page.getByRole('button', { name: '简体中文' }).click();
     await page.getByRole('button', { name: '保存菜谱' }).click();
     await page.getByRole('button', { name: '查看西红柿蛋汤' }).click();
-    await page.getByRole('dialog').getByRole('button', { name: '点单' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: '加入点单篮' }).click();
+    await page.getByRole('button', { name: '查看点单篮' }).click();
     const notes = page.getByRole('textbox', { name: '备注（选填）' });
     await notes.fill('少盐');
     await page.getByRole('button', { name: 'English' }).click();

@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { api, ApiError, localToday, type MealOrderDetail, type RecipeSummary } from './api';
+import type { BasketControls } from './basket';
 import { useI18n } from './i18n';
 
-export type OrderStart =
-  | { mode: 'create'; recipeId?: string; servings?: number }
-  | { mode: 'edit'; order: MealOrderDetail };
+/** A new order is placed from the basket; an existing pending order is edited directly. */
+export type OrderStart = { mode: 'basket' } | { mode: 'edit'; order: MealOrderDetail };
 
 interface Line {
   key: number;
@@ -36,6 +36,8 @@ interface Props {
   timezone: string;
   recipes: RecipeSummary[];
   start: OrderStart;
+  /** Basket mode: the unsent order; edits here are kept in it when the member goes back. */
+  basket?: BasketControls;
   onCancel: () => void;
   onSaved: (order: MealOrderDetail) => void;
 }
@@ -44,13 +46,24 @@ interface Props {
  * Create or edit a pending meal order. The server resolves the household-local time; when a
  * daylight-saving change makes it ambiguous, the member chooses which occurrence they mean.
  */
-export function OrderEditor({ householdId, timezone, recipes, start, onCancel, onSaved }: Props) {
+export function OrderEditor({
+  householdId,
+  timezone,
+  recipes,
+  start,
+  basket,
+  onCancel,
+  onSaved,
+}: Props) {
   const { language, t, apiError } = useI18n();
   const editing = start.mode === 'edit' ? start.order : null;
-  const [timing, setTiming] = useState<'now' | 'scheduled'>(editing ? 'scheduled' : 'now');
-  const [date, setDate] = useState(editing?.mealDate ?? localToday(timezone));
-  const [time, setTime] = useState(editing?.mealTime ?? '18:00');
-  const [notes, setNotes] = useState(editing?.notes ?? '');
+  const stored = basket?.basket;
+  const [timing, setTiming] = useState<'now' | 'scheduled'>(
+    editing ? 'scheduled' : (stored?.timing ?? 'now'),
+  );
+  const [date, setDate] = useState(editing?.mealDate ?? (stored?.date || localToday(timezone)));
+  const [time, setTime] = useState(editing?.mealTime ?? stored?.time ?? '18:00');
+  const [notes, setNotes] = useState(editing?.notes ?? stored?.notes ?? '');
   const [lines, setLines] = useState<Line[]>(() =>
     editing
       ? editing.items.map((item) => ({
@@ -59,19 +72,17 @@ export function OrderEditor({ householdId, timezone, recipes, start, onCancel, o
           name: item.recipeName,
           servings: String(item.servings),
         }))
-      : [
-          {
-            key: nextKey++,
-            recipeId:
-              start.mode === 'create' && start.recipeId ? start.recipeId : (recipes[0]?.id ?? ''),
-            servings: String(
-              (start.mode === 'create' && start.servings) || recipes[0]?.servings || 2,
-            ),
-          },
-        ],
+      : (stored?.items ?? []).map((item) => ({
+          key: nextKey++,
+          recipeId: item.recipeId,
+          name: recipes.find((recipe) => recipe.id === item.recipeId)?.name,
+          servings: String(item.servings),
+        })),
   );
   const [revision, setRevision] = useState(editing?.revision ?? 0);
-  const [requestId] = useState(() => crypto.randomUUID());
+  // Basket orders reuse the basket's request id, so a retry cannot create a second order.
+  const [ownRequestId] = useState(() => crypto.randomUUID());
+  const requestId = stored?.requestId ?? ownRequestId;
   const [choices, setChoices] = useState<Choice[] | null>(null);
   const [disambiguation, setDisambiguation] = useState<'earlier' | 'later' | ''>('');
   const [busy, setBusy] = useState(false);
@@ -82,6 +93,20 @@ export function OrderEditor({ householdId, timezone, recipes, start, onCancel, o
   useEffect(() => {
     heading.current?.focus();
   }, []);
+  // Keep the basket in step with this form, so going back to the dishes loses nothing.
+  const updateBasket = basket?.update;
+  useEffect(() => {
+    updateBasket?.({
+      items: lines.map((line) => ({
+        recipeId: line.recipeId ?? '',
+        servings: Number(line.servings) || 1,
+      })),
+      notes,
+      timing,
+      date,
+      time,
+    });
+  }, [updateBasket, lines, notes, timing, date, time]);
 
   function updateLine(index: number, patch: Partial<Line>) {
     setLines((current) => current.map((line, i) => (i === index ? { ...line, ...patch } : line)));
@@ -231,14 +256,13 @@ export function OrderEditor({ householdId, timezone, recipes, start, onCancel, o
       )}
 
       <h3>{t('orderEditor.dishes')}</h3>
-      {noRecipes && !editing && <p className="muted">{t('orderEditor.noRecipes')}</p>}
       {lines.map((line, index) => (
         <fieldset className="order-line" key={line.key}>
           <legend className="sr-only">{t('orderEditor.dish', { number: index + 1 })}</legend>
-          {line.itemId ? (
+          {line.itemId || basket ? (
             <p className="order-line-name">
               {line.name}
-              <span className="muted">{t('orderEditor.asOrdered')}</span>
+              {line.itemId && <span className="muted">{t('orderEditor.asOrdered')}</span>}
             </p>
           ) : (
             <label className="field wide">
@@ -264,7 +288,7 @@ export function OrderEditor({ householdId, timezone, recipes, start, onCancel, o
           )}
           <label className="field servings-field">
             <span>
-              {line.itemId
+              {line.itemId || basket
                 ? t('orderEditor.servingsFor', { name: line.name ?? '' })
                 : t('orderEditor.servings')}
             </span>
@@ -282,31 +306,38 @@ export function OrderEditor({ householdId, timezone, recipes, start, onCancel, o
           <button
             type="button"
             className="icon-button small"
-            aria-label={t('orderEditor.removeDish', { number: index + 1 })}
-            disabled={lines.length === 1}
+            aria-label={
+              basket
+                ? t('basket.removeDish', { name: line.name ?? '' })
+                : t('orderEditor.removeDish', { number: index + 1 })
+            }
+            disabled={!basket && lines.length === 1}
             onClick={() => setLines(lines.filter((_, i) => i !== index))}
           >
             <Trash2 size={18} />
           </button>
         </fieldset>
       ))}
-      <button
-        type="button"
-        className="text-button"
-        disabled={noRecipes || lines.length >= 20}
-        onClick={() =>
-          setLines([
-            ...lines,
-            {
-              key: nextKey++,
-              recipeId: recipes[0]?.id ?? '',
-              servings: String(recipes[0]?.servings ?? 2),
-            },
-          ])
-        }
-      >
-        <Plus size={16} /> {t('orderEditor.addDish')}
-      </button>
+      {basket && lines.length === 0 && <p className="muted">{t('basket.emptyCheckout')}</p>}
+      {!basket && (
+        <button
+          type="button"
+          className="text-button"
+          disabled={noRecipes || lines.length >= 20}
+          onClick={() =>
+            setLines([
+              ...lines,
+              {
+                key: nextKey++,
+                recipeId: recipes[0]?.id ?? '',
+                servings: String(recipes[0]?.servings ?? 2),
+              },
+            ])
+          }
+        >
+          <Plus size={16} /> {t('orderEditor.addDish')}
+        </button>
+      )}
 
       <label className="field wide">
         <span>{t('orderEditor.notes')}</span>
@@ -343,12 +374,12 @@ export function OrderEditor({ householdId, timezone, recipes, start, onCancel, o
       <div className="form-actions">
         <button
           className="primary-button"
-          disabled={busy || (noRecipes && !editing) || (choices !== null && !disambiguation)}
+          disabled={busy || lines.length === 0 || (choices !== null && !disambiguation)}
         >
           {t(busy ? 'orderEditor.saving' : editing ? 'orderEditor.save' : 'orderEditor.place')}
         </button>
         <button type="button" className="text-button" onClick={onCancel}>
-          {t('orderEditor.cancel')}
+          {t(basket ? 'basket.addMore' : 'orderEditor.cancel')}
         </button>
       </div>
     </form>
