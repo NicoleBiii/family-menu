@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { LogIn, RefreshCw, ShoppingBasket } from 'lucide-react';
 import {
   api,
@@ -38,11 +38,13 @@ export function ShoppingPage({ session, household, onGoMeals, onGoHousehold }: P
   const [error, setError] = useState<ApiError | 'load' | 'update' | null>(null);
   const [history, setHistory] = useState<Purchase[] | null>(null);
   const [busyLine, setBusyLine] = useState<string | null>(null);
+  const loadSequence = useRef(0);
   const householdId = household?.id;
 
   /** `keepError` keeps a check's error visible while the list is refreshed after it. */
   const load = useCallback(
     async (keepError = false) => {
+      const sequence = ++loadSequence.current;
       if (!householdId) return;
       if (range && (!from || !to)) return;
       if (!keepError) setError(null);
@@ -54,10 +56,13 @@ export function ShoppingPage({ session, household, onGoMeals, onGoHousehold }: P
             ? api<Purchase[]>(`/households/${householdId}/shopping/purchases`)
             : Promise.resolve(null),
         ]);
+        if (sequence !== loadSequence.current) return;
         setList(nextList);
         if (nextHistory) setHistory(nextHistory);
       } catch (caught) {
-        setError(caught instanceof ApiError ? caught : 'load');
+        if (sequence === loadSequence.current) {
+          setError(caught instanceof ApiError ? caught : 'load');
+        }
       }
     },
     [householdId, range, from, to, view],

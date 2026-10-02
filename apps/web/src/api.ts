@@ -210,6 +210,23 @@ export interface RecipeSummary {
   archived: boolean;
   ingredientCount: number;
   imageId: string | null;
+  imageCredit: ImageCredit | null;
+}
+
+export interface ImageCredit {
+  provider: 'pexels';
+  sourceUrl: string;
+  photographer: string;
+  photographerUrl: string;
+}
+
+export interface LibraryPhoto {
+  id: number;
+  previewUrl: string;
+  alt: string;
+  photographer: string;
+  photographerUrl: string;
+  sourceUrl: string;
 }
 
 export interface RecipeDetail extends RecipeContent {
@@ -226,6 +243,7 @@ export interface RecipeDetail extends RecipeContent {
   updatedBy: string;
   archived: boolean;
   imageId: string | null;
+  imageCredit: ImageCredit | null;
 }
 
 export const PLURAL_UNITS: Partial<Record<(typeof UNITS)[number], string>> = {

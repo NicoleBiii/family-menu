@@ -36,6 +36,7 @@ export default defineConfig({
         // Deterministic local AI provider (apps/api/src/ai-providers.ts); no network calls.
         AI_PROVIDER: 'mock',
         AI_MONTHLY_BUDGET_USD: '1000000',
+        PEXELS_API_KEY: '',
         DATABASE_URL:
           process.env.TEST_DATABASE_URL ??
           'postgresql://family_menu:local-development-only@127.0.0.1:55432/family_menu_test',

@@ -42,6 +42,7 @@ import {
 import { AiDraftPanel } from './AiDraftPanel';
 import { CategoryManager } from './CategoryManager';
 import { ImageError, prepareImage } from './image';
+import { PhotoLibraryChooser } from './PhotoLibraryChooser';
 import { RecipeEditor, type EditorStart } from './RecipeEditor';
 import { useI18n } from './i18n';
 
@@ -187,6 +188,16 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
       });
     }
   }
+  async function refreshLibraryPhoto(recipe: RecipeDetail) {
+    const path = `/households/${householdId}/recipes/${recipe.id}`;
+    const next = await api<RecipeDetail>(path);
+    setSelected((current) =>
+      current?.kind === 'recipe' && current.recipe.id === next.id
+        ? { kind: 'recipe', recipe: next }
+        : current,
+    );
+    await loadRecipes();
+  }
   const imageUrl = (recipeId: string, imageId: string | null) =>
     householdId && imageId ? recipeImageUrl(householdId, recipeId, imageId) : undefined;
 
@@ -206,6 +217,7 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
         <RecipeEditor
           householdId={householdId}
           start={editor}
+          onPhotoChanged={loadRecipes}
           onCancel={() => {
             // Leaving an AI draft keeps it under "Unfinished drafts".
             setAiPanel(editor.mode === 'ai');
@@ -521,6 +533,8 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
             }
             photo={photo}
             onPhoto={changePhoto}
+            householdId={householdId!}
+            onLibraryPhoto={refreshLibraryPhoto}
           />
         )}
       </dialog>
@@ -636,6 +650,8 @@ function RecipeView({
   imageUrl,
   photo,
   onPhoto,
+  householdId,
+  onLibraryPhoto,
 }: {
   selected: Selected;
   categoryName?: string;
@@ -649,9 +665,12 @@ function RecipeView({
   imageUrl?: string;
   photo: PhotoState;
   onPhoto: (recipe: RecipeDetail, file: File | null) => Promise<void>;
+  householdId: string;
+  onLibraryPhoto: (recipe: RecipeDetail) => Promise<void>;
 }) {
   const { t, language, apiError } = useI18n();
   const [dragActive, setDragActive] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(false);
   const dragDepth = useRef(0);
   const content = selected.kind === 'preset' ? selected.preset : selected.recipe;
   const recipe = selected.kind === 'recipe' ? selected.recipe : null;
@@ -682,6 +701,13 @@ function RecipeView({
           src={imageUrl}
           alt={t('menu.photoOf', { name: content.name })}
         />
+      )}
+      {recipe?.imageCredit && (
+        <p className="photo-credit">
+          <a href={recipe.imageCredit.sourceUrl} target="_blank" rel="noopener noreferrer">
+            {t('photoLibrary.credit', { name: recipe.imageCredit.photographer })}
+          </a>
+        </p>
       )}
       <h2 id="recipe-dialog-title">{content.name}</h2>
       <p className="dialog-subtitle">
@@ -779,6 +805,20 @@ function RecipeView({
             >
               <ImageOff size={16} /> {t('menu.removePhoto')}
             </button>
+          )}
+          <button
+            type="button"
+            className="text-button"
+            onClick={() => setShowLibrary((current) => !current)}
+          >
+            {t(showLibrary ? 'photoLibrary.hide' : 'photoLibrary.show')}
+          </button>
+          {showLibrary && (
+            <PhotoLibraryChooser
+              householdId={householdId}
+              recipeId={recipe.id}
+              onImported={() => onLibraryPhoto(recipe)}
+            />
           )}
           {photo.error && (
             <p className="form-error" role="alert">

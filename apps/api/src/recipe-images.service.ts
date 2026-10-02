@@ -129,6 +129,12 @@ export class RecipeImagesService {
     householdId: string,
     recipeId: string,
     image: { content: Buffer; width: number; height: number },
+    credit?: {
+      sourceProvider: 'pexels';
+      sourceUrl: string;
+      photographer: string;
+      photographerUrl: string;
+    },
   ) {
     return this.database.db.transaction().execute(async (trx) => {
       await this.households.requireMember(userId, householdId, trx, true);
@@ -148,6 +154,10 @@ export class RecipeImagesService {
           width: image.width,
           height: image.height,
           created_by: userId,
+          source_provider: credit?.sourceProvider ?? null,
+          source_url: credit?.sourceUrl ?? null,
+          photographer: credit?.photographer ?? null,
+          photographer_url: credit?.photographerUrl ?? null,
         })
         .returning(['id', 'width', 'height'])
         .executeTakeFirstOrThrow();

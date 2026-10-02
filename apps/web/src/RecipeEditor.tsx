@@ -4,16 +4,19 @@ import {
   api,
   ApiError,
   categoryKey,
+  recipeImageUrl,
   UNITS,
   unitLabel,
   type AiDraft,
   type Category,
   type Ingredient,
+  type ImageCredit,
   type PresetCategory,
   type RecipeContent,
   type RecipeDetail,
 } from './api';
 import { messageIn, useI18n } from './i18n';
+import { PhotoLibraryChooser } from './PhotoLibraryChooser';
 
 export type EditorStart =
   | { mode: 'create'; presetId?: string; content?: RecipeContent; category?: PresetCategory }
@@ -94,6 +97,7 @@ interface Props {
   onSaved: (recipe: RecipeDetail) => void;
   /** AI drafts only: called after the draft was discarded. */
   onDiscarded?: () => void;
+  onPhotoChanged?: () => Promise<void> | void;
 }
 
 /**
@@ -101,7 +105,14 @@ interface Props {
  * obvious mistakes. Edits carry the revision that was opened so a concurrent change by another
  * member is reported instead of overwritten.
  */
-export function RecipeEditor({ householdId, start, onCancel, onSaved, onDiscarded }: Props) {
+export function RecipeEditor({
+  householdId,
+  start,
+  onCancel,
+  onSaved,
+  onDiscarded,
+  onPhotoChanged,
+}: Props) {
   const { language, t, apiError } = useI18n();
   const [draft, setDraft] = useState<Draft>(() =>
     start.mode === 'edit'
@@ -126,6 +137,11 @@ export function RecipeEditor({ householdId, start, onCancel, onSaved, onDiscarde
   const categoryTouched = useRef(start.mode === 'edit');
   const heading = useRef<HTMLHeadingElement>(null);
   const recipeId = start.mode === 'edit' ? start.recipe.id : null;
+  const [imageId, setImageId] = useState(start.mode === 'edit' ? start.recipe.imageId : null);
+  const [imageCredit, setImageCredit] = useState<ImageCredit | null>(
+    start.mode === 'edit' ? start.recipe.imageCredit : null,
+  );
+  const [showLibrary, setShowLibrary] = useState(false);
 
   // A preset or AI suggestion: shown in the interface language, matched in either language.
   const suggestion =
@@ -266,6 +282,8 @@ export function RecipeEditor({ householdId, start, onCancel, onSaved, onDiscarde
       setDraft(toDraft(latest));
       setCategoryId(latest.categoryId ?? '');
       setRevision(latest.revision);
+      setImageId(latest.imageId);
+      setImageCredit(latest.imageCredit);
       void loadCategories();
     } catch (caught) {
       setError(caught instanceof ApiError ? caught : 'load');
@@ -288,6 +306,45 @@ export function RecipeEditor({ householdId, start, onCancel, onSaved, onDiscarde
       <h2 id="editor-title" tabIndex={-1} ref={heading}>
         {title}
       </h2>
+      {recipeId && (
+        <section className="recipe-editor-photo" aria-label={t('photoLibrary.title')}>
+          {imageId && (
+            <img
+              className="dialog-photo"
+              src={recipeImageUrl(householdId, recipeId, imageId)}
+              alt={t('menu.photoOf', { name: draft.name })}
+            />
+          )}
+          {imageCredit && (
+            <p className="photo-credit">
+              <a href={imageCredit.sourceUrl} target="_blank" rel="noopener noreferrer">
+                {t('photoLibrary.credit', { name: imageCredit.photographer })}
+              </a>
+            </p>
+          )}
+          <button
+            type="button"
+            className="text-button"
+            onClick={() => setShowLibrary((value) => !value)}
+          >
+            {t(showLibrary ? 'photoLibrary.hide' : 'photoLibrary.show')}
+          </button>
+          {showLibrary && (
+            <PhotoLibraryChooser
+              householdId={householdId}
+              recipeId={recipeId}
+              onImported={async () => {
+                const latest = await api<RecipeDetail>(
+                  `/households/${householdId}/recipes/${recipeId}`,
+                );
+                setImageId(latest.imageId);
+                setImageCredit(latest.imageCredit);
+                await onPhotoChanged?.();
+              }}
+            />
+          )}
+        </section>
+      )}
       {start.mode === 'ai' && (
         <p className="notice ai-notice">
           {t('recipeEditor.aiNotice', {
