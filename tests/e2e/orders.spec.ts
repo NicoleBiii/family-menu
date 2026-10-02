@@ -32,7 +32,8 @@ async function setUp(page: Page, dish: string) {
   await page.getByRole('textbox', { name: 'Household name' }).fill(unique('Home'));
   await page.getByRole('button', { name: 'Create household' }).click();
   await expect(page.getByRole('button', { name: 'Create invitation link' })).toBeVisible();
-  await page.getByRole('navigation').getByRole('button', { name: 'Menu' }).click();
+  await page.getByRole('link', { name: 'Family Menu home' }).click();
+  await page.getByRole('button', { name: 'Manage recipes & menu' }).click();
   await page.getByRole('button', { name: 'Add recipe' }).click();
   await page.getByRole('textbox', { name: 'Recipe name' }).fill(dish);
   await page.getByRole('spinbutton', { name: 'Serves' }).fill('3');
@@ -46,10 +47,11 @@ test('a dish is ordered from the menu for tomorrow, edited, and marked done', as
   await page.getByRole('button', { name: 'View Dumpling night' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Add to basket' }).click();
 
-  await expect(page).toHaveURL(/\/meals$/);
+  await expect(page).toHaveURL(/\/$/);
   await expect(page.getByText('Added Dumpling night to the basket.')).toBeVisible();
   await expect(page.locator('.basket-bar')).toContainText('1 dish · 3 servings · 12 pts');
   await page.getByRole('button', { name: 'Review basket' }).click();
+  await expect(page).toHaveURL(/\/checkout$/);
   await expect(page.getByRole('heading', { name: 'New meal order' })).toBeFocused();
   const servings = page.getByRole('spinbutton', { name: 'Servings for Dumpling night' });
   await expect(servings).toHaveValue('3');
@@ -66,6 +68,7 @@ test('a dish is ordered from the menu for tomorrow, edited, and marked done', as
   );
   await page.getByRole('button', { name: 'Place order' }).click();
 
+  await expect(page).toHaveURL(/\/meals$/);
   await expect(
     page.getByRole('status').filter({ hasText: 'Saved: Dumpling night for tomorrow at 19:00.' }),
   ).toBeVisible();
@@ -95,7 +98,7 @@ test('a repeated daylight-saving time asks which one is meant; cancel removes th
   page,
 }) => {
   await setUp(page, 'Late snack');
-  await page.getByRole('navigation').getByRole('button', { name: 'Meals' }).click();
+  await page.getByRole('link', { name: 'Family Menu home' }).click();
   await page.getByRole('button', { name: 'Add Late snack to the basket' }).click();
   await page.getByRole('button', { name: 'Review basket' }).click();
   await page.getByRole('radio', { name: 'Plan for later' }).check();
@@ -118,7 +121,7 @@ test('a repeated daylight-saving time asks which one is meant; cancel removes th
 
 test('saving over another member’s newer order change shows a conflict', async ({ page }) => {
   await setUp(page, 'Soup');
-  await page.getByRole('navigation').getByRole('button', { name: 'Meals' }).click();
+  await page.getByRole('link', { name: 'Family Menu home' }).click();
   await page.getByRole('button', { name: 'Add Soup to the basket' }).click();
   await page.getByRole('button', { name: 'Review basket' }).click();
   await page.getByRole('button', { name: 'Place order' }).click();

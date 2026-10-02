@@ -28,7 +28,7 @@ function unique(label: string) {
 }
 
 test('signed-out screens have no automatically detectable violations', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/recipes');
   await expect(page.getByRole('button', { name: /^View / }).first()).toBeVisible();
   await expectNoViolations(page, 'signed-out menu');
   await page
@@ -39,8 +39,9 @@ test('signed-out screens have no automatically detectable violations', async ({ 
   await expectNoViolations(page, 'starter recipe dialog');
   await page.keyboard.press('Escape');
   for (const [path, heading] of [
+    ['/', 'Your household menu'],
     ['/household', 'Household'],
-    ['/meals', 'Meals'],
+    ['/meals', 'Orders'],
     ['/shopping', 'Shopping'],
   ]) {
     await page.goto(path);
@@ -52,14 +53,15 @@ test('signed-out screens have no automatically detectable violations', async ({ 
 test('Chinese signed-out screens keep labels and have no automatically detectable violations', async ({
   page,
 }) => {
-  await page.goto('/');
+  await page.goto('/recipes');
   await page.getByRole('button', { name: '简体中文' }).click();
   await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hans');
   await expect(page.getByRole('button', { name: /^查看/ }).first()).toBeVisible();
   await expectNoViolations(page, 'Chinese menu');
   for (const [path, heading] of [
+    ['/', '家庭菜单'],
     ['/household', '家庭'],
-    ['/meals', '点单'],
+    ['/meals', '订单'],
     ['/shopping', '购物清单'],
   ]) {
     await page.goto(path);
@@ -83,7 +85,8 @@ test('signed-in screens have no automatically detectable violations', async ({ p
   await expect(page.getByRole('textbox', { name: /New invitation link/ })).toBeVisible();
   await expectNoViolations(page, 'household owner view');
 
-  await page.getByRole('navigation').getByRole('button', { name: 'Menu' }).click();
+  await page.getByRole('link', { name: 'Family Menu home' }).click();
+  await page.getByRole('button', { name: 'Manage recipes & menu' }).click();
   await expect(page.getByRole('heading', { name: 'Your menu is empty' })).toBeVisible();
   await expectNoViolations(page, 'empty household menu');
   await page.getByRole('button', { name: 'Categories' }).click();
@@ -113,7 +116,7 @@ test('signed-in screens have no automatically detectable violations', async ({ p
   await expectNoViolations(page, 'dish browser with basket');
   await page.getByRole('button', { name: 'Review basket' }).click();
   await expect(page.getByRole('heading', { name: 'New meal order' })).toBeVisible();
-  await expectNoViolations(page, 'order editor');
+  await expectNoViolations(page, 'order confirmation');
   await page.getByRole('button', { name: 'Place order' }).click();
   await expect(page.getByRole('article').first()).toBeVisible();
   await expectNoViolations(page, 'meals list');

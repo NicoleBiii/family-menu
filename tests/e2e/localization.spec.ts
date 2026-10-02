@@ -29,7 +29,7 @@ test('switching language keeps menu search and recipe text as written', async ({
   const context = await browser.newContext({ locale: 'zh-CN' });
   try {
     const page = await context.newPage();
-    await page.goto('/');
+    await page.goto('/recipes');
     const search = page.getByRole('textbox', { name: '搜索菜谱' });
     await search.fill('sesame');
     await expect(page.getByRole('button', { name: '查看Sesame noodle bowl' })).toBeVisible();
@@ -53,7 +53,8 @@ test('Chinese recipe and order forms keep member content when switching language
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByRole('textbox', { name: '家庭名称' }).fill('双语测试家庭');
     await page.getByRole('button', { name: '创建家庭' }).click();
-    await page.getByRole('navigation').getByRole('button', { name: '菜单' }).click();
+    await page.getByRole('link', { name: '家庭菜单首页' }).click();
+    await page.getByRole('button', { name: '管理菜谱与菜单' }).click();
     await page.getByRole('button', { name: '添加菜谱' }).click();
     await page.getByRole('textbox', { name: '菜名' }).fill('西红柿蛋汤');
     await page.getByRole('button', { name: '添加食材' }).click();

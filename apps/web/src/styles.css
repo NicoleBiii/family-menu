@@ -1452,12 +1452,75 @@ dialog h3 {
 }
 
 /* Meals dish browser and basket (UX-002 phase 3) */
+.home-menu {
+  scroll-margin-top: 20px;
+}
+.home-menu-heading {
+  align-items: center;
+  margin-bottom: 22px;
+}
+.home-menu-heading .muted {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+.dish-menu-layout {
+  display: grid;
+  grid-template-columns: 154px minmax(0, 1fr) 238px;
+  gap: 22px;
+  align-items: start;
+}
+.dish-search {
+  max-width: 610px;
+}
+.dish-categories {
+  position: sticky;
+  top: 20px;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0;
+  border-right: 1px solid #e2e5d9;
+  max-height: min(70vh, 600px);
+  overflow-y: auto;
+}
+.dish-rail-title {
+  padding: 8px 12px;
+  color: #59675a;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.dish-categories a {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 9px 0 0 9px;
+  color: #283b2e;
+  text-decoration: none;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.dish-categories a:hover,
+.dish-categories a:focus-visible {
+  background: #e9eddf;
+}
+.dish-categories a span {
+  color: #6c776a;
+  font-size: 11px;
+}
+.dish-results section {
+  scroll-margin-top: 18px;
+}
 .dish-browser .search-field {
   margin: 4px 0 18px;
 }
 .dish-group {
-  margin: 22px 0 6px;
-  font-size: 18px;
+  margin: 7px 0 8px;
+  padding: 8px 0;
+  font-size: 21px;
+  border-bottom: 2px solid #e7e9df;
 }
 .dish-list {
   list-style: none;
@@ -1465,26 +1528,60 @@ dialog h3 {
   padding: 0;
 }
 .dish-list li {
-  display: flex;
+  display: grid;
+  grid-template-columns: 94px minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 60px;
-  padding: 8px 0;
+  gap: 14px;
+  min-height: 116px;
+  padding: 10px 0;
   border-bottom: 1px solid #ecede2;
+}
+.dish-photo {
+  width: 94px;
+  height: 94px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #e8eada;
+  display: grid;
+  place-items: center;
+  color: #596d51;
+  font-family: Georgia, serif;
+  font-size: 32px;
+}
+.dish-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .dish-text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 5px;
   min-width: 0;
   overflow-wrap: anywhere;
 }
 .dish-name {
-  font-weight: 600;
+  font-weight: 700;
 }
 .dish-text .muted {
   font-size: 12px;
+}
+.dish-description {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.dish-points {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #4b6246;
+  font-size: 12px;
+}
+.dish-add {
+  margin: 0;
 }
 .stepper {
   display: inline-flex;
@@ -1493,22 +1590,21 @@ dialog h3 {
   flex-shrink: 0;
 }
 .stepper-count {
-  min-width: 64px;
+  min-width: 23px;
   text-align: center;
   font-size: 13px;
   font-weight: 600;
 }
 .basket-bar {
   position: sticky;
-  bottom: 104px;
+  top: 20px;
   z-index: 4;
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 16px;
-  margin-top: 20px;
-  padding: 12px 16px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+  margin-top: 0;
+  padding: 17px;
   border: 1px solid #d7dfca;
   border-radius: 14px;
   background: #fffef7;
@@ -1517,21 +1613,140 @@ dialog h3 {
 .basket-bar .muted {
   font-size: 12px;
 }
-.basket-actions {
+.basket-summary {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 14px;
+}
+.basket-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 50%;
+  background: #364f36;
+  color: #fff;
+}
+.basket-count {
+  position: absolute;
+  top: -6px;
+  right: -7px;
+  min-width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #d8774f;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+.basket-actions {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: stretch;
+  gap: 6px;
 }
 .basket-actions .primary-button {
   margin-top: 0;
+  justify-content: center;
 }
 /* Keep controls reached with Tab above both the bottom navigation and the basket bar. */
 html:has(.basket-bar) {
   scroll-padding-bottom: 230px;
 }
-@media (max-width: 700px) {
+@media (max-width: 1000px) {
+  .dish-menu-layout {
+    grid-template-columns: 132px minmax(0, 1fr);
+  }
   .basket-bar {
-    bottom: 92px;
+    position: fixed;
+    top: auto;
+    bottom: 96px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(680px, calc(100vw - 40px));
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+  }
+  .basket-actions {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+@media (max-width: 600px) {
+  .home-menu-heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .dish-menu-layout {
+    grid-template-columns: 90px minmax(0, 1fr);
+    gap: 10px;
+  }
+  .dish-categories {
+    top: 10px;
+  }
+  .dish-rail-title {
+    padding: 8px 5px;
+    font-size: 9px;
+  }
+  .dish-categories a {
+    padding: 10px 5px;
+    font-size: 11px;
+    overflow-wrap: break-word;
+  }
+  .dish-categories a span {
+    display: none;
+  }
+  .dish-list li {
+    grid-template-columns: 70px minmax(0, 1fr);
+    gap: 8px;
+    min-height: 90px;
+  }
+  .dish-photo {
+    width: 70px;
+    height: 70px;
+  }
+  .dish-list .dish-add,
+  .dish-list .stepper {
+    grid-column: 2;
+    justify-self: end;
+  }
+  .basket-bar {
+    bottom: 83px;
+    width: calc(100vw - 20px);
+    padding: 8px 10px;
+  }
+  .basket-summary {
+    gap: 8px;
+  }
+  .basket-summary .muted {
+    max-width: 135px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .basket-icon {
+    width: 36px;
+    height: 36px;
+  }
+  /* Phones keep Empty basket as an icon (its name stays in aria-label). */
+  .basket-clear {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+  .basket-clear-text {
+    display: none;
+  }
+  .basket-actions .primary-button {
+    padding: 8px 10px;
+    min-height: 44px;
   }
 }
 

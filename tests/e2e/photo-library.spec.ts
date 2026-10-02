@@ -12,7 +12,8 @@ test('the photo chooser handles an unavailable library and keeps manual upload u
   await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByRole('textbox', { name: 'Household name' }).fill(`Library home ${Date.now()}`);
   await page.getByRole('button', { name: 'Create household' }).click();
-  await page.getByRole('navigation').getByRole('button', { name: 'Menu' }).click();
+  await page.getByRole('link', { name: 'Family Menu home' }).click();
+  await page.getByRole('button', { name: 'Manage recipes & menu' }).click();
   await page.getByRole('button', { name: 'Add recipe' }).click();
   await page.getByRole('textbox', { name: 'Recipe name' }).fill('Library soup');
   await page.getByRole('button', { name: 'Save recipe' }).click();

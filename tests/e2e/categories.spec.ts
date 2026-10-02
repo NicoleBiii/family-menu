@@ -16,7 +16,8 @@ async function signInWithHousehold(page: Page) {
   await page.getByRole('textbox', { name: 'Household name' }).fill(unique('Kitchen'));
   await page.getByRole('button', { name: 'Create household' }).click();
   await expect(page.getByRole('button', { name: 'Create invitation link' })).toBeVisible();
-  await page.getByRole('navigation').getByRole('button', { name: 'Menu' }).click();
+  await page.getByRole('link', { name: 'Family Menu home' }).click();
+  await page.getByRole('button', { name: 'Manage recipes & menu' }).click();
   await expect(page.getByRole('heading', { name: 'Your household menu' })).toBeVisible();
 }
 
@@ -156,7 +157,8 @@ test('category controls work in Chinese', async ({ browser }) => {
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByRole('textbox', { name: '家庭名称' }).fill(unique('分类家庭'));
     await page.getByRole('button', { name: '创建家庭' }).click();
-    await page.getByRole('navigation').getByRole('button', { name: '菜单' }).click();
+    await page.getByRole('link', { name: '家庭菜单首页' }).click();
+    await page.getByRole('button', { name: '管理菜谱与菜单' }).click();
     await page
       .getByRole('button', { name: /^查看Tomato/ })
       .first()

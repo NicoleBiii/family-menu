@@ -161,7 +161,25 @@ export function useBasket(householdId: string | undefined) {
   /** Empties the basket and starts a new request id; nothing is sent to the server. */
   const clear = useCallback(() => change(() => empty()), [change]);
 
-  return { basket, add, setServings, update, clear };
+  /** Drops dishes that are no longer on the menu; returns whether any were dropped. */
+  const keepAvailable = useCallback(
+    (recipes: Pick<RecipeSummary, 'id'>[]) => {
+      const gone = basket.items.filter(
+        (item) => !recipes.some((recipe) => recipe.id === item.recipeId),
+      );
+      if (gone.length === 0) return false;
+      change((current) => ({
+        ...current,
+        items: current.items.filter((item) =>
+          recipes.some((recipe) => recipe.id === item.recipeId),
+        ),
+      }));
+      return true;
+    },
+    [basket.items, change],
+  );
+
+  return { basket, add, setServings, update, clear, keepAvailable };
 }
 
 export type BasketControls = ReturnType<typeof useBasket>;
