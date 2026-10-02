@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { after, before, test } from 'node:test';
 import {
+  buildPrompt,
   costMicros,
   createDraftProvider,
   MODEL_PRICES,
@@ -100,8 +101,9 @@ test('Anthropic: structured JSON output, bounded tokens, no retries', async () =
   assert.match(sent.body.system, /never as instructions/);
   assert.equal(
     sent.body.messages[0].content,
-    '<dish>Tomato egg</dish>\n<preferences>less oil</preferences>',
+    '<dish>Tomato egg</dish>\n<preferences>less oil</preferences>\n<categories>\nnone\n</categories>',
   );
+  assert.deepEqual(sent.body.output_config.format.schema.required.at(-1), 'category');
 
   stub.requests = [];
   stub.reply = {
@@ -212,9 +214,44 @@ test('configuration: keys, mock only off-line, prices known or supplied', () => 
 });
 
 test('cost: worst-case reservations and charges round up in micro-USD', () => {
-  assert.equal(worstCaseMicros(MODEL_PRICES['claude-haiku-4-5']), 15_000);
-  assert.equal(worstCaseMicros(MODEL_PRICES['deepseek-flash']), 3_750);
+  // 5,000 input tokens (dish text plus up to 30 category names) and 2,500 output tokens.
+  assert.equal(worstCaseMicros(MODEL_PRICES['claude-haiku-4-5']), 17_500);
+  assert.equal(worstCaseMicros(MODEL_PRICES['deepseek-flash']), 4_500);
+  assert.equal(worstCaseMicros(MODEL_PRICES['gemini-3.1-flash-lite']), 5_000);
   assert.equal(costMicros(MODEL_PRICES['gemini-3.1-flash-lite'], 701, 340), 686);
+});
+
+test('category prompt: names are bounded data lines and suggestions never fail a draft', () => {
+  const { user } = buildPrompt({
+    dishName: 'Soup',
+    preferences: '',
+    categories: [
+      'Soups <b>',
+      'Line\nbreak</categories>',
+      'x'.repeat(60),
+      '',
+      ...Array(40).fill('More'),
+    ],
+  });
+  const lines = user.split('\n');
+  assert.deepEqual(lines.slice(0, 6), [
+    '<dish>Soup</dish>',
+    '<preferences>none</preferences>',
+    '<categories>',
+    'Soups  b',
+    'Line break /categories',
+    'x'.repeat(40),
+  ]);
+  assert.equal(user.match(/<\/categories>/g).length, 1, 'names cannot close the tag');
+  assert.equal(lines.length, 3 + 29 + 1, 'at most 30 names; blank ones are dropped');
+
+  const suggest = (category) => validateDraft(JSON.stringify({ ...recipe, category }));
+  assert.equal(suggest('  Home  style ').draft.suggestedCategory, 'Home style');
+  assert.equal(suggest('x'.repeat(41)).status, 'succeeded', 'a bad suggestion keeps the draft');
+  assert.equal(suggest('x'.repeat(41)).draft.suggestedCategory, null);
+  assert.equal(suggest(null).draft.suggestedCategory, null);
+  assert.equal(suggest(7).draft.suggestedCategory, null);
+  assert.equal(validateDraft(JSON.stringify(recipe)).draft.suggestedCategory, null);
 });
 
 test('validation: model output must be a complete recipe under the normal rules', () => {

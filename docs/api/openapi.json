@@ -672,6 +672,12 @@
                         }
                       }
                     }
+                  },
+                  "categoryId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true,
+                    "description": "Household category, or null for Uncategorised. Omitted: new recipes are Uncategorised and updates keep the current category."
                   }
                 }
               }
@@ -873,6 +879,12 @@
                         }
                       }
                     }
+                  },
+                  "categoryId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true,
+                    "description": "Household category, or null for Uncategorised. Omitted: new recipes are Uncategorised and updates keep the current category."
                   }
                 }
               }
@@ -1223,6 +1235,256 @@
         "responses": {
           "200": {
             "description": "The photo. Ids change on every upload, so responses are immutable."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Not found, or the caller is not a member of the household."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Recipes"
+        ]
+      }
+    },
+    "/api/households/{householdId}/categories": {
+      "get": {
+        "operationId": "CategoriesController_list",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Household categories by name, with active and archived recipe counts."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Not found, or the caller is not a member of the household."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Recipes"
+        ]
+      },
+      "post": {
+        "operationId": "CategoriesController_create",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "Required on state-changing requests; returned by GET /api/auth/session.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 40,
+                    "example": "Soups"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The category; an existing one when the household already has this name."
+          },
+          "400": {
+            "description": "Missing or too long name."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Not found, or the caller is not a member of the household."
+          },
+          "409": {
+            "description": "The household reached its category limit."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Recipes"
+        ]
+      }
+    },
+    "/api/households/{householdId}/categories/{categoryId}": {
+      "put": {
+        "operationId": "CategoriesController_rename",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "categoryId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "Required on state-changing requests; returned by GET /api/auth/session.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 40,
+                    "example": "Soups"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Renamed; recipe links are kept."
+          },
+          "401": {
+            "description": "No valid session."
+          },
+          "404": {
+            "description": "Not found, or the caller is not a member of the household."
+          },
+          "409": {
+            "description": "Another category already has this name."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Recipes"
+        ]
+      }
+    },
+    "/api/households/{householdId}/categories/{categoryId}/delete": {
+      "post": {
+        "operationId": "CategoriesController_remove",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "categoryId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "description": "Required on state-changing requests; returned by GET /api/auth/session.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "moveTo"
+                ],
+                "properties": {
+                  "moveTo": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true,
+                    "description": "Category that receives this category’s recipes, or null for Uncategorised."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Recipes moved (with new revisions) and the category deleted."
+          },
+          "400": {
+            "description": "moveTo is missing, the same category or not found."
           },
           "401": {
             "description": "No valid session."

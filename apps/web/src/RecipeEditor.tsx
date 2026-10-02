@@ -3,18 +3,21 @@ import { Plus, Trash2 } from 'lucide-react';
 import {
   api,
   ApiError,
+  categoryKey,
   UNITS,
   unitLabel,
   type AiDraft,
+  type Category,
   type Ingredient,
+  type PresetCategory,
   type RecipeContent,
   type RecipeDetail,
 } from './api';
-import { useI18n } from './i18n';
+import { messageIn, useI18n } from './i18n';
 
 export type EditorStart =
-  | { mode: 'create'; presetId?: string; content?: RecipeContent }
-  | { mode: 'ai'; draft: AiDraft & { draft: RecipeContent } }
+  | { mode: 'create'; presetId?: string; content?: RecipeContent; category?: PresetCategory }
+  | { mode: 'ai'; draft: AiDraft & { draft: NonNullable<AiDraft['draft']> } }
   | { mode: 'edit'; recipe: RecipeDetail };
 
 interface DraftLine {
@@ -113,12 +116,77 @@ export function RecipeEditor({ householdId, start, onCancel, onSaved, onDiscarde
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<ApiError | 'save' | 'discard' | 'load' | null>(null);
   const [conflict, setConflict] = useState(false);
+  const [categories, setCategories] = useState<Category[] | null>(null);
+  const [categoryId, setCategoryId] = useState(
+    start.mode === 'edit' ? (start.recipe.categoryId ?? '') : '',
+  );
+  const [newCategory, setNewCategory] = useState('');
+  const [categoryBusy, setCategoryBusy] = useState(false);
+  const [categoryError, setCategoryError] = useState<ApiError | 'save' | 'load' | null>(null);
+  const categoryTouched = useRef(start.mode === 'edit');
   const heading = useRef<HTMLHeadingElement>(null);
   const recipeId = start.mode === 'edit' ? start.recipe.id : null;
+
+  // A preset or AI suggestion: shown in the interface language, matched in either language.
+  const suggestion =
+    start.mode === 'ai'
+      ? start.draft.draft.suggestedCategory
+      : start.mode === 'create' && start.category
+        ? t(`category.preset.${start.category}`)
+        : null;
+  const suggestionKeys = new Set(
+    start.mode === 'create' && start.category
+      ? (['en', 'zh'] as const).map((lang) =>
+          categoryKey(messageIn(lang, `category.preset.${start.category!}`)),
+        )
+      : suggestion
+        ? [categoryKey(suggestion)]
+        : [],
+  );
+  const suggested = categories?.find((category) => suggestionKeys.has(categoryKey(category.name)));
 
   useEffect(() => {
     heading.current?.focus();
   }, []);
+
+  async function loadCategories() {
+    try {
+      const list = await api<Category[]>(`/households/${householdId}/categories`);
+      setCategories(list);
+      return list;
+    } catch (caught) {
+      setCategoryError(caught instanceof ApiError ? caught : 'load');
+      return null;
+    }
+  }
+  useEffect(() => {
+    void loadCategories().then((list) => {
+      // Preselect a suggested category the household already has, until the member chooses.
+      const match = list?.find((category) => suggestionKeys.has(categoryKey(category.name)));
+      if (match && !categoryTouched.current) setCategoryId(match.id);
+    });
+    // Load once per editor session; the suggestion does not change while it is open.
+  }, [householdId]);
+
+  /** Creating a name the household already has returns that category, so this is safe to repeat. */
+  async function createCategory(name: string) {
+    setCategoryBusy(true);
+    setCategoryError(null);
+    try {
+      const created = await api<Category>(`/households/${householdId}/categories`, {
+        method: 'POST',
+        body: { name },
+      });
+      categoryTouched.current = true;
+      setCategoryId(created.id);
+      setNewCategory('');
+      await loadCategories();
+    } catch (caught) {
+      setCategoryError(caught instanceof ApiError ? caught : 'save');
+    } finally {
+      setCategoryBusy(false);
+    }
+  }
 
   function update(patch: Partial<Draft>) {
     setDraft((current) => ({ ...current, ...patch }));
@@ -138,21 +206,26 @@ export function RecipeEditor({ householdId, start, onCancel, onSaved, onDiscarde
     setError(null);
     setConflict(false);
     try {
+      // Without a loaded list the member could not choose, so the category is left unchanged.
+      const content = {
+        ...toBody(draft),
+        ...(categories ? { categoryId: categoryId || null } : {}),
+      };
       const saved = recipeId
         ? await api<RecipeDetail>(`/households/${householdId}/recipes/${recipeId}`, {
             method: 'PUT',
-            body: { ...toBody(draft), expectedRevision: revision },
+            body: { ...content, expectedRevision: revision },
           })
         : start.mode === 'ai'
           ? // Saving the same draft twice returns the recipe from the first save.
             await api<RecipeDetail>(`/households/${householdId}/ai-drafts/${start.draft.id}/save`, {
               method: 'POST',
-              body: toBody(draft),
+              body: content,
             })
           : await api<RecipeDetail>(`/households/${householdId}/recipes`, {
               method: 'POST',
               body: {
-                ...toBody(draft),
+                ...content,
                 requestId,
                 ...(start.mode === 'create' && start.presetId ? { presetId: start.presetId } : {}),
               },
@@ -161,6 +234,8 @@ export function RecipeEditor({ householdId, start, onCancel, onSaved, onDiscarde
     } catch (caught) {
       setError(caught instanceof ApiError ? caught : 'save');
       setConflict(caught instanceof ApiError && caught.status === 409 && recipeId !== null);
+      // The chosen category may have been deleted by another member meanwhile.
+      if (caught instanceof ApiError && caught.status === 400) void loadCategories();
     } finally {
       setBusy(false);
     }
@@ -189,7 +264,9 @@ export function RecipeEditor({ householdId, start, onCancel, onSaved, onDiscarde
     try {
       const latest = await api<RecipeDetail>(`/households/${householdId}/recipes/${recipeId}`);
       setDraft(toDraft(latest));
+      setCategoryId(latest.categoryId ?? '');
       setRevision(latest.revision);
+      void loadCategories();
     } catch (caught) {
       setError(caught instanceof ApiError ? caught : 'load');
     }
@@ -239,6 +316,74 @@ export function RecipeEditor({ householdId, start, onCancel, onSaved, onDiscarde
           maxLength={500}
         />
       </label>
+      <div className="category-picker">
+        <label className="field">
+          <span>{t('category.label')}</span>
+          <select
+            value={categoryId}
+            disabled={categories === null}
+            onChange={(event) => {
+              categoryTouched.current = true;
+              setCategoryId(event.target.value);
+            }}
+          >
+            <option value="">{t('category.uncategorised')}</option>
+            {categories?.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        {suggestion && !suggested && categories && (
+          <p className="category-suggestion">
+            <span>{t('category.suggested', { name: suggestion })}</span>
+            <button
+              type="button"
+              className="text-button inline"
+              disabled={categoryBusy}
+              onClick={() => createCategory(suggestion)}
+            >
+              <Plus size={16} aria-hidden="true" /> {t('category.create', { name: suggestion })}
+            </button>
+          </p>
+        )}
+        {categories && (
+          <div className="category-new">
+            <label className="field">
+              <span>{t('category.createLabel')}</span>
+              <input
+                value={newCategory}
+                maxLength={40}
+                placeholder={t('category.namePlaceholder')}
+                onChange={(event) => setNewCategory(event.target.value)}
+                onKeyDown={(event) => {
+                  // Enter adds the category instead of submitting the whole recipe.
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    if (newCategory.trim()) void createCategory(newCategory);
+                  }
+                }}
+              />
+            </label>
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={categoryBusy || !newCategory.trim()}
+              onClick={() => createCategory(newCategory)}
+            >
+              {t('category.add')}
+            </button>
+          </div>
+        )}
+        {categoryError && (
+          <p className="form-error" role="alert">
+            {categoryError instanceof ApiError
+              ? apiError(categoryError)
+              : t(categoryError === 'load' ? 'category.loadFailed' : 'category.saveFailed')}
+          </p>
+        )}
+      </div>
       <div className="field-row">
         <label className="field">
           <span>{t('recipeEditor.serves')}</span>
