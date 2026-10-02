@@ -151,7 +151,7 @@ export interface AiDraft {
   errorCode: string | null;
   errorMessage: string | null;
   /** The model's draft after server validation; null until it succeeds. */
-  draft: RecipeContent | null;
+  draft: (RecipeContent & { suggestedCategory: string | null }) | null;
   savedRecipeId: string | null;
   discarded: boolean;
   createdAt: string;
@@ -167,9 +167,33 @@ export interface AiOverview {
   drafts: AiDraft[];
 }
 
+export const PRESET_CATEGORIES = [
+  'breakfast',
+  'mains',
+  'noodlesRice',
+  'soups',
+  'vegetables',
+] as const;
+export type PresetCategory = (typeof PRESET_CATEGORIES)[number];
+
 export interface RecipePreset extends RecipeContent {
   id: string;
   version: number;
+  /** Suggested category key; the interface names it and never creates it silently. */
+  category: PresetCategory;
+}
+
+/** A household recipe category (ADR 0007). Counts cover active and archived recipes. */
+export interface Category {
+  id: string;
+  name: string;
+  recipeCount: number;
+  archivedCount: number;
+}
+
+/** Same normalization as the server: case, width and spacing do not make a new name. */
+export function categoryKey(name: string) {
+  return name.normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
 export interface RecipeSummary {
@@ -180,6 +204,7 @@ export interface RecipeSummary {
   pricePoints: number;
   source: RecipeSource;
   presetId: string | null;
+  categoryId: string | null;
   revision: number;
   updatedAt: string;
   archived: boolean;
@@ -193,6 +218,7 @@ export interface RecipeDetail extends RecipeContent {
   source: RecipeSource;
   presetId: string | null;
   presetVersion: number | null;
+  categoryId: string | null;
   revision: number;
   createdAt: string;
   updatedAt: string;

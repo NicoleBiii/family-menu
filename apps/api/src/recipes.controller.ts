@@ -84,6 +84,13 @@ const recipeProperties = {
   },
   steps: { type: 'array', maxItems: MAX_STEPS, items: { type: 'string', maxLength: 2000 } },
   ingredients: { type: 'array', maxItems: MAX_INGREDIENTS, items: ingredientSchema },
+  categoryId: {
+    type: 'string',
+    format: 'uuid',
+    nullable: true,
+    description:
+      'Household category, or null for Uncategorised. Omitted: new recipes are Uncategorised and updates keep the current category.',
+  },
 };
 
 @ApiTags('Recipes')

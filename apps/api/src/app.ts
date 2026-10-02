@@ -9,6 +9,8 @@ import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { AiDraftsController } from './ai-drafts.controller.js';
 import { AiDraftsService } from './ai-drafts.service.js';
+import { CategoriesController } from './categories.controller.js';
+import { CategoriesService } from './categories.service.js';
 import { APP_CONFIG, type AppConfig } from './config.js';
 import { DatabaseService } from './database.service.js';
 import { HealthController } from './health.controller.js';
@@ -38,6 +40,7 @@ class AppModule {
         InvitationsController,
         RecipePresetsController,
         RecipesController,
+        CategoriesController,
         OrdersController,
         ShoppingController,
         AiDraftsController,
@@ -49,6 +52,7 @@ class AppModule {
         AuthService,
         HouseholdsService,
         RecipesService,
+        CategoriesService,
         RecipeImagesService,
         OrdersService,
         ShoppingService,

@@ -70,6 +70,17 @@ interface Database {
     created_at: Generated<Date>;
     updated_at: Generated<Date>;
     archived_at: Date | null;
+    category_id: string | null;
+  };
+  'app.recipe_categories': {
+    id: Generated<string>;
+    household_id: string;
+    name: string;
+    name_key: string;
+    created_by: string;
+    updated_by: string;
+    created_at: Generated<Date>;
+    updated_at: Generated<Date>;
   };
   'app.recipe_ingredients': {
     household_id: string;

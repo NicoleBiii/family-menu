@@ -53,6 +53,11 @@ export interface RecipeInput {
   pricePoints: number;
   steps: string[];
   ingredients: IngredientInput[];
+  /**
+   * Household category id, or null for Uncategorised. Undefined means the caller did not send
+   * one: a new recipe is then Uncategorised and an update keeps the current category.
+   */
+  categoryId?: string | null;
 }
 
 type Executor = Transaction<Database> | DatabaseService['db'];
@@ -122,7 +127,16 @@ export function parseRecipeInput(body: unknown): RecipeInput {
   if (!Array.isArray(ingredients) || ingredients.length > MAX_INGREDIENTS) {
     fail(`ingredients must be a list of at most ${MAX_INGREDIENTS} entries.`);
   }
+  let categoryId: string | null | undefined;
+  if (input.categoryId === null || input.categoryId === '') categoryId = null;
+  else if (input.categoryId !== undefined) {
+    if (typeof input.categoryId !== 'string' || !isUuid(input.categoryId)) {
+      fail('categoryId must be a category id or null.');
+    }
+    categoryId = input.categoryId.toLowerCase();
+  }
   return {
+    categoryId,
     name: text(input.name, 'name', 120)!,
     description: text(input.description, 'description', 500, { optional: true }) ?? '',
     servings: integer(input.servings, 'servings', 1, 100),
@@ -200,6 +214,7 @@ export class RecipesService {
         'r.price_points as pricePoints',
         'r.source',
         'r.source_preset_id as presetId',
+        'r.category_id as categoryId',
         'r.revision',
         'r.updated_at as updatedAt',
         'r.archived_at as archivedAt',
@@ -278,10 +293,12 @@ export class RecipesService {
         `A household can keep up to ${MAX_RECIPES_PER_HOUSEHOLD} recipes.`,
       );
     }
+    const categoryId = await this.resolveCategory(trx, householdId, input.categoryId ?? null);
     const inserted = await trx
       .insertInto('app.recipes')
       .values({
         household_id: householdId,
+        category_id: categoryId,
         name: input.name,
         description: input.description,
         servings: input.servings,
@@ -322,9 +339,14 @@ export class RecipesService {
     return this.database.db.transaction().execute(async (trx) => {
       await this.households.requireMember(userId, householdId, trx, true);
       if (!isUuid(recipeId)) throw new NotFoundException('Recipe not found.');
+      const categoryId =
+        input.categoryId === undefined
+          ? undefined
+          : await this.resolveCategory(trx, householdId, input.categoryId);
       const updated = await trx
         .updateTable('app.recipes')
         .set({
+          ...(categoryId === undefined ? {} : { category_id: categoryId }),
           name: input.name,
           description: input.description,
           servings: input.servings,
@@ -379,6 +401,27 @@ export class RecipesService {
       if (!updated) await this.explainRejectedWrite(trx, householdId, recipeId, archived);
       return this.detail(trx, householdId, recipeId);
     });
+  }
+
+  /**
+   * Confirms a category belongs to the household. `FOR KEY SHARE` makes a concurrent category
+   * deletion wait for this write, or makes this write see the deletion and fail with 400.
+   */
+  private async resolveCategory(
+    trx: Transaction<Database>,
+    householdId: string,
+    categoryId: string | null,
+  ) {
+    if (categoryId === null) return null;
+    const category = await trx
+      .selectFrom('app.recipe_categories')
+      .select('id')
+      .where('household_id', '=', householdId)
+      .where('id', '=', categoryId)
+      .forKeyShare()
+      .executeTakeFirst();
+    if (!category) fail('categoryId does not match a category in this household.');
+    return category.id;
   }
 
   private async explainRejectedWrite(
@@ -446,6 +489,7 @@ export class RecipesService {
         'r.source',
         'r.source_preset_id as presetId',
         'r.source_preset_version as presetVersion',
+        'r.category_id as categoryId',
         'r.revision',
         'r.created_at as createdAt',
         'r.updated_at as updatedAt',

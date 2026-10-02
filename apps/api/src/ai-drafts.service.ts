@@ -16,6 +16,8 @@ import {
   createDraftProvider,
   MAX_DISH_NAME,
   MAX_PREFERENCES,
+  MAX_PROMPT_CATEGORIES,
+  MAX_SUGGESTED_CATEGORY,
   modelPrice,
   ProviderError,
   worstCaseMicros,
@@ -27,6 +29,13 @@ import { DatabaseService, type AiDraftErrorCode, type Database } from './databas
 import { HouseholdsService } from './households.service.js';
 import { parseRecipeInput, RecipesService, type RecipeInput } from './recipes.service.js';
 import { isUuid } from './security.js';
+
+type Job = { id: string; household_id: string; dish_name: string; preferences: string };
+
+/** A validated draft: recipe fields without price or category, plus the model's suggestion. */
+export type ValidDraft = Omit<RecipeInput, 'pricePoints' | 'categoryId'> & {
+  suggestedCategory: string | null;
+};
 
 /** Serializes quota and budget checks across concurrent requests (and application instances). */
 const RESERVATION_LOCK = 7_300_006;
@@ -84,7 +93,8 @@ type DraftRow = {
   preferences: string;
   model: string;
   errorCode: AiDraftErrorCode | null;
-  draft: Omit<RecipeInput, 'pricePoints'> | null;
+  /** Drafts written before categories (ADR 0007) have no `suggestedCategory`. */
+  draft: (Omit<ValidDraft, 'suggestedCategory'> & { suggestedCategory?: string | null }) | null;
   savedRecipeId: string | null;
   discardedAt: Date | null;
   createdAt: Date;
@@ -345,7 +355,7 @@ export class AiDraftsService implements OnApplicationBootstrap, OnModuleDestroy 
 
   private async claim() {
     const leaseSeconds = Math.ceil(this.config!.timeoutMs / 1000) + 60;
-    const result = await sql<{ id: string; dish_name: string; preferences: string }>`
+    const result = await sql<Job>`
       update app.ai_draft_requests
       set status = 'running', started_at = now(),
           lease_expires_at = now() + make_interval(secs => ${leaseSeconds})
@@ -357,22 +367,33 @@ export class AiDraftsService implements OnApplicationBootstrap, OnModuleDestroy 
         for update skip locked
         limit 1
       )
-      returning id, dish_name, preferences
+      returning id, household_id, dish_name, preferences
     `.execute(this.database.db);
     return result.rows[0];
   }
 
-  private async run(job: { id: string; dish_name: string; preferences: string }) {
+  private async run(job: Job) {
     const started = Date.now();
     const timeout = AbortSignal.timeout(this.config!.timeoutMs);
     const signal = AbortSignal.any([timeout, this.shutdown.signal]);
     let reply: ProviderReply | undefined;
     let outcome:
-      | { status: 'succeeded'; draft: Omit<RecipeInput, 'pricePoints'> }
-      | { status: 'failed'; code: AiDraftErrorCode };
+      { status: 'succeeded'; draft: ValidDraft } | { status: 'failed'; code: AiDraftErrorCode };
     try {
+      // Category names are read when the job starts, so the suggestion fits the current list.
+      const categories = await this.database.db
+        .selectFrom('app.recipe_categories')
+        .select('name')
+        .where('household_id', '=', job.household_id)
+        .orderBy(sql`lower(name)`)
+        .limit(MAX_PROMPT_CATEGORIES)
+        .execute();
       reply = await this.provider!.complete(
-        { dishName: job.dish_name, preferences: job.preferences },
+        {
+          dishName: job.dish_name,
+          preferences: job.preferences,
+          categories: categories.map((row) => row.name),
+        },
         signal,
       );
       outcome =
@@ -533,9 +554,10 @@ export class AiDraftsService implements OnApplicationBootstrap, OnModuleDestroy 
   }
 
   private present(row: DraftRow) {
-    const { discardedAt, errorCode, ...rest } = row;
+    const { discardedAt, errorCode, draft, ...rest } = row;
     return {
       ...rest,
+      draft: draft ? { ...draft, suggestedCategory: draft.suggestedCategory ?? null } : null,
       discarded: discardedAt !== null,
       errorCode,
       errorMessage: errorCode ? ERROR_MESSAGES[errorCode] : null,
@@ -565,12 +587,17 @@ function normalizeAmounts(ingredients: unknown) {
   });
 }
 
+/** A trimmed category suggestion of 1–40 characters, or null; never a reason to fail a draft. */
+function suggestedCategory(value: unknown) {
+  if (typeof value !== 'string') return null;
+  const name = value.trim().replace(/\s+/g, ' ');
+  return name.length >= 1 && name.length <= MAX_SUGGESTED_CATEGORY ? name : null;
+}
+
 /** Parses model text and applies the same rules as a manually entered recipe. */
 export function validateDraft(
   text: string,
-):
-  | { status: 'succeeded'; draft: Omit<RecipeInput, 'pricePoints'> }
-  | { status: 'failed'; code: 'invalid_output' } {
+): { status: 'succeeded'; draft: ValidDraft } | { status: 'failed'; code: 'invalid_output' } {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -587,7 +614,14 @@ export function validateDraft(
       ingredients: normalizeAmounts((parsed as { ingredients?: unknown }).ingredients),
       pricePoints: 0,
     });
-    const draft = { name, description, servings, steps, ingredients };
+    const draft = {
+      name,
+      description,
+      servings,
+      steps,
+      ingredients,
+      suggestedCategory: suggestedCategory((parsed as { category?: unknown }).category),
+    };
     if (draft.ingredients.length === 0 || draft.steps.length === 0) {
       return { status: 'failed', code: 'invalid_output' };
     }

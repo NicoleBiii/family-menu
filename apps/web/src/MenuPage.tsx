@@ -21,6 +21,7 @@ import {
   Search,
   Sparkles,
   Star,
+  Tags,
   Users,
   X,
 } from 'lucide-react';
@@ -31,6 +32,7 @@ import {
   recipeImageUrl,
   signInUrl,
   uploadImage,
+  type Category,
   type HouseholdSummary,
   type RecipeDetail,
   type RecipePreset,
@@ -38,6 +40,7 @@ import {
   type Session,
 } from './api';
 import { AiDraftPanel } from './AiDraftPanel';
+import { CategoryManager } from './CategoryManager';
 import { ImageError, prepareImage } from './image';
 import { RecipeEditor, type EditorStart } from './RecipeEditor';
 import { useI18n } from './i18n';
@@ -69,6 +72,10 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
   const { t, apiError } = useI18n();
   const [presets, setPresets] = useState<RecipePreset[] | null>(null);
   const [recipes, setRecipes] = useState<RecipeSummary[] | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  /** 'all', '' for Uncategorised, or a category id. */
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [managing, setManaging] = useState(false);
   const [query, setQuery] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const [editor, setEditor] = useState<EditorStart | null>(null);
@@ -87,15 +94,31 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
       .catch(() => setPresets([]));
   }, []);
   const loadRecipes = useCallback(async () => {
-    if (!householdId) return setRecipes(null);
+    if (!householdId) {
+      setCategories([]);
+      return setRecipes(null);
+    }
     try {
-      setRecipes(await api<RecipeSummary[]>(`/households/${householdId}/recipes`));
+      const [recipeList, categoryList] = await Promise.all([
+        api<RecipeSummary[]>(`/households/${householdId}/recipes`),
+        api<Category[]>(`/households/${householdId}/categories`),
+      ]);
+      setRecipes(recipeList);
+      setCategories(categoryList);
+      // A category deleted by any member no longer filters the menu.
+      setCategoryFilter((current) =>
+        current === 'all' || current === '' || categoryList.some((c) => c.id === current)
+          ? current
+          : 'all',
+      );
     } catch (caught) {
       setError(caught instanceof ApiError ? caught : 'load');
     }
   }, [householdId]);
   useEffect(() => {
     setEditor(null);
+    setManaging(false);
+    setCategoryFilter('all');
     void loadRecipes();
   }, [loadRecipes]);
   useEffect(() => {
@@ -171,6 +194,7 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
     setSelected(null);
     setNotice(null);
     setAiPanel(false);
+    setManaging(false);
     setEditor(start);
     window.scrollTo({ top: 0 });
   }
@@ -200,6 +224,19 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
     );
   }
 
+  if (managing && householdId) {
+    return (
+      <section className="page-panel">
+        <CategoryManager
+          householdId={householdId}
+          categories={categories}
+          onChanged={loadRecipes}
+          onClose={() => setManaging(false)}
+        />
+      </section>
+    );
+  }
+
   if (aiPanel && householdId) {
     return (
       <section className="page-panel">
@@ -219,8 +256,12 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
   const matches = (name: string) => name.toLowerCase().includes(needle);
   const active = (recipes ?? []).filter((recipe) => !recipe.archived);
   const archived = (recipes ?? []).filter((recipe) => recipe.archived);
-  const visibleRecipes = (showArchived ? archived : active).filter((recipe) =>
-    matches(recipe.name),
+  const categoryName = (id: string | null) =>
+    id === null ? undefined : categories.find((category) => category.id === id)?.name;
+  const visibleRecipes = (showArchived ? archived : active).filter(
+    (recipe) =>
+      matches(recipe.name) &&
+      (categoryFilter === 'all' || (recipe.categoryId ?? '') === categoryFilter),
   );
   const visiblePresets = (presets ?? []).filter((preset) => matches(preset.name));
   const signedIn = session?.authenticated === true;
@@ -268,6 +309,16 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
                 className="archive-toggle ai-toggle"
                 onClick={() => {
                   setNotice(null);
+                  setManaging(true);
+                  window.scrollTo({ top: 0 });
+                }}
+              >
+                <Tags size={14} aria-hidden="true" /> {t('category.manage')}
+              </button>
+              <button
+                className="archive-toggle ai-toggle"
+                onClick={() => {
+                  setNotice(null);
                   setAiPanel(true);
                   window.scrollTo({ top: 0 });
                 }}
@@ -280,6 +331,24 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
             </div>
           )}
         </div>
+        {household && categories.length > 0 && (
+          <div className="category-chips" role="group" aria-label={t('category.filter')}>
+            {[
+              { id: 'all', name: t('category.all') },
+              ...categories,
+              { id: '', name: t('category.uncategorised') },
+            ].map((option) => (
+              <button
+                key={option.id || 'none'}
+                className="category-chip"
+                aria-pressed={categoryFilter === option.id}
+                onClick={() => setCategoryFilter(option.id)}
+              >
+                {option.name}
+              </button>
+            ))}
+          </div>
+        )}
         <p className="sr-only" role="status">
           {t('menu.found', {
             count: household ? visibleRecipes.length : visiblePresets.length,
@@ -330,6 +399,7 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
                       ? t('menu.archived')
                       : t('menu.pointsPerServing', { count: recipe.pricePoints })
                   }
+                  category={categoryName(recipe.categoryId)}
                   imageUrl={imageUrl(recipe.id, recipe.imageId)}
                   onOpen={(target) => openRecipe(recipe.id, target)}
                 />
@@ -355,6 +425,11 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
               {needle && (
                 <button className="text-button" onClick={() => setQuery('')}>
                   {t('menu.clearSearch')}
+                </button>
+              )}
+              {!needle && categoryFilter !== 'all' && (
+                <button className="text-button" onClick={() => setCategoryFilter('all')}>
+                  {t('category.all')}
                 </button>
               )}
             </div>
@@ -424,6 +499,7 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
                 mode: 'create',
                 presetId: preset.id,
                 content: preset,
+                category: preset.category,
               })
             }
             onEdit={(recipe) => startEditor({ mode: 'edit', recipe })}
@@ -432,6 +508,11 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
               onOrder(recipe.id, recipe.servings);
             }}
             onArchive={setArchived}
+            categoryName={
+              selected.kind === 'recipe'
+                ? (categoryName(selected.recipe.categoryId) ?? t('category.uncategorised'))
+                : undefined
+            }
             imageUrl={
               selected.kind === 'recipe'
                 ? imageUrl(selected.recipe.id, selected.recipe.imageId)
@@ -452,6 +533,7 @@ function RecipeCard({
   description,
   servings,
   label,
+  category,
   imageUrl,
   onOpen,
 }: {
@@ -460,6 +542,7 @@ function RecipeCard({
   description: string;
   servings: number;
   label: string;
+  category?: string;
   imageUrl?: string;
   onOpen: (target: HTMLElement) => void;
 }) {
@@ -483,6 +566,7 @@ function RecipeCard({
       </div>
       <div className="recipe-content">
         <h3>{name}</h3>
+        {category && <span className="card-category">{category}</span>}
         <p>{description}</p>
         <div className="recipe-meta">
           <span>
@@ -547,11 +631,13 @@ function RecipeView({
   onEdit,
   onOrder,
   onArchive,
+  categoryName,
   imageUrl,
   photo,
   onPhoto,
 }: {
   selected: Selected;
+  categoryName?: string;
   canSave: boolean;
   signInHref: string | null;
   onClose: () => void;
@@ -604,6 +690,12 @@ function RecipeView({
             {' · '}
             <Star size={13} aria-hidden="true" />{' '}
             {t('menu.fullPoints', { count: recipe.pricePoints })}
+          </>
+        )}
+        {categoryName && (
+          <>
+            {' · '}
+            <Tags size={13} aria-hidden="true" /> {categoryName}
           </>
         )}
       </p>

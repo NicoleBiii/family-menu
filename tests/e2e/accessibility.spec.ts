@@ -86,6 +86,13 @@ test('signed-in screens have no automatically detectable violations', async ({ p
   await page.getByRole('navigation').getByRole('button', { name: 'Menu' }).click();
   await expect(page.getByRole('heading', { name: 'Your menu is empty' })).toBeVisible();
   await expectNoViolations(page, 'empty household menu');
+  await page.getByRole('button', { name: 'Categories' }).click();
+  await page.getByRole('textbox', { name: 'New category name' }).fill('Axe dishes');
+  await page.getByRole('button', { name: 'Add category' }).click();
+  await page.getByRole('button', { name: 'Delete Axe dishes' }).click();
+  await expectNoViolations(page, 'category manager');
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await page.getByRole('button', { name: 'Back to menu' }).click();
   await page.getByRole('button', { name: 'Add recipe' }).click();
   await page.getByRole('button', { name: 'Add ingredient' }).click();
   await page.getByRole('button', { name: 'Add step' }).click();

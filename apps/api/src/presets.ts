@@ -9,9 +9,22 @@ import type { IngredientInput } from './recipes.service.js';
  * Bump `version` when a preset's content changes so saved copies can be traced to the text they
  * started from.
  */
+/**
+ * Suggested category for a saved copy (ADR 0007). The interface names it in the current language
+ * and offers it to the member; the API never creates a household category from it.
+ */
+export const PRESET_CATEGORIES = [
+  'breakfast',
+  'mains',
+  'noodlesRice',
+  'soups',
+  'vegetables',
+] as const;
+
 export interface RecipePreset {
   id: string;
   version: number;
+  category: (typeof PRESET_CATEGORIES)[number];
   name: string;
   description: string;
   servings: number;
@@ -36,6 +49,7 @@ export const RECIPE_PRESETS: readonly RecipePreset[] = [
   {
     id: 'tomato-egg-stir-fry',
     version: 1,
+    category: 'mains',
     name: 'Tomato & egg stir-fry 番茄炒蛋',
     description: 'Soft scrambled eggs folded into a quick, saucy tomato base.',
     servings: 2,
@@ -57,6 +71,7 @@ export const RECIPE_PRESETS: readonly RecipePreset[] = [
   {
     id: 'lemon-herb-chicken',
     version: 1,
+    category: 'mains',
     name: 'Lemon herb chicken',
     description: 'Pan-seared chicken breast with lemon, garlic and rosemary.',
     servings: 2,
@@ -77,6 +92,7 @@ export const RECIPE_PRESETS: readonly RecipePreset[] = [
   {
     id: 'sesame-noodle-bowl',
     version: 1,
+    category: 'noodlesRice',
     name: 'Sesame noodle bowl',
     description: 'Cold noodles in a nutty sesame sauce with crisp cucumber.',
     servings: 2,
@@ -97,6 +113,7 @@ export const RECIPE_PRESETS: readonly RecipePreset[] = [
   {
     id: 'roasted-vegetable-bowl',
     version: 1,
+    category: 'vegetables',
     name: 'Roasted vegetable bowl',
     description: 'Sheet-pan broccoli and sweet potato over rice.',
     servings: 2,
@@ -118,6 +135,7 @@ export const RECIPE_PRESETS: readonly RecipePreset[] = [
   {
     id: 'egg-fried-rice',
     version: 1,
+    category: 'noodlesRice',
     name: 'Egg fried rice 蛋炒饭',
     description: 'A fast way to use yesterday’s rice.',
     servings: 2,
@@ -139,6 +157,7 @@ export const RECIPE_PRESETS: readonly RecipePreset[] = [
   {
     id: 'mapo-tofu',
     version: 1,
+    category: 'mains',
     name: 'Mapo tofu 麻婆豆腐',
     description: 'Silken tofu in a spicy, savory pork and bean sauce.',
     servings: 3,
@@ -161,6 +180,7 @@ export const RECIPE_PRESETS: readonly RecipePreset[] = [
   {
     id: 'beef-broccoli',
     version: 1,
+    category: 'mains',
     name: 'Beef and broccoli',
     description: 'Tender sliced beef and broccoli in a glossy soy-garlic sauce.',
     servings: 3,
@@ -183,6 +203,7 @@ export const RECIPE_PRESETS: readonly RecipePreset[] = [
   {
     id: 'chicken-congee',
     version: 1,
+    category: 'soups',
     name: 'Chicken congee 鸡肉粥',
     description: 'Slow-simmered rice porridge with ginger and shredded chicken.',
     servings: 4,
@@ -204,6 +225,7 @@ export const RECIPE_PRESETS: readonly RecipePreset[] = [
   {
     id: 'spaghetti-bolognese',
     version: 1,
+    category: 'noodlesRice',
     name: 'Spaghetti bolognese',
     description: 'A weeknight meat sauce simmered with tomatoes.',
     servings: 4,
@@ -227,6 +249,7 @@ export const RECIPE_PRESETS: readonly RecipePreset[] = [
   {
     id: 'pancakes',
     version: 1,
+    category: 'breakfast',
     name: 'Fluffy pancakes',
     description: 'A simple weekend breakfast batter.',
     servings: 4,
@@ -248,6 +271,7 @@ export const RECIPE_PRESETS: readonly RecipePreset[] = [
   {
     id: 'greek-salad',
     version: 1,
+    category: 'vegetables',
     name: 'Greek salad',
     description: 'Crunchy vegetables, olives and feta with an oregano dressing.',
     servings: 2,
@@ -269,6 +293,7 @@ export const RECIPE_PRESETS: readonly RecipePreset[] = [
   {
     id: 'garlic-bok-choy',
     version: 1,
+    category: 'vegetables',
     name: 'Garlic bok choy 蒜蓉小白菜',
     description: 'A two-minute green side dish.',
     servings: 2,

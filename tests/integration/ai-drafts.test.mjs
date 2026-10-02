@@ -237,7 +237,7 @@ test('AC-13: the monthly budget holds under concurrency and counts unknown outco
     from app.ai_draft_requests
     where created_at >= date_trunc('month', now() at time zone 'utc') at time zone 'utc'`);
   const spent = Number(rows[0].spent);
-  const reservation = 15_000; // mock model: 2,500 × USD 1 + 2,500 × USD 5 per million tokens
+  const reservation = 17_500; // mock model: 5,000 × USD 1 + 2,500 × USD 5 per million tokens
   await withAiSettings(
     { monthlyBudgetMicros: spent + 2 * reservation + 1, userDailyAttempts: 100 },
     async () => {
@@ -385,6 +385,52 @@ test('only the dish text reaches the provider, and inputs are bounded', async ()
     body: { requestId: randomUUID(), dishName: 'Soup' },
   });
   assert.equal(noCsrf.status, 403);
+});
+
+test('a draft suggests a category from the household list; accepting it is explicit', async () => {
+  const { owner, home } = await household('Category Cook');
+  const empty = await settle(owner, home.id, (await createDraft(owner, home.id)).id);
+  assert.match(mock().lastPrompt.user, /<categories>\nnone\n<\/categories>$/);
+  assert.equal(empty.draft.suggestedCategory, 'Weeknight dinners', 'a new name may be proposed');
+  const before = await pool.query(
+    'select count(*)::int as n from app.recipe_categories where household_id = $1',
+    [home.id],
+  );
+  assert.equal(before.rows[0].n, 0, 'a suggestion creates no category');
+
+  const created = await api(owner, `/households/${home.id}/categories`, {
+    method: 'POST',
+    body: { name: '川菜 Sichuan' },
+  });
+  const sichuan = await created.json();
+  await api(owner, `/households/${home.id}/categories`, {
+    method: 'POST',
+    body: { name: 'Zesty' },
+  });
+  const draft = await settle(owner, home.id, (await createDraft(owner, home.id)).id);
+  assert.match(mock().lastPrompt.user, /<categories>\nZesty\n川菜 Sichuan\n<\/categories>$/);
+  assert.equal(draft.draft.suggestedCategory, 'Zesty');
+
+  // The member chooses a different category than the suggestion; only their choice is saved.
+  const saved = await api(owner, `/households/${home.id}/ai-drafts/${draft.id}/save`, {
+    method: 'POST',
+    body: edited(draft, { categoryId: sichuan.id }),
+  });
+  assert.equal(saved.status, 200, await saved.clone().text());
+  assert.equal((await saved.json()).categoryId, sichuan.id);
+
+  const other = await household('Other Cook');
+  const foreign = await api(other.owner, `/households/${other.home.id}/categories`, {
+    method: 'POST',
+    body: { name: 'Foreign' },
+  });
+  const otherDraft = await settle(owner, home.id, (await createDraft(owner, home.id)).id);
+  const crossSave = await api(owner, `/households/${home.id}/ai-drafts/${otherDraft.id}/save`, {
+    method: 'POST',
+    body: edited(otherDraft, { categoryId: (await foreign.json()).id }),
+  });
+  assert.equal(crossSave.status, 400, 'another household’s category is rejected on save');
+  assert.equal((await row(otherDraft.id)).saved_at, null);
 });
 
 test('AC-13: with AI switched off, drafts are refused and manual recipes still work', async () => {
