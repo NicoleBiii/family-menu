@@ -40,7 +40,15 @@ PR #26 Quality checks passed on `b402b2a`; it was squash-merged to `main` as `2c
 - The screen-reader check of the category rail and basket badge was reported good. Exact assistive technology and steps were not specified.
 - At 200% browser zoom on a laptop, the bottom navigation was too narrow and its Chinese labels stacked one character per line. Cause: the fixed bar was centred with `left: 50%` and `translateX(-50%)`, so its width was capped at half the viewport. In the test browser's fonts the Chinese labels need 318 px of the 350 px available at a 701 px viewport, so a slightly wider font wraps them. The follow-up on `claude/ux-003-nav-zoom` centres the bar with `left: 0; right: 0; margin-inline: auto; width: max-content`, keeps labels on one line, and adds a `shell.spec.ts` regression case (labels widened by letter spacing at 701 px). That case fails on the old CSS and passes on the fix. Full `npm run check` passed with the fix: 85 integration and 80 browser cases. The owner has not re-checked on the laptop yet.
 
+Further owner feedback after reviewing the new ordering flow on staging: Home was reachable only through the brand, recipe management had no way back, and its entry button was not prominent enough. On the same branch (see the proposal's owner review amendment):
+
+- A Menu (点菜) tab now opens Home at the dish browser. It is also marked (`aria-current="true"`) on `/recipes` and `/checkout`.
+- `/recipes` has a Back button. It uses browser history after in-app navigation and falls back to ordering when the page was opened directly.
+- "Manage recipes & menu" is now a filled card button with a description line, full width on phones.
+- `shell.spec.ts` covers the tab state, Back after in-app navigation, Back on a direct visit, and the Menu tab from Shopping; `states.spec.ts` reaches Home through the Menu tab. The agent reviewed Chinese screenshots at 1280, 701 and 360 px: four tabs fit on one line. Full `npm run check` passed: 85 integration, 80 browser cases.
+
 ## Not verified
 
 - The phone's fixed basket bar at 200% zoom.
+- Owner review of the Menu tab, Back button and new Manage button on staging.
 - The owner's laptop re-check after the navigation fix is deployed.

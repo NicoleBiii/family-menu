@@ -41,6 +41,22 @@ test('shopping explains sign-in when signed out and the layout fits the viewport
   await page.getByRole('button', { name: 'Manage recipes & menu' }).click();
   await expect(page).toHaveURL(/\/recipes$/);
   await expect(page.getByRole('heading', { name: 'Starter recipes' })).toBeVisible();
+  // Recipe management belongs to the Menu tab and has its own way back.
+  const nav = page.getByRole('navigation', { name: 'Main navigation' });
+  await expect(nav.getByRole('button', { name: 'Menu' })).toHaveAttribute('aria-current', 'true');
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(nav.getByRole('button', { name: 'Menu' })).toHaveAttribute('aria-current', 'page');
+  // Opened directly, Back still leads to ordering instead of leaving the app.
+  await page.goto('/recipes');
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('heading', { name: 'Your household menu' })).toBeInViewport();
+  // The Menu tab returns to the dishes from any tab.
+  await nav.getByRole('button', { name: 'Shopping' }).click();
+  await nav.getByRole('button', { name: 'Menu' }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('heading', { name: 'Your household menu' })).toBeInViewport();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );

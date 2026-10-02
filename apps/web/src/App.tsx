@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ArrowLeft,
   CalendarDays,
   ChefHat,
   CookingPot,
@@ -7,6 +8,7 @@ import {
   LogIn,
   LogOut,
   ShoppingBasket,
+  Utensils,
 } from 'lucide-react';
 import {
   api,
@@ -27,11 +29,14 @@ import { clearStoredBaskets, useBasket } from './basket';
 import { useI18n, type MessageKey } from './i18n';
 
 const navigation = [
+  { label: 'Home', text: 'nav.home', icon: Utensils },
   { label: 'Meals', text: 'nav.meals', icon: CalendarDays },
   { label: 'Shopping', text: 'nav.shopping', icon: ShoppingBasket },
   { label: 'Household', text: 'nav.household', icon: House },
 ] as const;
-type Page = (typeof navigation)[number]['label'] | 'Home' | 'Recipes' | 'Checkout' | 'Join';
+type Page = (typeof navigation)[number]['label'] | 'Recipes' | 'Checkout' | 'Join';
+/** Pages reached from Home; its tab stays marked while they are open. */
+const homeSection: Page[] = ['Home', 'Recipes', 'Checkout'];
 const ACTIVE_KEY = 'family-menu.active-household';
 
 function initialPage(): Page {
@@ -150,7 +155,12 @@ export function App() {
                 : next === 'Shopping'
                   ? '/shopping'
                   : '/';
-    if (window.location.pathname !== path) history.pushState(null, '', path);
+    if (window.location.pathname !== path) history.pushState({ inApp: true }, '', path);
+  }
+  /** Returns to the previous in-app page, or to ordering when the page was opened directly. */
+  function goBack() {
+    if ((history.state as { inApp?: boolean } | null)?.inApp) history.back();
+    else goOrdering();
   }
   /** Home, scrolled to the dish browser. */
   function goOrdering() {
@@ -296,6 +306,9 @@ export function App() {
           </section>
         ) : page === 'Recipes' ? (
           <div className="page-panel">
+            <button className="text-button back-button" onClick={goBack}>
+              <ArrowLeft size={17} aria-hidden="true" /> {t('app.back')}
+            </button>
             <p className="eyebrow">{t('app.sharedTable')}</p>
             <h1>{t('home.manageRecipes')}</h1>
             <MenuPage
@@ -374,8 +387,16 @@ export function App() {
         {navigation.map(({ label, text, icon: Icon }) => (
           <button
             key={label}
-            aria-current={page === label ? 'page' : undefined}
+            aria-current={
+              page === label
+                ? 'page'
+                : label === 'Home' && homeSection.includes(page)
+                  ? 'true'
+                  : undefined
+            }
             onClick={() => {
+              // The Home tab opens the dishes; the brand link opens the top of Home.
+              if (label === 'Home') return goOrdering();
               setPage(label);
               window.scrollTo({ top: 0 });
             }}

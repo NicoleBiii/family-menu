@@ -19,6 +19,14 @@ Status: owner direction confirmed in conversation on 2026-10-02. This supersedes
 - Preserve signed-out starter-recipe access through the Recipes link. Do not invent delivery, ratings, discounts, payment or restaurant reviews.
 - In grouped shopping, a task is one ingredient identity/form/unit family for one order item, so duplicate ingredient lines within the same dish add together. A check allocates only that item's outstanding share. The combined list and history derive from the same purchase allocations. Undoing a grouped check affects only that purchase. An existing combined check may cover several items; grouped rows should reflect that coverage, and undoing a combined check can reopen those items together.
 
+## Owner review amendment — 2026-10-02
+
+After reviewing the first implementation on staging, the owner found that reaching Home only through the brand was not humane, and that recipe management lacked a way back and was not prominent enough. Supersedes the defaults above that the bottom navigation holds only Orders, Shopping and Household:
+
+- The bottom navigation holds Menu (点菜), Orders, Shopping and Household. The Menu tab opens Home at the dish browser; the brand still opens the top of Home. The Menu tab stays marked on `/recipes` and `/checkout`.
+- `/recipes` starts with a Back control that returns to the previous in-app page, or to ordering when opened directly.
+- The Home entry to recipe management is a filled, full-width-on-phone button with a short description.
+
 ## Observable acceptance criteria
 
 1. On desktop, tablet and 360 px phone, Home is reachable outside the bottom tabs. Home shows the household menu and the ordering section directly below the introduction, with a clear route to `/recipes`. Recipe create/edit/archive, presets, category management and AI drafts still work there.

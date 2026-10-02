@@ -1458,6 +1458,54 @@ dialog h3 {
   display: block;
 }
 
+/* Home: the way into recipe management (UX-003 owner review) */
+.manage-button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 10px 14px 10px 10px;
+  border: 0;
+  border-radius: 14px;
+  background: #364f36;
+  color: #fff;
+  text-align: left;
+  box-shadow: 0 6px 18px #263d2426;
+}
+.manage-button:hover {
+  background: #253e27;
+}
+.manage-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 10px;
+  background: #fffef71f;
+}
+.manage-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 14px;
+}
+.manage-text span {
+  color: #e6ecdc;
+  font-size: 12px;
+}
+.back-button {
+  margin-left: -12px;
+}
+@media (max-width: 600px) {
+  .manage-button {
+    width: 100%;
+  }
+  .manage-button > svg {
+    margin-left: auto;
+  }
+}
+
 /* Meals dish browser and basket (UX-002 phase 3) */
 .home-menu {
   scroll-margin-top: 20px;

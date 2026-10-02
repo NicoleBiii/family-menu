@@ -5,6 +5,7 @@ export type Language = 'en' | 'zh';
 const STORAGE_KEY = 'family-menu.language';
 
 const en = {
+  'nav.home': 'Menu',
   'nav.menu': 'Recipes',
   'nav.meals': 'Orders',
   'nav.shopping': 'Shopping',
@@ -12,6 +13,7 @@ const en = {
   'nav.main': 'Main navigation',
   'app.skip': 'Skip to content',
   'app.home': 'Family Menu home',
+  'app.back': 'Back',
   'app.signIn': 'Sign in',
   'app.signOut': 'Sign out',
   'app.sample': 'Sample household',
@@ -30,6 +32,7 @@ const en = {
   'home.manageRecipes': 'Manage recipes & menu',
   'home.orderHint': 'Choose dishes for your next shared meal.',
   'home.categories': 'Categories',
+  'home.manageHint': 'Add and edit dishes, categories and photos',
   'home.addFirst': 'Add recipes',
   'checkout.title': 'Confirm your order',
   'checkout.hint': 'Review dishes, servings, timing and notes before placing the order.',
@@ -448,6 +451,7 @@ const en = {
 export type MessageKey = keyof typeof en;
 
 const zh: Record<MessageKey, string> = {
+  'nav.home': '点菜',
   'nav.menu': '菜谱管理',
   'nav.meals': '订单',
   'nav.shopping': '购物清单',
@@ -455,6 +459,7 @@ const zh: Record<MessageKey, string> = {
   'nav.main': '主导航',
   'app.skip': '跳转到主要内容',
   'app.home': '家庭菜单首页',
+  'app.back': '返回',
   'app.signIn': '登录',
   'app.signOut': '退出登录',
   'app.sample': '示例家庭',
@@ -473,6 +478,7 @@ const zh: Record<MessageKey, string> = {
   'home.manageRecipes': '管理菜谱与菜单',
   'home.orderHint': '从家庭菜单选择这次想吃的菜。',
   'home.categories': '分类',
+  'home.manageHint': '添加和编辑菜品、分类与照片',
   'home.addFirst': '添加菜谱',
   'checkout.title': '确认订单',
   'checkout.hint': '提交前可以修改菜品、份数、时间和备注。',
