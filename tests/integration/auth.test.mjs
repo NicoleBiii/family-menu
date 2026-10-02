@@ -313,6 +313,18 @@ test('AC-01: owners invite with single-use links; expired, revoked, used and unk
 
   const link = await invite(owner, household.id);
   assert.equal(link.url, `${server.origin}/join#${link.token}`);
+  const publicPreview = await fetch(link.url, { headers: { Accept: 'text/html' } });
+  assert.equal(publicPreview.status, 200);
+  const previewHtml = await publicPreview.text();
+  assert.match(previewHtml, /<meta property="og:title" content="You’re invited to Family Menu"/);
+  assert.ok(
+    previewHtml.includes(`<meta property="og:image" content="${server.origin}/invite-preview.png"`),
+  );
+  assert.ok(!previewHtml.includes(household.name));
+  assert.ok(!previewHtml.includes(link.token));
+  const image = await fetch(`${server.origin}/invite-preview.png`);
+  assert.equal(image.status, 200);
+  assert.match(image.headers.get('content-type'), /image\/png/);
   const stored = await pool.query('select token_hash from app.household_invitations where id=$1', [
     link.id,
   ]);

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Family Menu invitation">
+  <rect width="1200" height="630" fill="#f5f4ed"/>
+  <path d="M0 517c233-70 375 74 620 10 200-52 355-84 580-1v104H0Z" fill="#e6e8d7"/>
+  <circle cx="996" cy="161" r="218" fill="#e6e8d7"/>
+  <circle cx="1020" cy="169" r="151" fill="#d5dcc6"/>
+  <rect x="104" y="108" width="92" height="92" rx="22" fill="#364f36"/>
+  <g transform="translate(118 122) scale(1)">
+    <path d="M19 25h44v30a10 10 0 0 1-10 10H29a10 10 0 0 1-10-10V25Z" fill="#fffef7"/>
+    <path d="M16 24h50M31 16h20M41 16v-7" fill="none" stroke="#fffef7" stroke-width="5" stroke-linecap="round"/>
+    <path d="M31 39c4-5 8-5 10 0 4 6 8 6 12 0" fill="none" stroke="#bd7038" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <text x="219" y="168" fill="#364f36" font-family="Arial, sans-serif" font-size="42" font-weight="700">family menu<tspan fill="#bd7038">.</tspan></text>
+  <text x="104" y="322" fill="#263b28" font-family="Arial, sans-serif" font-size="65" font-weight="700">You’re invited to</text>
+  <text x="104" y="404" fill="#263b28" font-family="Arial, sans-serif" font-size="78" font-weight="700">share the table.</text>
+  <text x="107" y="476" fill="#4d5c4d" font-family="Arial, sans-serif" font-size="29">Recipes · Meals · Shopping, together</text>
+  <path d="M970 226c-54-65-60-110-2-132 34-13 63 9 63 41 21-26 57-23 73 6 30 55-26 86-92 126Z" fill="#bd7038" opacity=".88"/>
+  <path d="M946 373c8-65 26-85 85-101-4 60-30 89-85 101ZM952 377c53-41 89-43 142-13-38 40-78 42-142 13Z" fill="#6e8b58"/>
+</svg>
