@@ -17,6 +17,7 @@ import { JoinPage } from './JoinPage';
 import { MenuPage } from './MenuPage';
 import { OrdersPage } from './OrdersPage';
 import { ShoppingPage } from './ShoppingPage';
+import { clearStoredBaskets, useBasket } from './basket';
 import { useI18n, type MessageKey } from './i18n';
 
 const navigation = [
@@ -65,10 +66,8 @@ export function App() {
   const signOutButton = useRef<HTMLButtonElement>(null);
   const [signingOut, setSigningOut] = useState(false);
   const search = useRef<HTMLInputElement>(null);
-  const [orderPrefill, setOrderPrefill] = useState<{ recipeId: string; servings: number } | null>(
-    null,
-  );
-  const clearPrefill = useCallback(() => setOrderPrefill(null), []);
+  const [addedToBasket, setAddedToBasket] = useState<string | null>(null);
+  const clearAdded = useCallback(() => setAddedToBasket(null), []);
 
   const refreshSession = useCallback(async () => {
     try {
@@ -137,6 +136,8 @@ export function App() {
       await api('/auth/logout', { method: 'POST' });
       signOutDialog.current?.close();
       setCsrfToken('');
+      clearStoredBaskets();
+      basket.clear();
       await refreshSession();
     } catch {
       setAuthError('app.signOutFailed');
@@ -147,6 +148,7 @@ export function App() {
   const activeHousehold = session?.authenticated
     ? session.households.find((household) => household.id === activeId)
     : undefined;
+  const basket = useBasket(activeHousehold?.id);
 
   return (
     <div className="app-shell">
@@ -297,8 +299,9 @@ export function App() {
             session={session}
             household={activeHousehold}
             onGoHousehold={() => setPage('Household')}
-            onOrder={(recipeId, servings) => {
-              setOrderPrefill({ recipeId, servings });
+            onOrder={(recipe) => {
+              basket.add(recipe);
+              setAddedToBasket(recipe.name);
               setPage('Meals');
               window.scrollTo({ top: 0 });
             }}
@@ -311,8 +314,9 @@ export function App() {
             <OrdersPage
               session={session}
               household={activeHousehold}
-              prefill={orderPrefill}
-              onPrefillUsed={clearPrefill}
+              basket={basket}
+              added={addedToBasket}
+              onAddedShown={clearAdded}
               onGoHousehold={() => setPage('Household')}
             />
           </section>

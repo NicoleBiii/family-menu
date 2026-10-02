@@ -1450,3 +1450,87 @@ dialog h3 {
 .notice-slot .notice {
   display: block;
 }
+
+/* Meals dish browser and basket (UX-002 phase 3) */
+.dish-browser .search-field {
+  margin: 4px 0 18px;
+}
+.dish-group {
+  margin: 22px 0 6px;
+  font-size: 18px;
+}
+.dish-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.dish-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 60px;
+  padding: 8px 0;
+  border-bottom: 1px solid #ecede2;
+}
+.dish-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dish-name {
+  font-weight: 600;
+}
+.dish-text .muted {
+  font-size: 12px;
+}
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.stepper-count {
+  min-width: 64px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+}
+.basket-bar {
+  position: sticky;
+  bottom: 104px;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-top: 20px;
+  padding: 12px 16px;
+  border: 1px solid #d7dfca;
+  border-radius: 14px;
+  background: #fffef7;
+  box-shadow: 0 8px 30px #263d241f;
+}
+.basket-bar .muted {
+  font-size: 12px;
+}
+.basket-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.basket-actions .primary-button {
+  margin-top: 0;
+}
+/* Keep controls reached with Tab above both the bottom navigation and the basket bar. */
+html:has(.basket-bar) {
+  scroll-padding-bottom: 230px;
+}
+@media (max-width: 700px) {
+  .basket-bar {
+    bottom: 92px;
+  }
+}

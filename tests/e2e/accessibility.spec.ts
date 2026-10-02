@@ -108,7 +108,10 @@ test('signed-in screens have no automatically detectable violations', async ({ p
   await expect(page.getByRole('dialog')).toBeVisible();
   await expectNoViolations(page, 'household recipe dialog');
 
-  await page.getByRole('dialog').getByRole('button', { name: 'Order' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Add to basket' }).click();
+  await expect(page.locator('.basket-bar')).toBeVisible();
+  await expectNoViolations(page, 'dish browser with basket');
+  await page.getByRole('button', { name: 'Review basket' }).click();
   await expect(page.getByRole('heading', { name: 'New meal order' })).toBeVisible();
   await expectNoViolations(page, 'order editor');
   await page.getByRole('button', { name: 'Place order' }).click();

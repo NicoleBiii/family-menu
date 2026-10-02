@@ -75,10 +75,16 @@ test('the core workflow works with the keyboard alone at 360 px', async ({ page 
   await tabTo(page, card);
   await page.keyboard.press('Enter');
   const dialog = page.getByRole('dialog');
-  await tabTo(page, dialog.getByRole('button', { name: 'Order' }));
+  await tabTo(page, dialog.getByRole('button', { name: 'Add to basket' }));
+  await page.keyboard.press('Enter');
+  await tabTo(page, page.getByRole('button', { name: 'One serving more of Keyboard noodles' }));
+  await page.keyboard.press('Enter');
+  await tabTo(page, page.getByRole('button', { name: 'Review basket' }));
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: 'New meal order' })).toBeFocused();
-  await typeInto(page, page.getByRole('spinbutton', { name: 'Servings' }), '3');
+  await expect(page.getByRole('spinbutton', { name: 'Servings for Keyboard noodles' })).toHaveValue(
+    '3',
+  );
   await tabTo(page, page.getByRole('button', { name: 'Place order' }));
   await page.keyboard.press('Enter');
   const order = page.getByRole('article').first();

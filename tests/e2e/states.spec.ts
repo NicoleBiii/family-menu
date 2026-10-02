@@ -60,6 +60,7 @@ test('offline and server failures show plain messages and recover', async ({ pag
     }),
   );
   await nav(page, 'Meals').click();
+  await page.getByRole('button', { name: 'Upcoming' }).click();
   await expect(page.getByRole('alert')).toHaveText(
     'Something went wrong on our side. Please try again in a moment.',
   );

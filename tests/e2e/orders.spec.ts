@@ -44,19 +44,22 @@ async function setUp(page: Page, dish: string) {
 test('a dish is ordered from the menu for tomorrow, edited, and marked done', async ({ page }) => {
   await setUp(page, 'Dumpling night');
   await page.getByRole('button', { name: 'View Dumpling night' }).click();
-  await page.getByRole('dialog').getByRole('button', { name: 'Order' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Add to basket' }).click();
 
-  await expect(page.getByRole('heading', { name: 'New meal order' })).toBeFocused();
   await expect(page).toHaveURL(/\/meals$/);
-  await expect(page.getByRole('combobox', { name: 'Dish 1' })).toHaveValue(/.+/);
-  await expect(page.getByRole('spinbutton', { name: 'Servings' })).toHaveValue('3');
+  await expect(page.getByText('Added Dumpling night to the basket.')).toBeVisible();
+  await expect(page.locator('.basket-bar')).toContainText('1 dish · 3 servings · 12 pts');
+  await page.getByRole('button', { name: 'Review basket' }).click();
+  await expect(page.getByRole('heading', { name: 'New meal order' })).toBeFocused();
+  const servings = page.getByRole('spinbutton', { name: 'Servings for Dumpling night' });
+  await expect(servings).toHaveValue('3');
   await expect(
     page.getByText('Times are in the household time zone, America/Toronto.'),
   ).toBeVisible();
   await page.getByRole('radio', { name: 'Plan for later' }).check();
   await page.getByLabel('Date').fill(torontoDate(1));
   await page.getByLabel('Time').fill('19:00');
-  await page.getByRole('spinbutton', { name: 'Servings' }).fill('5');
+  await servings.fill('5');
   await page.getByRole('textbox', { name: 'Notes (optional)' }).fill('少放盐 please');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
@@ -93,7 +96,8 @@ test('a repeated daylight-saving time asks which one is meant; cancel removes th
 }) => {
   await setUp(page, 'Late snack');
   await page.getByRole('navigation').getByRole('button', { name: 'Meals' }).click();
-  await page.getByRole('button', { name: 'New meal order' }).click();
+  await page.getByRole('button', { name: 'Add Late snack to the basket' }).click();
+  await page.getByRole('button', { name: 'Review basket' }).click();
   await page.getByRole('radio', { name: 'Plan for later' }).check();
   await page.getByLabel('Date').fill(nextFallBack());
   await page.getByLabel('Time').fill('01:30');
@@ -115,7 +119,8 @@ test('a repeated daylight-saving time asks which one is meant; cancel removes th
 test('saving over another member’s newer order change shows a conflict', async ({ page }) => {
   await setUp(page, 'Soup');
   await page.getByRole('navigation').getByRole('button', { name: 'Meals' }).click();
-  await page.getByRole('button', { name: 'New meal order' }).click();
+  await page.getByRole('button', { name: 'Add Soup to the basket' }).click();
+  await page.getByRole('button', { name: 'Review basket' }).click();
   await page.getByRole('button', { name: 'Place order' }).click();
   await page.getByRole('button', { name: 'Edit' }).click();
 

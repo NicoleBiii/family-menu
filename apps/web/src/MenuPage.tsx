@@ -12,13 +12,13 @@ import {
   ArchiveRestore,
   ArrowRight,
   BookOpen,
-  CalendarPlus,
   Camera,
   ChefHat,
   ImageOff,
   Pencil,
   Plus,
   Search,
+  ShoppingBasket,
   Sparkles,
   Star,
   Tags,
@@ -62,7 +62,8 @@ interface Props {
   session: Session | null;
   household: HouseholdSummary | undefined;
   onGoHousehold: () => void;
-  onOrder: (recipeId: string, servings: number) => void;
+  /** Adds the dish to the household's basket on the Meals page. */
+  onOrder: (recipe: RecipeDetail) => void;
   searchRef: RefObject<HTMLInputElement | null>;
   /** Shown above the menu, hidden while the editor is open. */
   hero: ReactNode;
@@ -505,7 +506,7 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
             onEdit={(recipe) => startEditor({ mode: 'edit', recipe })}
             onOrder={(recipe) => {
               closeDialog();
-              onOrder(recipe.id, recipe.servings);
+              onOrder(recipe);
             }}
             onArchive={setArchived}
             categoryName={
@@ -814,7 +815,7 @@ function RecipeView({
         {recipe && !recipe.archived && (
           <>
             <button className="primary-button" onClick={() => onOrder(recipe)}>
-              <CalendarPlus size={18} /> {t('menu.order')}
+              <ShoppingBasket size={18} aria-hidden="true" /> {t('menu.order')}
             </button>
             <button className="text-button" onClick={() => onEdit(recipe)}>
               <Pencil size={16} /> {t('menu.edit')}
