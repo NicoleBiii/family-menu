@@ -1,6 +1,6 @@
 # Current State and Handoff
 
-Updated: 2026-10-02 by Claude Code. Remote: private `github.com/NicoleBiii/family-menu`.
+Updated: 2026-10-03 by Claude Code. Remote: private `github.com/NicoleBiii/family-menu`.
 INFRA-001 PR #10 merged as `725a397`; the new-service runbook correction merged in PR #12 as `03a01e6`. The owner reports the Railway app service is `Active` in `staging` at `https://family-menu-staging.up.railway.app`. External checks returned HTTP 200 from `/` and HTTP 200 with `{"status":"ready"}` from `/api/health/ready` on 2026-10-01. The owner reports all six product smoke steps passed using desktop Chrome and Chrome on an iPhone 18 Pro Max; 200% zoom and a screen-reader check had no reported problems. The provided runtime log shows Nest listening on port 8080, but it does not establish migration success. Deployment identity, pre-deploy migration evidence and detailed UX checklist coverage remain pending ([record](verification/2026-10-01-infra-001-staging.md)).
 The owner approved UX-002's [UI expansion](proposals/2026-10-01-ui-expansion.md) on 2026-10-01. PR #16 merged the proposal as `13df79f`. PR #17 merged the first implementation checkpoint as `dc0c16c`; PR #18 merged the generic invitation preview as `a7da89a`. PR #19 merged the interface localization as `6f37a93`. PR #20 merged household categories as `532292d` ([ADR 0007](decisions/0007-recipe-categories.md)). PR #21 merged the Meals dish browser and single-submit basket as `8264565` ([ADR 0008](decisions/0008-order-basket.md)). PR #22 merged shopping checks and purchase history as `00770f6` ([ADR 0009](decisions/0009-shopping-purchases.md)). PR #23 merged the free-library photo chooser as `42a4c04` after local and PR checks passed ([record](verification/2026-10-02-ux-002-photo-library.md)).
 
@@ -16,13 +16,13 @@ The 2026-10-01 documentation-only update checked Prettier and `git diff --check`
 - SHOP-001: shopping demand from pending order snapshots with exact rational arithmetic (rounded up and flagged when inexact), fixed-family unit conversion, separate forms/counts/unquantified lines, combined and by-day views from one read, date-range scope, Shopping page. [ADR 0005](decisions/0005-shopping-list.md).
 - AI-001: durable draft requests with worst-case cost reservations, household/personal/monthly-budget limits under one lock, leased in-process worker with recovery and no blind retries, review/edit/save/discard with idempotent save, Anthropic/DeepSeek/Gemini adapters, a measured three-provider evaluation, and Gemini 3.1 Flash-Lite chosen for now. [ADR 0006](decisions/0006-ai-drafts.md), [record](verification/2026-09-27-ai-001.md).
 - UX-001 (automated part): axe WCAG 2.2 A/AA scans at 0 violations on all main screens, keyboard-only core flow at 360 px with focus never hidden behind the bottom navigation, session-expiry/offline/server-error messages, per-page titles. The real-phone and screen-reader checklist is open ([record](verification/2026-09-27-ux-001.md)).
-- UX-003 ([proposal](proposals/2026-10-02-home-ordering.md), owner-confirmed 2026-10-02, amended after staging review):
+- UX-003 done ([proposal](proposals/2026-10-02-home-ordering.md), owner-confirmed 2026-10-02, amended after staging review):
   - Home is the household menu with a category rail and floating basket, reached from the Menu (点菜) tab.
   - `/recipes` holds recipe management, with a Back button.
   - `/checkout` confirms the basket.
   - Orders shows only Pending and History.
 
-  Pages merged in PR #26 (`2cd7328`); the owner's follow-ups (200% zoom fix, Menu tab, Back, Manage button) merged in PR #27 (`80a9076`) and were reviewed on staging ([record](verification/2026-10-02-ux-003-home-ordering.md)). Per-dish shopping checks are on `claude/ux-003-shopping-groups` ([record](verification/2026-10-02-ux-003-shopping-tasks.md)).
+  Pages merged in PR #26 (`2cd7328`); the owner's follow-ups (200% zoom fix, Menu tab, Back, Manage button) merged in PR #27 (`80a9076`) and were reviewed on staging ([record](verification/2026-10-02-ux-003-home-ordering.md)). Per-dish shopping checks merged in PR #28 (`4260c1e`) and passed owner review on staging ([record](verification/2026-10-02-ux-003-shopping-tasks.md)).
 
 - UX-002 in progress: the merged first checkpoint adds sign-out confirmation, desktop photo drag-and-drop, a more visible phone photo button, favicon and Apple touch icon ([record](verification/2026-10-01-ux-002-polish.md)). The generic invitation preview merged ([record](verification/2026-10-02-ux-002-invite-preview.md)). English/Simplified Chinese interface localization merged ([record](verification/2026-10-02-ux-002-localization.md)). Household categories and AI category suggestions merged ([record](verification/2026-10-02-ux-002-categories.md)). The Meals basket merged ([record](verification/2026-10-02-ux-002-basket.md)). Shared shopping checks and purchase history merged ([record](verification/2026-10-02-ux-002-shopping-checks.md)). The optional Pexels chooser, private normalized import and attribution merged in PR #23; live provider/staging and owner phone checks remain ([record](verification/2026-10-02-ux-002-photo-library.md)).
 
@@ -70,11 +70,12 @@ The Mac's project PostgreSQL is listening at 127.0.0.1:55432 (data in ignored `.
 
 ## Next exact work
 
-Checkout checkpoint: `main` includes UX-003 pages `2cd7328` (PR #26) and owner follow-ups `80a9076` (PR #27), both deployed to staging and reviewed by the owner without problems. Branch `claude/ux-003-shopping-groups` holds per-dish shopping checks (proposal criterion 4, ADR 0009 amendment, no migration). Check `git log` and its PR state. Project PostgreSQL remains running; no app server was left running.
+Checkout checkpoint: `main` includes UX-003 (`2cd7328`, `80a9076`, `4260c1e`; PRs #26–#28), deployed to staging and accepted by the owner. Branch `claude/ux-003-closeout` holds this closeout record; check its PR state. Project PostgreSQL remains running; no app server was left running.
 
-1. Merge the per-dish shopping PR after Quality checks pass and the owner approves. Then ask the owner to try the By-day checks on a phone, with two members if possible, and to check the basket bar with Chrome's Zoom Text at 200%.
-2. Reassess the 2026-10-16 release target with the owner, as the proposal asks, once UX-003 has passed staging and phone review.
-3. Carry-over from UX-002: record Railway's deployment ID and pre-deploy migration results for 007–009 (keep keys, cookies and invitation tokens out of the record). Then run a live Pexels key smoke test and check a real iMessage invitation preview. After that, complete the detailed UX-001 manual checklist and REL-001. INFRA-001 remains Ready for verification until its evidence gaps are closed.
+1. Reassess the 2026-10-16 release target with the owner, as the home-ordering proposal asks. The remaining release work is listed in the next item.
+2. Close INFRA-001's evidence gaps: record Railway's deployment ID and pre-deploy migration results for 007–009, keeping keys, cookies and invitation tokens out of the record.
+3. Close UX-002's open checks: a live Pexels key smoke test and a real iMessage invitation preview. Then complete the detailed UX-001 manual checklist.
+4. REL-001: recovery, alerts and release checks.
 
 ## Switching agents
 

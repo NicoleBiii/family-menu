@@ -47,8 +47,8 @@ Further owner feedback after reviewing the new ordering flow on staging: Home wa
 - "Manage recipes & menu" is now a filled card button with a description line, full width on phones.
 - `shell.spec.ts` covers the tab state, Back after in-app navigation, Back on a direct visit, and the Menu tab from Shopping; `states.spec.ts` reaches Home through the Menu tab. The agent reviewed Chinese screenshots at 1280, 701 and 360 px: four tabs fit on one line. Full `npm run check` passed: 85 integration, 80 browser cases.
 
+After PR #27 merged as `80a9076` (staging deployment `6820470370`, success), the owner reported no problems with the Menu tab, the Back button, the Manage button or the laptop at 200% zoom. On 2026-10-03 they reported that phone Chrome at 200% text zoom (including the basket bar) had no problems.
+
 ## Not verified
 
-- The phone's fixed basket bar at 200% zoom.
-- Owner review of the Menu tab, Back button and new Manage button on staging.
-- The owner's laptop re-check after the navigation fix is deployed.
+- Exact screen-reader steps were not specified; the owner reported the check as good.
