@@ -74,7 +74,7 @@ Release target (owner, 2026-10-03): release as soon as the release checklist is 
 
 Checkout checkpoint: `main` includes UX-003 and its closeout (`08307a2`). Branch `claude/rel-001-production` holds the REL-001 preparation: restricted runtime role, restore drill, production runbook and ADR 0010. Check its PR state. Project PostgreSQL remains running; no app server was left running.
 
-1. Merge the REL-001 preparation PR after Quality checks pass (its CI also first verifies the Dockerfile change) and the owner approves.
+1. UX-004 owner polish merged in PR #31 (`3b9ac6e`; [record](verification/2026-10-03-ux-004-polish.md)); ask the owner to review it on a phone after staging deploys. Merge the REL-001 preparation PR #30 after Quality checks pass on the combined branch (the owner approved this order).
 2. Guide the owner through DEPLOYMENT.md P1–P3: the Supabase Pro project and CA file, the Railway `production` environment and variables, and UptimeRobot. Commit `certs/supabase-ca.crt`, then create the `release` branch from the verified `main` commit.
 3. P4: the production smoke test, the alert drill and the restore drill (PostgreSQL 17 tools on the owner's Mac). Write the release record.
 4. In parallel or after: record Railway staging deployment IDs and the pre-deploy migration results for 007–009. Then a live Pexels smoke test, a real iMessage invitation preview, and the detailed UX-001 checklist.

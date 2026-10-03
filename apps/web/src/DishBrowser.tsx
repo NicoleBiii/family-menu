@@ -60,12 +60,32 @@ export function DishBrowser({ recipes, categories, householdId, basket, onReview
           <span className="dish-rail-title" aria-hidden="true">
             {t('home.categories')}
           </span>
-          {groups.map((group) => (
-            <a key={group.id || 'none'} href={`#${groupId(group.id)}`}>
-              {group.name}
-              <span aria-hidden="true">{group.recipes.length}</span>
-            </a>
-          ))}
+          {groups.map((group) => {
+            // Servings already in the basket from this category, like the badges on food apps.
+            const chosen = group.recipes.reduce(
+              (sum, recipe) => sum + (inBasket.get(recipe.id) ?? 0),
+              0,
+            );
+            return (
+              <a
+                key={group.id || 'none'}
+                href={`#${groupId(group.id)}`}
+                className={chosen > 0 ? 'has-chosen' : undefined}
+              >
+                {group.name}
+                {chosen > 0 ? (
+                  <>
+                    <span className="rail-badge" aria-hidden="true">
+                      {chosen}
+                    </span>
+                    <span className="sr-only">{t('basket.categoryCount', { count: chosen })}</span>
+                  </>
+                ) : (
+                  <span aria-hidden="true">{group.recipes.length}</span>
+                )}
+              </a>
+            );
+          })}
         </nav>
         <div className="dish-results">
           {groups.length === 0 && <p className="muted">{t('basket.noMatch')}</p>}
@@ -82,8 +102,13 @@ export function DishBrowser({ recipes, categories, householdId, basket, onReview
                 {group.recipes.map((recipe) => {
                   const count = inBasket.get(recipe.id);
                   return (
-                    <li key={recipe.id}>
+                    <li key={recipe.id} className={count !== undefined ? 'in-basket' : undefined}>
                       <div className="dish-photo">
+                        {count !== undefined && (
+                          <span className="dish-badge" aria-hidden="true">
+                            {count}
+                          </span>
+                        )}
                         {recipe.imageId ? (
                           <img
                             src={recipeImageUrl(householdId, recipe.id, recipe.imageId)}
@@ -103,6 +128,9 @@ export function DishBrowser({ recipes, categories, householdId, basket, onReview
                           <Star size={13} aria-hidden="true" />{' '}
                           {t('menu.pointsPerServing', { count: recipe.pricePoints })}
                         </span>
+                        {count !== undefined && (
+                          <span className="dish-chosen">{t('basket.inBasket', { count })}</span>
+                        )}
                       </div>
                       {count === undefined ? (
                         <button

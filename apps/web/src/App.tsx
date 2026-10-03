@@ -18,6 +18,7 @@ import {
   type MealOrderDetail,
   type Session,
 } from './api';
+import { BackToTop } from './BackToTop';
 import { CheckoutPage } from './CheckoutPage';
 import { HomePage } from './HomePage';
 import { HouseholdPage } from './HouseholdPage';
@@ -383,6 +384,7 @@ export function App() {
           <span>{t('app.footerNote')}</span>
         </footer>
       </main>
+      <BackToTop />
       <nav className="main-nav" aria-label={t('nav.main')}>
         {navigation.map(({ label, text, icon: Icon }) => (
           <button
