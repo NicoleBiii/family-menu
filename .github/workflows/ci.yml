@@ -45,16 +45,20 @@ jobs:
       - run: npm audit --omit=dev --audit-level=high
       - name: Build deployment image
         run: docker build --tag family-menu:${{ github.sha }} .
-      # Runs the image the way Railway does: the pre-deploy migration, then the server with its
-      # readiness check. Uses a fresh database so migrations start from nothing.
+      # Runs the image the way Railway does: the pre-deploy migration and runtime role, then the
+      # server as that restricted role with its readiness check. Uses a fresh database so
+      # migrations start from nothing.
       - name: Start deployment image
         run: |
           docker exec "$(docker ps -q --filter ancestor=postgres:17)" \
             psql -U family_menu -d family_menu_test -c 'create database family_menu_image'
           url=postgresql://family_menu:local-development-only@127.0.0.1:5432/family_menu_image
-          docker run --rm --network host -e DATABASE_URL="$url" \
-            family-menu:${{ github.sha }} node scripts/migrate.mjs
-          docker run -d --name app --network host -e DATABASE_URL="$url" -e PORT=3300 \
+          runtime=postgresql://family_menu_app_image:image-test-only-not-a-real-secret@127.0.0.1:5432/family_menu_image
+          docker run --rm --network host -e MIGRATION_DATABASE_URL="$url" \
+            -e RUNTIME_DB_ROLE=family_menu_app_image \
+            -e RUNTIME_DB_PASSWORD=image-test-only-not-a-real-secret \
+            family-menu:${{ github.sha }} sh -c 'node scripts/migrate.mjs && node scripts/runtime-role.mjs'
+          docker run -d --name app --network host -e DATABASE_URL="$runtime" -e PORT=3300 \
             -e APP_ORIGIN=https://preview.example.test family-menu:${{ github.sha }}
           for attempt in $(seq 1 30); do
             if curl -fsS http://127.0.0.1:3300/api/health/ready; then break; fi

@@ -16,7 +16,9 @@ COPY apps/web/package.json apps/web/package.json
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/apps/web/dist ./apps/web/dist
-COPY scripts/migrate.mjs ./scripts/migrate.mjs
+COPY scripts/migrate.mjs scripts/runtime-role.mjs ./scripts/
+# Public CA certificates for database TLS verification (e.g. Supabase); see certs/README.md.
+COPY certs ./certs
 COPY db/migrations ./db/migrations
 USER node
 EXPOSE 3000

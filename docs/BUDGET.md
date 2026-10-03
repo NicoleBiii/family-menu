@@ -26,6 +26,8 @@ Checked: 2026-09-25. Currency of the owner's budget: CAD. Preferred ceiling: CAD
 
 Preview decision (owner, 2026-09-28): the INFRA-001 preview runs the app and its PostgreSQL on Railway Hobby (usage-billed within the Railway allocation and the staging allowance), keeps Supabase only for sign-in on the existing development project, and uses a separate Gemini key capped by `AI_MONTHLY_BUDGET_USD=2`. The production database choice (Supabase Pro with daily backups, or Railway with verified backups) is revisited before real households.
 
+Production decision (owner, 2026-10-03, [ADR 0010](decisions/0010-production-environment.md)): production uses Supabase Pro (USD 25/month, its own organization so the development project stays free) for the database, daily backups and sign-in. The app runs in a Railway `production` environment beside staging, on the same Hobby plan. Alerts use UptimeRobot's free plan; the address is a free Railway domain. Expected recurring cost is about CAD 35 for Supabase, plus measured Railway usage for both environments (within the CAD 12 + CAD 5 lines unless measurement shows otherwise), production AI capped at USD 8.50/month, and the staging AI key at USD 2. The domain line is unused for now. Measure Railway usage for several days after release before treating the forecast as confirmed.
+
 This is a proposed allocation, not a guaranteed bill. At the same exchange assumption, a full-month second Supabase Micro project adds approximately CAD 14 before tax, instead of the CAD 5 temporary-staging allowance. Preview resources left running, larger compute, image transformation add-ons, or public AI access can exceed the budget.
 
 ## Verified provider facts

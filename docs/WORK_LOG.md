@@ -389,6 +389,28 @@ Use dates in YYYY-MM-DD format, with America/Toronto as the reporting timezone. 
 - The first attempt reopened one dish without a prompt, which is consistent with a combined check that covered only one dish because the other was already checked. The owner accepted that behaviour.
 - UX-003 is Done. Next: reassess the 2026-10-16 release target with the owner, as the home-ordering proposal asks.
 
+## 2026-10-03 — REL-001 production decisions and preparation (Claude Code)
+
+- PR #29 (UX-003 closeout) passed Quality checks and was squash-merged as `08307a2`.
+- Decision (owner): there is no reason to wait for 2026-10-16. Release as soon as the release checklist is complete; this supersedes the fixed working date for the family release.
+- Decisions (owner, ADR 0010), each the recommended option:
+  - production database and sign-in on Supabase Pro in its own organization;
+  - UptimeRobot free alerts;
+  - a free Railway domain.
+
+  Provider facts checked first: Railway backups need its Pro plan, and Supabase Free projects pause after 7 inactive days.
+
+- Agent design defaults in ADR 0010:
+  - production deploys from a `release` branch;
+  - Supabase session pooler with `sslmode=verify-full` and a committed public CA file;
+  - a restricted runtime login with append-only audit events;
+  - residual risk recorded: the migration credential remains visible to the app on Railway.
+- Implemented on `claude/rel-001-production`:
+  - `scripts/runtime-role.mjs`, with the integration harness, browser server and CI image all running the app as the restricted role;
+  - `scripts/restore-check.mjs` and `npm run restore:drill`, rehearsed locally;
+  - the production runbook (DEPLOYMENT.md P1–P4) and a budget update.
+- Validation: see `verification/2026-10-03-rel-001-preparation.md`; full `npm run check` result recorded there. Next: the owner's Supabase/Railway/UptimeRobot steps.
+
 ## 2026-10-03 — UX-004 owner UI polish (Claude Code)
 
 - Before the production setup, the owner asked for four changes:
@@ -403,3 +425,4 @@ Use dates in YYYY-MM-DD format, with America/Toronto as the reporting timezone. 
   - chosen-dish highlight, label and photo badge, plus category-rail basket badges with screen-reader text;
   - a full-width "Draft with AI" card on Recipes, with "Add recipe" as a secondary button.
 - Validation: full `npm run check` passed (88 integration, 84 browser). Evidence: `verification/2026-10-03-ux-004-polish.md`. PR #30 (REL-001 preparation) stays open, awaiting the owner's merge decision.
+- PR #31 passed Quality checks and was squash-merged as `3b9ac6e` at the owner's request. `main` was then merged into `claude/rel-001-production` (PR #30), with PLAN.md and WORK_LOG.md conflicts resolved by keeping both changes; PR #30 merges next per the owner.

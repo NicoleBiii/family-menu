@@ -68,9 +68,62 @@ Migrations are forward-only at this stage. Do not delete tables or restore an ol
 - A safe app rollback (Railway "Redeploy" of an earlier deployment) requires a compatible schema; otherwise use a reviewed forward fix.
 - Backup restoration is a separate incident action with possible data loss.
 
-## Before inviting real households
+## Production runbook (REL-001, ADR 0010)
 
-- A separate production environment: database with verified backups and a restore drill, a restricted runtime database login, and its own Supabase project and paid Gemini key.
-- A production Google OAuth client, or the published app.
-- Alert delivery and cost alerts exercised.
-- The remaining acceptance checks (AC-15) and the UX-001 phone and screen-reader checklist.
+Production holds real household data. The decisions and their reasons are in [ADR 0010](decisions/0010-production-environment.md). The owner does every account, billing, password and key step; console labels may differ. Keep every generated password and key in a password manager, mark Railway variables **Sealed**, and never paste them into chat, issues or repository files.
+
+### P1. Supabase production project
+
+1. In Supabase, create a **new organization** (e.g. "Family Menu Production") on the **Pro** plan, so the development project stays free in its own organization. Create one project in it.
+2. Choose the region closest to the Railway service's region (Railway app service → Settings → Deploy → Region). Let Supabase generate the database password and store it in the password manager.
+3. **Database → Settings → SSL Configuration:** turn on **Enforce SSL** and **Download certificate**. Save it unchanged as `certs/supabase-ca.crt` in the repository (it is a public CA certificate); the agent commits it.
+4. **Authentication → Sign In / Providers → Google:** enable it with the existing Google OAuth client ID and secret. In Google Cloud Console, add this project's callback (`https://<project-ref>.supabase.co/auth/v1/callback`) to the client's authorized redirect URIs. Add every family member's Google account as a **test user** on the consent screen.
+5. **Authentication → URL Configuration:** set Site URL to the production origin (P2.4) and add `https://<production-domain>/api/auth/callback` to Redirect URLs.
+6. Copy the project URL and the **publishable** key (never a secret or `service_role` key).
+
+### P2. Railway production environment
+
+1. In the Railway project, create an environment named `production` (empty, not duplicated from staging, so it gets no staging database).
+2. Add the app service from `NicoleBiii/family-menu` with branch **`release`**, Dockerfile builder, Healthcheck Path `/api/health/ready`, **Wait for CI** on, and Pre-Deploy Command:
+
+   ```
+   node scripts/migrate.mjs && node scripts/runtime-role.mjs
+   ```
+
+3. Variables (all secrets Sealed). `<pooler-host>` and `<project-ref>` come from Supabase **Connect → Session pooler**:
+
+   | Variable                   | Value                                                                                                                                                  |
+   | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+   | `MIGRATION_DATABASE_URL`   | `postgresql://postgres.<project-ref>:<database password>@<pooler-host>:5432/postgres?sslmode=verify-full&sslrootcert=/app/certs/supabase-ca.crt`       |
+   | `RUNTIME_DB_ROLE`          | `family_menu_app`                                                                                                                                      |
+   | `RUNTIME_DB_PASSWORD`      | a new random password of at least 24 characters (letters and digits only, so it needs no URL escaping)                                                 |
+   | `DATABASE_URL`             | `postgresql://family_menu_app.<project-ref>:<runtime password>@<pooler-host>:5432/postgres?sslmode=verify-full&sslrootcert=/app/certs/supabase-ca.crt` |
+   | `APP_ORIGIN`               | `https://${{RAILWAY_PUBLIC_DOMAIN}}`                                                                                                                   |
+   | `SUPABASE_URL`             | the production project URL                                                                                                                             |
+   | `SUPABASE_PUBLISHABLE_KEY` | the production publishable key                                                                                                                         |
+   | `AI_PROVIDER`              | `gemini`                                                                                                                                               |
+   | `GEMINI_API_KEY`           | a new key named `family-menu-production`, billing enabled                                                                                              |
+   | `AI_MONTHLY_BUDGET_USD`    | `8.50`                                                                                                                                                 |
+   | `PEXELS_API_KEY`           | optional                                                                                                                                               |
+
+4. **Networking → Generate Domain** and choose a name such as `family-menu`, giving `https://family-menu.up.railway.app`. Use it in P1.5.
+5. The agent creates the `release` branch from a `main` commit that has passed CI and staging smoke testing; Railway then deploys it. The pre-deploy log should list each migration and `Runtime database role is up to date.`
+
+### P3. Alerts
+
+1. Create a free UptimeRobot account with the owner's email.
+2. Add a **Keyword** monitor: URL `https://<production-domain>/api/health/ready`, keyword `ready` (alert when it does not exist), interval 5 minutes, email alert contact.
+3. Prove delivery once: temporarily change the keyword to one that is absent (e.g. `drill`), wait for the alert email, then restore `ready` and wait for the recovery email. Record both times.
+4. In Railway (workspace usage settings) and Supabase (organization billing), keep usage and spend alerts on; Google AI Studio's budget alert stays on the production key.
+
+### P4. Release checks
+
+1. **Smoke test** on the production origin with family test users: sign in, create the household, add a recipe, run one AI draft, order from Home, check shopping, invite a second member. Use real names only as the family wishes; nothing personal goes into the repository record.
+2. **Restore drill** on the owner's Mac. Install the PostgreSQL 17 tools (`brew install postgresql@17`), start a temporary local PostgreSQL 17 server, and put the two URLs in an ignored `.env.drill` file (`SOURCE_DATABASE_URL` = the migration URL with a local path to the CA file, `DRILL_SERVER_URL` = the local server). Run `PG_BIN=$(brew --prefix postgresql@17)/bin npm run restore:drill`. It prints only counts, timings and `match`/`mismatch`; record that output. Delete `.env.drill` afterwards.
+3. **Release record** in `docs/verification/`: source commit, Railway deployment ID, the pre-deploy migration output, smoke results, the alert drill, the restore drill and the rollback option (redeploy the previous Railway deployment while the schema is compatible).
+
+### Known limitations accepted for the family release
+
+- The migration credential is visible to the running app on Railway (ADR 0010 residual risk).
+- The Google consent screen stays in Testing mode: only listed test users can sign in.
+- Supabase Pro keeps daily backups for 7 days; there is no point-in-time recovery.
