@@ -378,3 +378,13 @@ Use dates in YYYY-MM-DD format, with America/Toronto as the reporting timezone. 
   - `POST …/shopping/purchases` takes an optional `orderItemId`, which allocates only that dish's remaining share under the existing lock and token rules;
   - combined checks are reported as `shared` on every dish they covered, and the UI asks before an undo reopens them together.
 - Validation on Node 24.19.0: full `npm run check` passed (88 integration, 82 browser); OpenAPI regenerated. Evidence: `verification/2026-10-02-ux-003-shopping-tasks.md`.
+
+## 2026-10-03 — UX-003 closed after owner review (Claude Code)
+
+- PR #28 (per-dish shopping checks) passed Quality checks and was squash-merged as `4260c1e` at the owner's request. GitHub staging deployment `6820788394` reports success; readiness returned `ready`.
+- Owner review on staging:
+  - per-dish checks, the combined-list effect and history were fine;
+  - phone Chrome at 200% text zoom was fine;
+  - a shared-undo retest showed the prompt and reopened both dishes.
+- The first attempt reopened one dish without a prompt, which is consistent with a combined check that covered only one dish because the other was already checked. The owner accepted that behaviour.
+- UX-003 is Done. Next: reassess the 2026-10-16 release target with the owner, as the home-ordering proposal asks.
