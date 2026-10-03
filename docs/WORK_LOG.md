@@ -388,3 +388,18 @@ Use dates in YYYY-MM-DD format, with America/Toronto as the reporting timezone. 
   - a shared-undo retest showed the prompt and reopened both dishes.
 - The first attempt reopened one dish without a prompt, which is consistent with a combined check that covered only one dish because the other was already checked. The owner accepted that behaviour.
 - UX-003 is Done. Next: reassess the 2026-10-16 release target with the owner, as the home-ordering proposal asks.
+
+## 2026-10-03 — UX-004 owner UI polish (Claude Code)
+
+- Before the production setup, the owner asked for four changes:
+  - the recipe card's close button should stay visible while scrolling;
+  - a floating back-to-top button for long pages;
+  - more prominent chosen dishes on Home;
+  - a more prominent AI drafting entry, which the owner now prefers to manual entry.
+- The owner also plans to keep developing, testing and deploying gradually after release, which matches the ADR 0010 staging-then-`release` path.
+- Implemented on `claude/ux-004-polish`, web-only:
+  - a sticky dialog header;
+  - a global `BackToTop` above the navigation and basket bar;
+  - chosen-dish highlight, label and photo badge, plus category-rail basket badges with screen-reader text;
+  - a full-width "Draft with AI" card on Recipes, with "Add recipe" as a secondary button.
+- Validation: full `npm run check` passed (88 integration, 84 browser). Evidence: `verification/2026-10-03-ux-004-polish.md`. PR #30 (REL-001 preparation) stays open, awaiting the owner's merge decision.

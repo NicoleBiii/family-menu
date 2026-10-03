@@ -79,6 +79,29 @@ test('the bottom navigation keeps Chinese labels on one line when zoomed', async
   expect(Math.abs(bar!.x - (701 - bar!.x - bar!.width))).toBeLessThan(2);
 });
 
+test('the recipe card keeps its close button in view and long pages offer Back to top', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 640 });
+  await page.goto('/recipes');
+  await page.getByRole('button', { name: 'View Sesame noodle bowl' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.evaluate((element) => element.scrollTo({ top: element.scrollHeight }));
+  const close = dialog.getByRole('button', { name: 'Close recipe' });
+  await expect(close).toBeInViewport();
+  await close.click();
+  await expect(dialog).not.toBeVisible();
+
+  const backToTop = page.getByRole('button', { name: 'Back to top' });
+  await page.evaluate(() => window.scrollTo({ top: 0 }));
+  await expect(backToTop).toHaveCount(0);
+  await page.evaluate(() => window.scrollTo({ top: document.documentElement.scrollHeight }));
+  await expect(backToTop).toBeVisible();
+  await backToTop.click();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  await expect(backToTop).toHaveCount(0);
+});
+
 test('API errors stay JSON instead of returning the application shell', async ({ request }) => {
   const response = await request.get('/api/missing', { headers: { Accept: 'text/html' } });
   expect(response.status()).toBe(404);

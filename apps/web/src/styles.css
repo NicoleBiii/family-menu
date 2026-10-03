@@ -1754,7 +1754,8 @@ html:has(.basket-bar) {
     font-size: 11px;
     overflow-wrap: break-word;
   }
-  .dish-categories a span {
+  /* Phones drop the dish counts but keep basket badges and screen-reader text. */
+  .dish-categories a span[aria-hidden='true']:not(.rail-badge) {
     display: none;
   }
   .dish-list li {
@@ -1905,4 +1906,108 @@ html:has(.basket-bar) {
   align-items: center;
   gap: 1rem;
   margin-top: 1rem;
+}
+
+/* UX-004 owner polish */
+/* The recipe card's header (with its close button) stays at the top while the card scrolls. */
+dialog .dialog-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: -25px -25px 0;
+  padding: 14px 18px 10px 25px;
+  background: #fffef7;
+  border-radius: 20px 20px 0 0;
+}
+.back-to-top {
+  position: fixed;
+  right: 20px;
+  bottom: 100px;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid #d7dfca;
+  border-radius: 50%;
+  background: #fffef7;
+  color: #283b2e;
+  box-shadow: 0 6px 20px #263d2433;
+}
+.back-to-top:hover {
+  background: #e9eddf;
+}
+/* Above a floating basket bar on narrower screens. */
+@media (max-width: 1000px) {
+  html:has(.basket-bar) .back-to-top {
+    bottom: 176px;
+  }
+}
+@media (max-width: 600px) {
+  .back-to-top {
+    right: 12px;
+    bottom: 90px;
+  }
+  html:has(.basket-bar) .back-to-top {
+    bottom: 152px;
+  }
+}
+/* Dishes already in the basket stand out. */
+.dish-list li.in-basket {
+  margin: 4px -10px;
+  padding: 10px;
+  border-radius: 12px;
+  background: #eef3e4;
+  box-shadow: inset 4px 0 0 #364f36;
+  border-bottom-color: transparent;
+}
+.dish-photo {
+  position: relative;
+}
+.dish-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: #b34f27;
+  color: #fff;
+  font-family: 'Avenir Next', Avenir, system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+}
+.dish-chosen {
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #364f36;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+.dish-categories a.has-chosen {
+  font-weight: 700;
+  color: #283b2e;
+}
+.dish-categories a .rail-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: #b34f27;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+/* AI drafting is the main way to add a recipe. */
+.ai-cta {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 0 16px;
 }

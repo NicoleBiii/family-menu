@@ -70,7 +70,18 @@ test('dishes are collected by category and placed as one order', async ({ page }
   await expect(page.getByRole('button', { name: /Miso soup/ })).toHaveCount(0);
   await page.getByRole('textbox', { name: 'Search dishes' }).fill('');
   const rail = page.getByRole('navigation', { name: 'Categories' });
-  await expect(rail.getByRole('link')).toHaveText(['Soups2', 'Uncategorised1']);
+  // The rail shows how many servings each category already has in the basket.
+  await expect(rail.getByRole('link', { name: 'Soups 3 in basket', exact: true })).toBeVisible();
+  await expect(
+    rail.getByRole('link', { name: 'Uncategorised 1 in basket', exact: true }),
+  ).toBeVisible();
+  // Chosen dishes are marked in the list, with their servings.
+  const miso = page.getByRole('listitem').filter({ hasText: 'Miso soup' });
+  await expect(miso).toHaveClass(/in-basket/);
+  await expect(miso).toContainText('In basket · 3');
+  await expect(page.getByRole('listitem').filter({ hasText: 'Lentil soup' })).not.toHaveClass(
+    /in-basket/,
+  );
   await rail.getByRole('link', { name: 'Uncategorised' }).click();
   await expect(page.getByRole('heading', { name: 'Uncategorised' })).toBeInViewport();
   await expect(page.locator('.basket-bar')).toContainText('2 dishes');

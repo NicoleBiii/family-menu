@@ -14,6 +14,7 @@ import {
   BookOpen,
   Camera,
   ChefHat,
+  ChevronRight,
   ImageOff,
   Pencil,
   Plus,
@@ -298,6 +299,26 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
               : t('menu.starterCount', { count: presets?.length ?? 0 })}
           </span>
         </div>
+        {household && (
+          // The quickest way to add a dish: AI drafts it, the member reviews and saves.
+          <button
+            className="manage-button ai-cta"
+            onClick={() => {
+              setNotice(null);
+              setAiPanel(true);
+              window.scrollTo({ top: 0 });
+            }}
+          >
+            <span className="manage-icon" aria-hidden="true">
+              <Sparkles size={20} />
+            </span>
+            <span className="manage-text">
+              <strong>{t('menu.draftAi')}</strong>
+              <span>{t('menu.draftAiHint')}</span>
+            </span>
+            <ChevronRight size={18} aria-hidden="true" />
+          </button>
+        )}
         <div className="menu-tools">
           <label className="search-field">
             <Search size={19} />
@@ -328,18 +349,8 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
               >
                 <Tags size={14} aria-hidden="true" /> {t('category.manage')}
               </button>
-              <button
-                className="archive-toggle ai-toggle"
-                onClick={() => {
-                  setNotice(null);
-                  setAiPanel(true);
-                  window.scrollTo({ top: 0 });
-                }}
-              >
-                <Sparkles size={14} aria-hidden="true" /> {t('menu.draftAi')}
-              </button>
-              <button className="primary-button" onClick={() => startEditor({ mode: 'create' })}>
-                <Plus size={18} /> {t('menu.addRecipe')}
+              <button className="secondary-button" onClick={() => startEditor({ mode: 'create' })}>
+                <Plus size={17} aria-hidden="true" /> {t('menu.addRecipe')}
               </button>
             </div>
           )}
