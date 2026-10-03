@@ -425,9 +425,30 @@ export interface ShoppingList {
         servings: number;
         recipeServings: number;
         ingredients: (Ingredient & { approximate: boolean })[];
+        /** This dish's share of each checkable line (UX-003). */
+        tasks: ShoppingTask[];
       }[];
     }[];
   }[];
+}
+
+/** One ingredient of one dish in the by-day view, checkable on its own. */
+export interface ShoppingTask {
+  itemId: string;
+  lineId: string;
+  name: string;
+  form: string | null;
+  unquantified: boolean;
+  notes: string[];
+  state: 'open' | 'bought';
+  /** The dish's full demand for this ingredient. */
+  required: ShoppingAmount | null;
+  toBuy: ShoppingAmount | null;
+  bought: ShoppingAmount | null;
+  partlyBought: boolean;
+  token: string;
+  /** `shared`: the purchase also covered other dishes; undoing it reopens them too. */
+  purchases: { id: string; by: string; at: string; shared: boolean }[];
 }
 
 export function formatAmount(amount: ShoppingAmount, language: 'en' | 'zh' = 'en') {

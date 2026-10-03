@@ -2142,7 +2142,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Ingredient demand of pending orders (all by default, including overdue ones): a combined list and the same demand grouped by meal date and order. Amounts are exact decimals; values that need rounding are rounded up and flagged approximate. `checklist` splits the combined demand into checkable lines (ingredient, form, unit family) with what is still to buy and what members already bought (ADR 0009)."
+            "description": "Ingredient demand of pending orders (all by default, including overdue ones): a combined list and the same demand grouped by meal date and order. Amounts are exact decimals; values that need rounding are rounded up and flagged approximate. `checklist` splits the combined demand into checkable lines (ingredient, form, unit family) with what is still to buy and what members already bought (ADR 0009). Each by-day dish has `tasks`: its share of each line, checkable on its own (UX-003)."
           },
           "400": {
             "description": "Invalid date range."
@@ -2241,7 +2241,12 @@
                   },
                   "token": {
                     "type": "string",
-                    "description": "From the checklist line the member saw."
+                    "description": "From the checklist line, or from the by-day task when orderItemId is set."
+                  },
+                  "orderItemId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "By-day check: allocate only this dish’s remaining share of the line (UX-003)."
                   },
                   "from": {
                     "type": "string",
@@ -2259,7 +2264,7 @@
         },
         "responses": {
           "201": {
-            "description": "The purchase: the line’s remaining amount, allocated to the order items in scope."
+            "description": "The purchase: the line’s remaining amount allocated to the order items in scope, or only the given dish’s remaining share."
           },
           "401": {
             "description": "No valid session."

@@ -369,3 +369,12 @@ Use dates in YYYY-MM-DD format, with America/Toronto as the reporting timezone. 
 - PR #26 Quality checks passed on `b402b2a`; at the owner's request it was squash-merged to `main` as `2cd7328`. GitHub staging deployment `6820203779` reports success, and readiness returned `ready`.
 - Owner review on staging: the Chinese labels look good on a phone, and the screen-reader check was reported good. At 200% laptop zoom, Chinese bottom-navigation labels stacked vertically. Cause: the bar's `left: 50%` centring capped its width at half the viewport. Fixed on `claude/ux-003-nav-zoom` with auto-margin centring and no-wrap labels, plus a regression case that fails on the old CSS. Evidence: `verification/2026-10-02-ux-003-home-ordering.md`.
 - Owner follow-up on staging: Home must be in the bottom navigation, recipe management needs a way back, and its entry button must be more prominent. Recorded as an amendment to the home-ordering proposal and implemented on the same branch: a Menu (点菜) tab that opens the dishes, a history-aware Back on `/recipes`, and a filled Manage card button, with browser coverage.
+
+## 2026-10-02 — UX-003 follow-up merge and per-dish shopping checks (Claude Code)
+
+- PR #27 (zoom fix, Menu tab, Back, Manage button) passed Quality checks and was squash-merged as `80a9076` at the owner's request. GitHub auto-merge is not allowed for this repository, so the agent waited for the run and merged with `--match-head-commit`. GitHub staging deployment `6820470370` reports success at 23:38:18 UTC. Readiness returned `ready`, and staging served the merged web bundle (`index-CbryO3sJ.js`). The owner reviewed it and reported no problems. They had not yet tried 200% text zoom on the phone; the agent described Chrome's "Zoom Text" setting.
+- Implemented proposal criterion 4 on `claude/ux-003-shopping-groups` as an ADR 0009 amendment, without a migration:
+  - each by-day dish gets one checkable task per shopping line;
+  - `POST …/shopping/purchases` takes an optional `orderItemId`, which allocates only that dish's remaining share under the existing lock and token rules;
+  - combined checks are reported as `shared` on every dish they covered, and the UI asks before an undo reopens them together.
+- Validation on Node 24.19.0: full `npm run check` passed (88 integration, 82 browser); OpenAPI regenerated. Evidence: `verification/2026-10-02-ux-003-shopping-tasks.md`.

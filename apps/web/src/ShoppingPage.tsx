@@ -13,6 +13,7 @@ import {
   type Purchase,
   type Session,
   type ShoppingList,
+  type ShoppingTask,
 } from './api';
 import { useI18n } from './i18n';
 
@@ -68,9 +69,12 @@ export function ShoppingPage({ session, household, onGoMeals, onGoHousehold }: P
     [householdId, range, from, to, view],
   );
 
-  /** Records that the member bought what this line showed, for the meals in scope. */
-  async function check(line: ChecklistLine) {
-    setBusyLine(line.lineId);
+  /**
+   * Records that the member bought what this line showed, for the meals in scope, or only one
+   * dish's share when checked in the by-day view.
+   */
+  async function check(line: { lineId: string; token: string; itemId?: string }, busy: string) {
+    setBusyLine(busy);
     setError(null);
     try {
       await api(`/households/${householdId}/shopping/purchases`, {
@@ -79,6 +83,7 @@ export function ShoppingPage({ session, household, onGoMeals, onGoHousehold }: P
           requestId: crypto.randomUUID(),
           lineId: line.lineId,
           token: line.token,
+          ...(line.itemId ? { orderItemId: line.itemId } : {}),
           ...(range ? { from, to } : {}),
         },
       });
@@ -91,8 +96,8 @@ export function ShoppingPage({ session, household, onGoMeals, onGoHousehold }: P
     }
   }
   /** Unchecking voids the purchases that cover this line; they stay in history. */
-  async function uncheck(line: ChecklistLine) {
-    setBusyLine(line.lineId);
+  async function uncheck(line: { purchases: { id: string }[] }, busy: string) {
+    setBusyLine(busy);
     setError(null);
     try {
       for (const purchase of line.purchases) {
@@ -175,7 +180,7 @@ export function ShoppingPage({ session, household, onGoMeals, onGoHousehold }: P
               name: lineName(line),
               amount: lineAmount(line),
             })}
-            onChange={() => (isBought ? uncheck(line) : check(line))}
+            onChange={() => (isBought ? uncheck(line, line.lineId) : check(line, line.lineId))}
           />
           <span>
             <strong>{line.name}</strong>
@@ -196,6 +201,61 @@ export function ShoppingPage({ session, household, onGoMeals, onGoHousehold }: P
         </label>
         <div className="shopping-amounts">
           <span className={line.unquantified ? 'muted' : undefined}>{lineAmount(line)}</span>
+        </div>
+      </li>
+    );
+  };
+
+  const renderTask = (task: ShoppingTask, dish: string) => {
+    const busy = `${task.itemId}:${task.lineId}`;
+    const isBought = task.state === 'bought';
+    const latest = task.purchases[0];
+    const amount = task.unquantified
+      ? task.notes.join(', ') || t('shopping.amountUnknown')
+      : task.required
+        ? formatAmount(task.required, language)
+        : '';
+    return (
+      <li key={task.lineId} className={isBought ? 'checked' : undefined}>
+        <label className="check-line">
+          <input
+            type="checkbox"
+            checked={busyLine === busy ? !isBought : isBought}
+            disabled={busyLine === busy}
+            aria-label={t(isBought ? 'shopping.markTaskNotBought' : 'shopping.markTaskBought', {
+              name: lineName(task),
+              dish,
+              amount: task.toBuy ? formatAmount(task.toBuy, language) : amount,
+            })}
+            onChange={() => {
+              if (!isBought) return check(task, busy);
+              // A combined check covers several dishes; undoing it reopens all of them.
+              if (task.purchases.some((purchase) => purchase.shared)) {
+                if (!window.confirm(t('shopping.undoShared'))) return;
+              }
+              return uncheck(task, busy);
+            }}
+          />
+          <span>
+            <strong>{task.name}</strong>
+            {task.form && <span className="muted">, {task.form}</span>}
+            {isBought && latest && (
+              <span className="muted small block">
+                {t('shopping.boughtBy', { name: latest.by, time: clock(latest.at, true) })}
+              </span>
+            )}
+            {task.partlyBought && task.bought && task.toBuy && (
+              <span className="muted small block">
+                {t('shopping.taskPartly', {
+                  bought: formatAmount(task.bought, language),
+                  rest: formatAmount(task.toBuy, language),
+                })}
+              </span>
+            )}
+          </span>
+        </label>
+        <div className="shopping-amounts">
+          <span className={task.unquantified ? 'muted' : undefined}>{amount}</span>
         </div>
       </li>
     );
@@ -353,14 +413,23 @@ export function ShoppingPage({ session, household, onGoMeals, onGoHousehold }: P
                         })}
                       </span>
                     </h3>
-                    <ul>
-                      {item.ingredients.map((line, index) => (
-                        <li key={index}>
-                          {line.approximate ? '≈ ' : ''}
-                          {formatIngredient(line, language)}
-                        </li>
-                      ))}
-                    </ul>
+                    {item.tasks.length > 0 ? (
+                      <ul
+                        className="shopping-list dish-tasks"
+                        aria-label={t('shopping.dishList', { dish: item.recipeName })}
+                      >
+                        {item.tasks.map((task) => renderTask(task, item.recipeName))}
+                      </ul>
+                    ) : (
+                      <ul>
+                        {item.ingredients.map((line, index) => (
+                          <li key={index}>
+                            {line.approximate ? '≈ ' : ''}
+                            {formatIngredient(line, language)}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 ))}
               </article>

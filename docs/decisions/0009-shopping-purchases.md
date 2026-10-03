@@ -59,6 +59,17 @@ This gives the confirmed behaviour without special cases:
 - **By-day view.** It continues to show the full demand of each meal, so it still matches the orders (AC-10). Checks affect the combined list only.
 - **Permissions.** Every active member may check, undo and read history (shared-household rule). Every route uses the existing membership check, and other households get 404. Allocations can reference only the household's own order items, which the composite keys enforce.
 
+## Amendment — per-dish checks in the by-day view (UX-003, 2026-10-02)
+
+The owner-confirmed [home-ordering proposal](../proposals/2026-10-02-home-ordering.md) replaces the "checks affect the combined list only" rule above. The by-day view now gives each dish its own checkable task per ingredient. This uses the existing model without a migration, because allocations are already per order item:
+
+- **Task.** One order item's share of one shopping line: same ingredient, form and unit family. Repeated lines within one dish add up into one task. Each by-day dish lists its tasks in its own ingredient order, with its full demand (`required`), what is still `toBuy`, what was `bought`, the purchases covering it, and its own `token`. The by-day view keeps `ingredients` unchanged. Amounts in tasks use the shopping presentation, e.g. 0.2 kg is shown as 200 g.
+- **Check.** `POST …/shopping/purchases` accepts an optional `orderItemId`. With it, the server checks the task's token and allocates only that item's remaining share. The purchase records that amount. The household lock, request-id idempotency, scope and 409 `shopping_changed` all work as before. A dish that is not pending, not in scope, not in the household or without the line is a 409, and a malformed id is a 400.
+- **Consistency.** The combined line, by-day tasks and history all derive from the same allocations. A per-dish check lowers the combined line's to-buy amount by exactly that dish's share; a combined check marks every covered dish bought.
+- **Undo.** Unchecking a task voids the purchases covering it. When one of them also covered other dishes (a combined check), the task reports `shared: true`, and the UI asks before reopening all of them together. Undoing a per-dish purchase reopens only that dish.
+
+Tests: pure task reconciliation, real-database per-dish check/undo/stale/scope/household cases, and the shared-undo case. A two-member browser case covers per-dish checks, the warning and Chinese labels.
+
 ## Alternatives considered
 
 - **Running totals per ingredient** ("bought 2 eggs" counted against all demand). Simpler, but a purchase for a closed order would cover a later order, and an order edit could not be told apart from new demand. This contradicts requirements 3–5.

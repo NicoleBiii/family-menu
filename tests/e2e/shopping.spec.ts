@@ -78,10 +78,16 @@ test('pending orders add up in the combined view and show per meal by day', asyn
   await expect(page.getByRole('heading', { name: 'Tomorrow' })).toBeVisible();
   const dinner = page.getByRole('article', { name: 'Meal at 18:00' });
   await expect(dinner).toContainText('Chicken rice · 3 servings');
-  await expect(dinner).toContainText('300 g Chicken breast, raw');
-  await expect(page.getByRole('article', { name: 'Meal at 19:30' })).toContainText(
-    '0.2 kg chicken breast, raw',
-  );
+  // Each dish's full demand is listed as checkable rows, in shopping units (UX-003).
+  await expect(
+    dinner.getByRole('listitem').filter({ hasText: 'Chicken breast, raw' }),
+  ).toContainText('300 g');
+  await expect(
+    page
+      .getByRole('article', { name: 'Meal at 19:30' })
+      .getByRole('listitem')
+      .filter({ hasText: 'chicken breast, raw' }),
+  ).toContainText('200 g');
 
   // Cancelling elsewhere changes the totals after a refresh.
   await post(`/orders/${first.id}/cancel`, { expectedRevision: 1 });

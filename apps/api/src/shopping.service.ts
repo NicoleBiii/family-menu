@@ -12,6 +12,7 @@ import { isUuid } from './security.js';
 import {
   buildChecklist,
   buildShoppingList,
+  itemTasks,
   parseLineId,
   present,
   rational,
@@ -38,10 +39,18 @@ export function parsePurchase(body: unknown) {
   if (typeof input.token !== 'string' || !input.token || input.token.length > 64) {
     throw new BadRequestException('token is required.');
   }
+  if (
+    input.orderItemId !== undefined &&
+    (typeof input.orderItemId !== 'string' || !isUuid(input.orderItemId))
+  ) {
+    throw new BadRequestException('orderItemId must identify one dish of a pending order.');
+  }
   return {
     requestId: input.requestId.toLowerCase(),
     lineId: input.lineId as string,
     token: input.token,
+    /** UX-003: check only this dish's share of the line (the by-day view). */
+    orderItemId: (input.orderItemId as string | undefined)?.toLowerCase(),
     scope: parseScope(input.from, input.to),
   };
 }
@@ -95,16 +104,30 @@ export class ShoppingService {
         const rows = await this.demand(trx, householdId, scope);
         const allocations = await this.allocations(trx, householdId, rows);
         const list = buildShoppingList(rows);
+        const checklist = buildChecklist(rows, allocations);
+        const tasks = itemTasks(rows, checklist);
         return {
           scope: { from: scope.from ?? null, to: scope.to ?? null },
           generatedAt: rows[0]?.generatedAt ?? new Date(),
           orderCount: new Set(rows.map((row) => row.orderId)).size,
-          ...list,
-          checklist: buildChecklist(rows, allocations).map((line) => {
+          combined: list.combined,
+          // Each dish keeps its full demand and gains one checkable task per line (UX-003).
+          grouped: list.grouped.map((group) => ({
+            ...group,
+            orders: group.orders.map((order) => ({
+              ...order,
+              items: order.items.map((item) => ({
+                ...item,
+                tasks: tasks.get(item.itemId) ?? [],
+              })),
+            })),
+          })),
+          checklist: checklist.map((line) => {
             // Allocation details stay on the server.
             const shown: Partial<typeof line> = { ...line };
             delete shown.outstanding;
             delete shown.total;
+            delete shown.items;
             return shown;
           }),
         };
@@ -131,7 +154,17 @@ export class ShoppingService {
       const rows = await this.demand(trx, householdId, input.scope);
       const allocations = await this.allocations(trx, householdId, rows);
       const line = buildChecklist(rows, allocations).find((entry) => entry.lineId === input.lineId);
-      if (!line || line.token !== input.token || line.outstanding.length === 0) changed();
+      if (!line) changed();
+      // A by-day check covers only that dish's share; a combined check covers the whole line.
+      let outstanding = line.outstanding;
+      let total = line.total;
+      if (input.orderItemId) {
+        const share = line.items.find((item) => item.itemId === input.orderItemId);
+        if (!share || share.token !== input.token || share.state !== 'open') changed();
+        outstanding = [{ itemId: share.itemId, quantity: share.remaining }];
+        total = share.remaining;
+      } else if (line.token !== input.token) changed();
+      if (outstanding.length === 0) changed();
 
       const inserted = await trx
         .insertInto('app.shopping_purchases')
@@ -142,8 +175,8 @@ export class ShoppingService {
           family: line.family,
           name: line.name,
           form: line.form,
-          quantity_num: line.total ? line.total.n.toString() : null,
-          quantity_den: line.total ? line.total.d.toString() : null,
+          quantity_num: total ? total.n.toString() : null,
+          quantity_den: total ? total.d.toString() : null,
           request_id: input.requestId,
           created_by: userId,
         })
@@ -153,7 +186,7 @@ export class ShoppingService {
         await trx
           .insertInto('app.shopping_allocations')
           .values(
-            line.outstanding.map(({ itemId, quantity }) => ({
+            outstanding.map(({ itemId, quantity }) => ({
               household_id: householdId,
               purchase_id: inserted.id,
               order_item_id: itemId,
@@ -283,6 +316,11 @@ export class ShoppingService {
         'p.family',
         'p.created_at',
         'u.display_name',
+        // Coverage of the whole purchase, including dishes outside this scope.
+        sql<number>`(select count(*)::int from app.shopping_allocations c
+          where c.purchase_id = a.purchase_id and c.household_id = a.household_id)`.as(
+          'purchase_items',
+        ),
       ])
       .where('a.household_id', '=', householdId)
       .where('a.order_item_id', 'in', itemIds)
@@ -300,6 +338,7 @@ export class ShoppingService {
           : rational(BigInt(row.quantity_num), BigInt(row.quantity_den)),
       purchasedBy: row.display_name,
       purchasedAt: row.created_at,
+      purchaseItems: row.purchase_items,
     }));
   }
 
