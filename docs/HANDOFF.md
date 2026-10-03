@@ -70,12 +70,14 @@ The Mac's project PostgreSQL is listening at 127.0.0.1:55432 (data in ignored `.
 
 ## Next exact work
 
-Checkout checkpoint: `main` includes UX-003 (`2cd7328`, `80a9076`, `4260c1e`; PRs #26–#28), deployed to staging and accepted by the owner. Branch `claude/ux-003-closeout` holds this closeout record; check its PR state. Project PostgreSQL remains running; no app server was left running.
+Release target (owner, 2026-10-03): release as soon as the release checklist is complete; do not wait for 2026-10-16. Production decisions are in [ADR 0010](decisions/0010-production-environment.md).
 
-1. Reassess the 2026-10-16 release target with the owner, as the home-ordering proposal asks. The remaining release work is listed in the next item.
-2. Close INFRA-001's evidence gaps: record Railway's deployment ID and pre-deploy migration results for 007–009, keeping keys, cookies and invitation tokens out of the record.
-3. Close UX-002's open checks: a live Pexels key smoke test and a real iMessage invitation preview. Then complete the detailed UX-001 manual checklist.
-4. REL-001: recovery, alerts and release checks.
+Checkout checkpoint: `main` includes UX-003 and its closeout (`08307a2`). Branch `claude/rel-001-production` holds the REL-001 preparation: restricted runtime role, restore drill, production runbook and ADR 0010. Check its PR state. Project PostgreSQL remains running; no app server was left running.
+
+1. Merge the REL-001 preparation PR after Quality checks pass (its CI also first verifies the Dockerfile change) and the owner approves.
+2. Guide the owner through DEPLOYMENT.md P1–P3: the Supabase Pro project and CA file, the Railway `production` environment and variables, and UptimeRobot. Commit `certs/supabase-ca.crt`, then create the `release` branch from the verified `main` commit.
+3. P4: the production smoke test, the alert drill and the restore drill (PostgreSQL 17 tools on the owner's Mac). Write the release record.
+4. In parallel or after: record Railway staging deployment IDs and the pre-deploy migration results for 007–009. Then a live Pexels smoke test, a real iMessage invitation preview, and the detailed UX-001 checklist.
 
 ## Switching agents
 

@@ -1,6 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const stubKey = 'sb_publishable_e2e_stub';
+const testDatabaseUrl =
+  process.env.TEST_DATABASE_URL ??
+  'postgresql://family_menu:local-development-only@127.0.0.1:55432/family_menu_test';
+// The server runs as the restricted runtime role, after the same steps as Railway's pre-deploy.
+const runtimeUrl = new URL(testDatabaseUrl);
+runtimeUrl.username = 'family_menu_app_test';
+runtimeUrl.password = 'runtime-test-only-not-a-real-secret';
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -26,7 +33,8 @@ export default defineConfig({
       timeout: 10000,
     },
     {
-      command: 'node --env-file-if-exists=.env apps/api/dist/main.js',
+      command:
+        'node scripts/migrate.mjs && node scripts/runtime-role.mjs && node --env-file-if-exists=.env apps/api/dist/main.js',
       env: {
         PORT: '4173',
         HOST: '127.0.0.1',
@@ -37,9 +45,10 @@ export default defineConfig({
         AI_PROVIDER: 'mock',
         AI_MONTHLY_BUDGET_USD: '1000000',
         PEXELS_API_KEY: '',
-        DATABASE_URL:
-          process.env.TEST_DATABASE_URL ??
-          'postgresql://family_menu:local-development-only@127.0.0.1:55432/family_menu_test',
+        MIGRATION_DATABASE_URL: testDatabaseUrl,
+        RUNTIME_DB_ROLE: runtimeUrl.username,
+        RUNTIME_DB_PASSWORD: runtimeUrl.password,
+        DATABASE_URL: runtimeUrl.href,
       },
       url: 'http://127.0.0.1:4173/api/health/live',
       reuseExistingServer: false,

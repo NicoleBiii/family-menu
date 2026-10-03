@@ -29,6 +29,7 @@
     "ai:eval": "npm run build --workspace @family-menu/api && node --env-file-if-exists=.env scripts/ai-eval.mjs",
     "openapi": "npm run build --workspace @family-menu/api && node --env-file-if-exists=.env apps/api/dist/openapi.js",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run build && npm run test:integration && npm run test:e2e",
+    "restore:drill": "node --env-file-if-exists=.env.drill scripts/restore-drill.mjs",
     "handoff:status": "node scripts/handoff.mjs status",
     "handoff:claim": "node scripts/handoff.mjs claim",
     "handoff:release": "node scripts/handoff.mjs release"

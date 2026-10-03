@@ -4,6 +4,7 @@ import { createServer } from 'node:http';
 import { before, after } from 'node:test';
 import pg from 'pg';
 import { migrate } from '../../scripts/migrate.mjs';
+import { applyRuntimeRole } from '../../scripts/runtime-role.mjs';
 import { createApplication } from '../../apps/api/dist/app.js';
 import { readConfig } from '../../apps/api/dist/config.js';
 
@@ -26,6 +27,13 @@ if (
 }
 
 export const PUBLISHABLE_KEY = 'sb_publishable_test_only_not_a_real_key';
+/** The application runs as the restricted runtime role, as in production (ADR 0010). */
+export const RUNTIME_ROLE = 'family_menu_app_test';
+const RUNTIME_PASSWORD = 'runtime-test-only-not-a-real-secret';
+const runtimeUrl = new URL(databaseUrl);
+runtimeUrl.username = RUNTIME_ROLE;
+runtimeUrl.password = RUNTIME_PASSWORD;
+export const runtimeDatabaseUrl = runtimeUrl.href;
 export const pool = new pg.Pool({ connectionString: databaseUrl, max: 3 });
 const issuedCodes = new Map();
 export const stub = { nextIdentity: undefined, tokenStatusOverride: undefined };
@@ -48,6 +56,7 @@ function listen(server) {
 
 before(async () => {
   await migrate(databaseUrl);
+  await applyRuntimeRole({ databaseUrl, role: RUNTIME_ROLE, password: RUNTIME_PASSWORD });
   provider = createServer(async (request, response) => {
     const url = new URL(request.url, 'http://stub');
     if (request.method === 'GET' && url.pathname === '/auth/v1/authorize') {
@@ -109,7 +118,7 @@ before(async () => {
   origin = `http://127.0.0.1:${port}`;
   server.origin = origin;
   const config = readConfig({
-    DATABASE_URL: databaseUrl,
+    DATABASE_URL: runtimeDatabaseUrl,
     APP_ORIGIN: origin,
     SUPABASE_URL: providerOrigin,
     SUPABASE_PUBLISHABLE_KEY: PUBLISHABLE_KEY,
