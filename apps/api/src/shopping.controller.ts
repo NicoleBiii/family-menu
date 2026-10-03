@@ -41,7 +41,7 @@ export class ShoppingController {
   @ApiQuery({ name: 'to', required: false, description: 'Last household-local meal date.' })
   @ApiOkResponse({
     description:
-      'Ingredient demand of pending orders (all by default, including overdue ones): a combined list and the same demand grouped by meal date and order. Amounts are exact decimals; values that need rounding are rounded up and flagged approximate. `checklist` splits the combined demand into checkable lines (ingredient, form, unit family) with what is still to buy and what members already bought (ADR 0009).',
+      'Ingredient demand of pending orders (all by default, including overdue ones): a combined list and the same demand grouped by meal date and order. Amounts are exact decimals; values that need rounding are rounded up and flagged approximate. `checklist` splits the combined demand into checkable lines (ingredient, form, unit family) with what is still to buy and what members already bought (ADR 0009). Each by-day dish has `tasks`: its share of each line, checkable on its own (UX-003).',
   })
   @ApiBadRequestResponse({ description: 'Invalid date range.' })
   list(
@@ -75,7 +75,16 @@ export class ShoppingController {
             'Client-generated per check; retrying with the same id records one purchase.',
         },
         lineId: { type: 'string', description: 'From the checklist line.' },
-        token: { type: 'string', description: 'From the checklist line the member saw.' },
+        token: {
+          type: 'string',
+          description: 'From the checklist line, or from the by-day task when orderItemId is set.',
+        },
+        orderItemId: {
+          type: 'string',
+          format: 'uuid',
+          description:
+            'By-day check: allocate only this dish’s remaining share of the line (UX-003).',
+        },
         from: { type: 'string', format: 'date', description: 'Scope used for the list.' },
         to: { type: 'string', format: 'date' },
       },
@@ -83,7 +92,7 @@ export class ShoppingController {
   })
   @ApiCreatedResponse({
     description:
-      'The purchase: the line’s remaining amount, allocated to the order items in scope.',
+      'The purchase: the line’s remaining amount allocated to the order items in scope, or only the given dish’s remaining share.',
   })
   @ApiConflictResponse({
     description: 'code shopping_changed: the line changed since it was loaded; nothing recorded.',

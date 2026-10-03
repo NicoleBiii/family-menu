@@ -1832,6 +1832,16 @@ html:has(.basket-bar) {
 .shopping-list li.undone {
   opacity: 0.6;
 }
+/* By-day: each dish's ingredients are checkable tasks (UX-003). */
+.shopping-dish .dish-tasks {
+  margin: 8px 0 0;
+  padding: 0;
+  line-height: normal;
+  border-radius: 12px;
+}
+.shopping-dish .dish-tasks li {
+  padding: 10px 12px;
+}
 .shopping-subheading {
   margin: 24px 0 10px;
   font-size: 18px;

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { test } from 'node:test';
-import { buildChecklist, lineIdOf, rational } from '../../apps/api/dist/shopping.js';
+import { buildChecklist, itemTasks, lineIdOf, rational } from '../../apps/api/dist/shopping.js';
 import { api, identity, invite, pool, signIn } from './harness.mjs';
 
 // UX-002 phase 4 (ADR 0009): shared shopping checks reconciled against order items, purchase
@@ -122,6 +122,62 @@ test('reconciliation: exact rationals reach zero; units, forms and "to taste" st
   assert.deepEqual(line(list, 'unquantified').notes, ['for glazing']);
   assert.equal(new Set(list.map((entry) => entry.lineId)).size, 4);
   assert.equal(line(list).lineId, lineIdOf({ key: 'egg', formKey: '', family: 'count:' }));
+});
+
+test('reconciliation: each dish has its own task per line; repeated lines in a dish add up', () => {
+  const a = randomUUID();
+  const b = randomUUID();
+  const rows = [
+    row(
+      a,
+      1,
+      1,
+      [eggs, { name: 'Salt', note: 'to taste' }, { name: 'Egg', quantity: '1' }],
+      'Cake',
+    ),
+    row(b, 2, 1, [eggs], 'Omelette'),
+  ];
+  const purchase = (itemId, quantity, purchaseItems = 1) => ({
+    purchaseId: randomUUID(),
+    itemId,
+    key: 'egg',
+    formKey: '',
+    family: 'count:',
+    quantity,
+    purchasedBy: 'Ana',
+    purchasedAt: new Date(),
+    purchaseItems,
+  });
+  let list = buildChecklist(rows, []);
+  let tasks = itemTasks(rows, list);
+  assert.deepEqual(
+    tasks.get(a).map((task) => [task.name, task.required?.quantity ?? null, task.state]),
+    [
+      ['Egg', '3', 'open'],
+      ['Salt', null, 'open'],
+    ],
+    'Cake: 2 + 1 eggs are one task, in the dish’s ingredient order',
+  );
+  assert.deepEqual(tasks.get(a)[1].notes, ['to taste']);
+  assert.equal(tasks.get(b)[0].required.quantity, '4');
+  assert.notEqual(tasks.get(a)[0].token, tasks.get(b)[0].token);
+  assert.equal('remaining' in tasks.get(a)[0], false, 'allocation amounts stay internal');
+
+  // Buying Cake's eggs leaves Omelette's open; the combined line keeps only the rest.
+  const cake = purchase(a, rational(3n));
+  list = buildChecklist(rows, [cake]);
+  tasks = itemTasks(rows, list);
+  assert.equal(tasks.get(a)[0].state, 'bought');
+  assert.deepEqual(tasks.get(a)[0].purchases[0].shared, false);
+  assert.equal(tasks.get(b)[0].state, 'open');
+  assert.equal(line(list).toBuy.quantity, '4');
+
+  // A combined purchase covering both dishes is marked shared on each.
+  const both = [purchase(a, rational(3n), 2), purchase(b, rational(4n), 2)];
+  both[1].purchaseId = both[0].purchaseId;
+  tasks = itemTasks(rows, buildChecklist(rows, both));
+  assert.equal(tasks.get(a)[0].purchases[0].shared, true);
+  assert.equal(tasks.get(b)[0].state, 'bought');
 });
 
 // ---------- API ----------
@@ -372,7 +428,20 @@ test('a check under a date range covers only those meals; by-day demand is uncha
   assert.equal(all.toBuy.quantity, '200', 'the later meal is still to buy');
   assert.equal(all.bought.quantity, '100');
   const after = await (await api(owner, base)).json();
-  assert.deepEqual(after.grouped, before.grouped, 'the by-day view still shows full demand');
+  const demandOnly = (grouped) =>
+    grouped.map((group) => ({
+      ...group,
+      orders: group.orders.map((entry) => ({
+        ...entry,
+        // Tasks carry check state by design; the demand itself must not change.
+        items: entry.items.map((item) => ({ ...item, tasks: undefined })),
+      })),
+    }));
+  assert.deepEqual(
+    demandOnly(after.grouped),
+    demandOnly(before.grouped),
+    'the by-day view still shows full demand',
+  );
   assert.deepEqual(after.combined, before.combined);
 });
 
@@ -463,4 +532,178 @@ test('AC-02: other households and removed members cannot read, check or undo pur
     purchase.id,
   ]);
   assert.equal(stored.rows[0].undone_at, null);
+});
+
+test('UX-003: a by-day check covers one dish; combined demand, history and undo stay consistent', async () => {
+  const { owner, member, home, recipe, base } = await household();
+  const cake = await recipe('Cake', 1, [
+    { name: 'Egg', quantity: '2' },
+    { name: 'Egg', quantity: '1' },
+    { name: 'Sugar', quantity: '100', unit: 'g' },
+  ]);
+  const omelette = await recipe('Omelette', 1, [{ name: 'Egg', quantity: '2' }]);
+  await order(owner, home.id, [
+    { recipeId: cake.id, servings: 1 },
+    { recipeId: omelette.id, servings: 1 },
+  ]);
+  const load = async (user = owner, query = '') =>
+    await (await api(user, `${base}${query}`)).json();
+  const dishes = (list) => list.grouped[0].orders[0].items;
+  const task = (list, dish, key = 'Egg') =>
+    dishes(list)
+      .find((item) => item.recipeName === dish)
+      .tasks.find((entry) => entry.name === key);
+  const checkTask = (user, list, dish, extra = {}) => {
+    const item = dishes(list).find((entry) => entry.recipeName === dish);
+    const entry = item.tasks.find((candidate) => candidate.name === 'Egg');
+    return api(user, `${base}/purchases`, {
+      method: 'POST',
+      body: {
+        requestId: randomUUID(),
+        lineId: entry.lineId,
+        token: entry.token,
+        orderItemId: item.itemId,
+        ...extra,
+      },
+    });
+  };
+
+  let list = await load();
+  assert.equal(task(list, 'Cake').required.quantity, '3', 'repeated egg lines are one task');
+  assert.deepEqual(
+    dishes(list)[0].tasks.map((entry) => entry.name),
+    ['Egg', 'Sugar'],
+  );
+  assert.equal(find(list.checklist, 'egg').toBuy.quantity, '5');
+
+  // Ben buys the cake's eggs only.
+  const bought = await checkTask(member, list, 'Cake');
+  assert.equal(bought.status, 201, await bought.clone().text());
+  const purchase = await bought.json();
+  assert.equal(purchase.amount.quantity, '3');
+  list = await load();
+  assert.equal(task(list, 'Cake').state, 'bought');
+  assert.equal(task(list, 'Cake').purchases[0].by, 'Shopper Ben');
+  assert.equal(task(list, 'Cake').purchases[0].shared, false);
+  assert.equal(task(list, 'Omelette').state, 'open', 'the other dish’s share stays to buy');
+  const egg = find(list.checklist, 'egg');
+  assert.equal(egg.toBuy.quantity, '2');
+  assert.equal(egg.bought.quantity, '3');
+  assert.equal(egg.partlyBought, true);
+  assert.equal(task(list, 'Cake', 'Sugar').state, 'open', 'other ingredients are separate tasks');
+
+  // The same per-dish view checked twice, or after the dish changed, records nothing more.
+  const stale = await checkTask(owner, await load(), 'Cake');
+  assert.equal(stale.status, 409);
+  const oldOmelette = await load();
+  await checkTask(owner, oldOmelette, 'Omelette');
+  assert.equal((await checkTask(member, oldOmelette, 'Omelette')).status, 409);
+  list = await load();
+  assert.equal(find(list.checklist, 'egg').state, 'bought');
+
+  // Undoing the cake purchase reopens only the cake; history keeps both purchases.
+  const undo = await api(owner, `${base}/purchases/${purchase.id}/undo`, { method: 'POST' });
+  assert.equal(undo.status, 200);
+  list = await load();
+  assert.equal(task(list, 'Cake').state, 'open');
+  assert.equal(task(list, 'Omelette').state, 'bought');
+  assert.equal(find(list.checklist, 'egg').toBuy.quantity, '3');
+  const history = await (await api(owner, `${base}/purchases`)).json();
+  assert.deepEqual(
+    history.map((entry) => [entry.amount.quantity, entry.undoneAt === null]),
+    [
+      ['2', true],
+      ['3', false],
+    ],
+  );
+
+  // A combined check covers the cake too and is shown as shared on both dishes.
+  const combined = await check(owner, base, find(list.checklist, 'egg'));
+  assert.equal(combined.status, 201);
+  list = await load();
+  assert.equal(task(list, 'Cake').state, 'bought');
+  assert.equal(task(list, 'Cake').purchases[0].shared, false, 'only the cake was still open');
+
+  // The dish must be pending, in scope and in this household; ids are validated.
+  const fresh = await load();
+  const sugar = task(fresh, 'Cake', 'Sugar');
+  const cakeItem = dishes(fresh).find((entry) => entry.recipeName === 'Cake').itemId;
+  const omeletteItem = dishes(fresh).find((entry) => entry.recipeName === 'Omelette').itemId;
+  const attempt = (orderItemId, extra = {}) =>
+    api(owner, `${base}/purchases`, {
+      method: 'POST',
+      body: {
+        requestId: randomUUID(),
+        lineId: sugar.lineId,
+        token: sugar.token,
+        orderItemId,
+        ...extra,
+      },
+    });
+  assert.equal((await attempt('not-a-uuid')).status, 400);
+  assert.equal((await attempt(randomUUID())).status, 409);
+  assert.equal((await attempt(omeletteItem)).status, 409, 'the omelette has no sugar');
+  assert.equal(
+    (await attempt(cakeItem, { from: day(30), to: day(30) })).status,
+    409,
+    'out of scope',
+  );
+  const stranger = await signIn(identity('Task stranger'));
+  const elsewhere = await (
+    await api(stranger, '/households', { method: 'POST', body: { name: 'Task elsewhere' } })
+  ).json();
+  const foreign = await api(stranger, `/households/${elsewhere.id}/shopping/purchases`, {
+    method: 'POST',
+    body: {
+      requestId: randomUUID(),
+      lineId: sugar.lineId,
+      token: sugar.token,
+      orderItemId: cakeItem,
+    },
+  });
+  assert.equal(foreign.status, 409, 'another household’s dish is not in the caller’s demand');
+  assert.equal(
+    (
+      await api(stranger, `${base}/purchases`, {
+        method: 'POST',
+        body: {
+          requestId: randomUUID(),
+          lineId: sugar.lineId,
+          token: sugar.token,
+          orderItemId: cakeItem,
+        },
+      })
+    ).status,
+    404,
+  );
+  assert.equal((await attempt(cakeItem)).status, 201);
+  assert.equal(task(await load(), 'Cake', 'Sugar').state, 'bought');
+});
+
+test('UX-003: undoing a combined check from one dish reopens every dish it covered', async () => {
+  const { owner, home, recipe, base } = await household();
+  const toast = await recipe('Toast', 1, [{ name: 'Bread', quantity: '2', unit: 'slice' }]);
+  const sandwich = await recipe('Sandwich', 1, [{ name: 'Bread', quantity: '2', unit: 'slice' }]);
+  await order(owner, home.id, [
+    { recipeId: toast.id, servings: 1 },
+    { recipeId: sandwich.id, servings: 1 },
+  ]);
+  const bought = await (
+    await check(owner, base, find(await checklist(owner, base), 'bread', 'count:slice'))
+  ).json();
+  const list = await (await api(owner, base)).json();
+  const tasks = list.grouped[0].orders[0].items.map((item) => item.tasks[0]);
+  assert.deepEqual(
+    tasks.map((task) => [task.state, task.purchases[0].id, task.purchases[0].shared]),
+    [
+      ['bought', bought.id, true],
+      ['bought', bought.id, true],
+    ],
+  );
+  await api(owner, `${base}/purchases/${bought.id}/undo`, { method: 'POST' });
+  const after = await (await api(owner, base)).json();
+  assert.deepEqual(
+    after.grouped[0].orders[0].items.map((item) => item.tasks[0].state),
+    ['open', 'open'],
+  );
 });

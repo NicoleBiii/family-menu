@@ -309,6 +309,16 @@ export interface AllocationRow extends LineIdentity {
   quantity: Rational | null;
   purchasedBy: string;
   purchasedAt: Date;
+  /** How many order items the whole purchase covered (a combined check may cover several). */
+  purchaseItems?: number;
+}
+
+export interface PurchaseRef {
+  id: string;
+  by: string;
+  at: Date;
+  /** The purchase also covered other dishes, so undoing it reopens them too. */
+  shared: boolean;
 }
 
 interface ItemShare {
@@ -316,12 +326,41 @@ interface ItemShare {
   covered: Rational;
   /** Unquantified lines: whether an active purchase covered this item. */
   coveredFlag: boolean;
+  purchases: Map<string, PurchaseRef>;
+}
+
+/** Digest of what a check would allocate; a different list cannot be checked by mistake. */
+function tokenOf(outstanding: { itemId: string; quantity: Rational | null }[]) {
+  return createHash('sha256')
+    .update(
+      JSON.stringify(
+        outstanding
+          .map(({ itemId, quantity }) => [itemId, quantity ? `${quantity.n}/${quantity.d}` : '*'])
+          .sort(),
+      ),
+    )
+    .digest('base64url')
+    .slice(0, 22);
 }
 
 const ZERO = rational(0n);
 const isPositive = (value: Rational) => value.n > 0n;
 const subtract = (a: Rational, b: Rational) => add(a, rational(-b.n, b.d));
 const min = (a: Rational, b: Rational) => (subtract(a, b).n <= 0n ? a : b);
+
+/** One dish's share of a checkable line. `remaining` stays on the server. */
+export interface ItemTask {
+  itemId: string;
+  state: 'open' | 'bought';
+  /** This dish's full demand, as in the by-day view. */
+  required: ReturnType<typeof present> | null;
+  toBuy: ReturnType<typeof present> | null;
+  bought: ReturnType<typeof present> | null;
+  partlyBought: boolean;
+  token: string;
+  purchases: PurchaseRef[];
+  remaining: Rational | null;
+}
 
 export function amountOf(line: SnapshotLine, servings: number, recipeServings: number) {
   const value = scaled(line, servings, recipeServings);
@@ -341,7 +380,7 @@ export function buildChecklist(rows: DemandRow[], allocations: AllocationRow[]) 
     notes: Set<string>;
     dishes: Set<string>;
     items: Map<string, ItemShare>;
-    purchases: Map<string, { id: string; by: string; at: Date }>;
+    purchases: Map<string, PurchaseRef>;
   }
   const lines = new Map<string, Line>();
   for (const row of rows) {
@@ -366,6 +405,7 @@ export function buildChecklist(rows: DemandRow[], allocations: AllocationRow[]) 
         required: ZERO,
         covered: ZERO,
         coveredFlag: false,
+        purchases: new Map<string, PurchaseRef>(),
       };
       // The same ingredient twice in one dish adds up within that dish.
       share.required = base === null ? share.required : add(share.required, base);
@@ -378,12 +418,17 @@ export function buildChecklist(rows: DemandRow[], allocations: AllocationRow[]) 
     if (!line || !share) continue;
     if (allocation.quantity === null) share.coveredFlag = true;
     else share.covered = add(share.covered, allocation.quantity);
-    line.purchases.set(allocation.purchaseId, {
+    const purchase = {
       id: allocation.purchaseId,
       by: allocation.purchasedBy,
       at: allocation.purchasedAt,
-    });
+      shared: (allocation.purchaseItems ?? 1) > 1,
+    };
+    line.purchases.set(allocation.purchaseId, purchase);
+    share.purchases.set(allocation.purchaseId, purchase);
   }
+  const newestFirst = (purchases: Map<string, PurchaseRef>) =>
+    [...purchases.values()].sort((a, b) => b.at.getTime() - a.at.getTime());
 
   return [...lines.entries()]
     .map(([lineId, line]) => {
@@ -393,38 +438,52 @@ export function buildChecklist(rows: DemandRow[], allocations: AllocationRow[]) 
       let bought = ZERO;
       let openItems = 0;
       let coveredItems = 0;
+      // One task per order item (UX-003): the same reconciliation, limited to that dish's share.
+      const items: ItemTask[] = [];
       for (const [itemId, share] of line.items) {
         if (unquantified) {
+          const itemOutstanding = share.coveredFlag ? [] : [{ itemId, quantity: null }];
           if (share.coveredFlag) coveredItems += 1;
           else {
             openItems += 1;
-            outstanding.push({ itemId, quantity: null });
+            outstanding.push(...itemOutstanding);
           }
+          items.push({
+            itemId,
+            state: share.coveredFlag ? 'bought' : 'open',
+            required: null,
+            toBuy: null,
+            bought: null,
+            partlyBought: false,
+            token: tokenOf(itemOutstanding),
+            purchases: newestFirst(share.purchases),
+            remaining: null,
+          });
           continue;
         }
         const remaining = subtract(share.required, share.covered);
-        if (isPositive(remaining)) {
+        const itemBought = min(share.covered, share.required);
+        const itemOpen = isPositive(remaining);
+        if (itemOpen) {
           toBuy = add(toBuy, remaining);
           outstanding.push({ itemId, quantity: remaining });
         }
-        bought = add(bought, min(share.covered, share.required));
+        bought = add(bought, itemBought);
+        items.push({
+          itemId,
+          state: itemOpen ? 'open' : 'bought',
+          required: present(share.required, line.family),
+          toBuy: itemOpen ? present(remaining, line.family) : null,
+          bought: isPositive(itemBought) ? present(itemBought, line.family) : null,
+          partlyBought: itemOpen && isPositive(itemBought),
+          token: tokenOf(itemOpen ? [{ itemId, quantity: remaining }] : []),
+          purchases: newestFirst(share.purchases),
+          remaining: itemOpen ? remaining : null,
+        });
       }
       const open = unquantified ? openItems > 0 : isPositive(toBuy);
       const anyBought = unquantified ? coveredItems > 0 : isPositive(bought);
-      // Digest of what a check would allocate; a different list cannot be checked by mistake.
-      const token = createHash('sha256')
-        .update(
-          JSON.stringify(
-            outstanding
-              .map(({ itemId, quantity }) => [
-                itemId,
-                quantity ? `${quantity.n}/${quantity.d}` : '*',
-              ])
-              .sort(),
-          ),
-        )
-        .digest('base64url')
-        .slice(0, 22);
+      const token = tokenOf(outstanding);
       return {
         lineId,
         key: line.key,
@@ -439,9 +498,10 @@ export function buildChecklist(rows: DemandRow[], allocations: AllocationRow[]) 
         bought: !unquantified && anyBought ? present(bought, line.family) : null,
         partlyBought: open && anyBought,
         token,
-        purchases: [...line.purchases.values()].sort((a, b) => b.at.getTime() - a.at.getTime()),
+        purchases: newestFirst(line.purchases),
         outstanding,
         total: unquantified ? null : toBuy,
+        items,
       };
     })
     .sort(
@@ -451,4 +511,56 @@ export function buildChecklist(rows: DemandRow[], allocations: AllocationRow[]) 
         (a.form ?? '').localeCompare(b.form ?? '', 'en') ||
         a.family.localeCompare(b.family, 'en'),
     );
+}
+
+/**
+ * The by-day tasks of each order item, in the dish's own ingredient order. Repeated lines of one
+ * ingredient identity within a dish are one task, as they are one share of the checklist line.
+ */
+export function itemTasks(rows: DemandRow[], checklist: ReturnType<typeof buildChecklist>) {
+  const byLine = new Map(checklist.map((line) => [line.lineId, line]));
+  const tasks = new Map<string, (Omit<ItemTask, 'remaining'> & TaskLine)[]>();
+  for (const row of rows) {
+    const seen = new Set<string>();
+    const list: (Omit<ItemTask, 'remaining'> & TaskLine)[] = [];
+    for (const ingredient of row.ingredients) {
+      const formKey = normalizeForm(ingredient.form) ?? '';
+      const { family } = amountOf(ingredient, row.servings, row.recipeServings);
+      const lineId = lineIdOf({ key: ingredient.key, formKey, family });
+      if (seen.has(lineId)) continue;
+      seen.add(lineId);
+      const line = byLine.get(lineId);
+      const share = line?.items.find((item) => item.itemId === row.itemId);
+      if (!line || !share) continue;
+      const notes = row.ingredients
+        .filter(
+          (other) =>
+            other.key === ingredient.key &&
+            (normalizeForm(other.form) ?? '') === formKey &&
+            other.quantity === null &&
+            other.note,
+        )
+        .map((other) => other.note!);
+      const shown: Partial<ItemTask> = { ...share };
+      delete shown.remaining;
+      list.push({
+        ...(shown as Omit<ItemTask, 'remaining'>),
+        lineId,
+        name: ingredient.name,
+        form: ingredient.form,
+        unquantified: line.unquantified,
+        notes: [...new Set(notes)],
+      });
+    }
+    tasks.set(row.itemId, list);
+  }
+  return tasks;
+}
+
+interface TaskLine {
+  lineId: string;
+  name: string;
+  form: string | null;
+  unquantified: boolean;
+  notes: string[];
 }
