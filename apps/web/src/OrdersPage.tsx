@@ -12,6 +12,7 @@ import {
   type Session,
 } from './api';
 import { OrderEditor, type OrderStart } from './OrderEditor';
+import { useViewHistory } from './history';
 import { useI18n } from './i18n';
 
 type Notice =
@@ -32,6 +33,8 @@ export function OrdersPage({ session, household, placed, onPlacedShown, onGoHous
   const [orders, setOrders] = useState<MealOrder[] | null>(null);
   const [recipes, setRecipes] = useState<RecipeSummary[] | null>(null);
   const [editor, setEditor] = useState<OrderStart | null>(null);
+  // Back from the order editor returns to the list, not the previous page (UX-004).
+  useViewHistory(editor ? ['editor'] : [], () => setEditor(null));
   const [error, setError] = useState<ApiError | 'load' | 'update' | 'open' | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);

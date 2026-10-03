@@ -127,7 +127,16 @@ export function App() {
           });
   }, [page, t]);
   useEffect(() => {
-    const onPop = () => setPageState(initialPage());
+    const onPop = () => {
+      const next = initialPage();
+      setPageState((current) => {
+        // Back from the order confirmation lands on the dishes, not the top of Home.
+        if (current === 'Checkout' && next === 'Home') {
+          requestAnimationFrame(() => document.getElementById('order-menu')?.scrollIntoView());
+        }
+        return next;
+      });
+    };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
@@ -139,7 +148,8 @@ export function App() {
     }
   }, [activeId]);
 
-  function setPage(next: Page) {
+  /** `replace`: the current page is finished (e.g. a placed order), so Back skips it. */
+  function setPage(next: Page, replace = false) {
     setPageState(next);
     setAddedToBasket(null);
     const path =
@@ -156,7 +166,9 @@ export function App() {
                 : next === 'Shopping'
                   ? '/shopping'
                   : '/';
-    if (window.location.pathname !== path) history.pushState({ inApp: true }, '', path);
+    if (window.location.pathname === path) return;
+    if (replace) history.replaceState({ inApp: true }, '', path);
+    else history.pushState({ inApp: true }, '', path);
   }
   /** Returns to the previous in-app page, or to ordering when the page was opened directly. */
   function goBack() {
@@ -330,11 +342,11 @@ export function App() {
             session={session}
             household={activeHousehold}
             basket={basket}
-            onBack={goOrdering}
+            onBack={goBack}
             onSaved={(order) => {
               basket.clear();
               setPlacedOrder(order);
-              setPage('Meals');
+              setPage('Meals', true);
               window.scrollTo({ top: 0 });
             }}
           />

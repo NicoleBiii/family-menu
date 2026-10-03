@@ -426,3 +426,9 @@ Use dates in YYYY-MM-DD format, with America/Toronto as the reporting timezone. 
   - a full-width "Draft with AI" card on Recipes, with "Add recipe" as a secondary button.
 - Validation: full `npm run check` passed (88 integration, 84 browser). Evidence: `verification/2026-10-03-ux-004-polish.md`. PR #30 (REL-001 preparation) stays open, awaiting the owner's merge decision.
 - PR #31 passed Quality checks and was squash-merged as `3b9ac6e` at the owner's request. `main` was then merged into `claude/rel-001-production` (PR #30), with PLAN.md and WORK_LOG.md conflicts resolved by keeping both changes; PR #30 merges next per the owner.
+- Owner report: Back from Add recipe or AI drafting went to Home. Fixed on `claude/ux-004-back-navigation`:
+  - in-place views (recipe editor, AI drafting, categories, recipe card, order editor) get their own history entries, so Back closes one view at a time;
+  - the confirmation page's "Add more dishes" is a real Back;
+  - placing an order replaces the confirmation page in history.
+
+  Full `npm run check` passed (90 integration, 90 browser).
