@@ -45,6 +45,7 @@ import { CategoryManager } from './CategoryManager';
 import { ImageError, prepareImage } from './image';
 import { PhotoLibraryChooser } from './PhotoLibraryChooser';
 import { RecipeEditor, type EditorStart } from './RecipeEditor';
+import { useViewHistory } from './history';
 import { useI18n } from './i18n';
 
 const TONES = ['lemon', 'sesame', 'tomato', 'greens'] as const;
@@ -127,6 +128,30 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
   useEffect(() => {
     if (selected && !dialog.current?.open) dialog.current?.showModal();
   }, [selected]);
+
+  // Each in-place view gets a history entry, so Back returns to the view before it (UX-004).
+  useViewHistory(
+    editor
+      ? editor.mode === 'ai'
+        ? ['ai', 'editor']
+        : ['editor']
+      : aiPanel
+        ? ['ai']
+        : managing
+          ? ['categories']
+          : selected
+            ? ['recipe']
+            : [],
+    () => {
+      if (editor) {
+        // Leaving an AI draft keeps it under "Unfinished drafts", as Cancel does.
+        setAiPanel(editor.mode === 'ai');
+        setEditor(null);
+      } else if (aiPanel) setAiPanel(false);
+      else if (managing) setManaging(false);
+      else if (selected) closeDialog();
+    },
+  );
 
   function closeDialog() {
     dialog.current?.close();
