@@ -12,7 +12,7 @@
     "@anthropic-ai/sdk": "0.128.0",
     "@nestjs/common": "12.1.0",
     "@nestjs/core": "12.1.0",
-    "@nestjs/platform-express": "12.1.0",
+    "@nestjs/platform-express": "12.1.2",
     "@nestjs/swagger": "12.0.2",
     "express": "5.2.1",
     "helmet": "8.3.0",
