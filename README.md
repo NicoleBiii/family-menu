@@ -9,6 +9,7 @@ A mobile-first shared menu for the people you call home: collect recipes, coordi
 - Google sign-in via server-side PKCE, HttpOnly app sessions with expiry/logout, CSRF protection.
 - Create households, invite with single-use 7-day links, join, remove members or leave. All household routes are authorized on the server.
 - Responsive React menu: starter recipes, the household's own recipes with search, recipe dialogs with focus restoration, a mobile recipe editor with structured ingredients, stale-edit conflict handling, and navigation empty states.
+- Reviewed bulk import from versioned JSON prepared with an external assistant: preview, category mapping, duplicate handling and one atomic save of up to 50 recipes.
 - NestJS application serving the production frontend and API from one origin.
 - Separate liveness and database/schema readiness checks, request IDs, security headers, and a generated OpenAPI contract.
 - PostgreSQL migrations for profiles, households, membership, sessions, login state and invitations in a private schema.

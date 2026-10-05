@@ -1,6 +1,6 @@
 # REC-002 — Bulk recipe import proposal
 
-Date: 2026-10-05. Status: proposed; planning requested by the owner, implementation not yet approved. Defaults below are recommendations, not measured capacity or confirmed product decisions.
+Date: 2026-10-05. Status: implemented locally on `codex/rec-002-bulk-import-plan` after the owner asked to start development. The listed thresholds are initial values; staging and owner review remain open. Validation: [REC-002 record](../verification/2026-10-05-rec-002-import.md).
 
 ## Purpose and existing foundation
 
