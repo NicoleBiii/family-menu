@@ -21,6 +21,8 @@ import { HouseholdsController, InvitationsController } from './households.contro
 import { HouseholdsService } from './households.service.js';
 import { SupabaseIdentityProvider } from './identity-provider.js';
 import { RecipePresetsController, RecipesController } from './recipes.controller.js';
+import { RecipeImportsController } from './recipe-imports.controller.js';
+import { RecipeImportsService } from './recipe-imports.service.js';
 import { RecipesService } from './recipes.service.js';
 import { RecipeImagesService } from './recipe-images.service.js';
 import { PhotoLibraryController, PhotoLibraryService } from './photo-library.js';
@@ -41,6 +43,7 @@ class AppModule {
         InvitationsController,
         RecipePresetsController,
         RecipesController,
+        RecipeImportsController,
         PhotoLibraryController,
         CategoriesController,
         OrdersController,
@@ -54,6 +57,7 @@ class AppModule {
         AuthService,
         HouseholdsService,
         RecipesService,
+        RecipeImportsService,
         CategoriesService,
         RecipeImagesService,
         PhotoLibraryService,
@@ -70,6 +74,11 @@ export async function createApplication(config: AppConfig, quiet = false) {
   const app = await NestFactory.create(AppModule.configure(config), {
     logger: quiet ? false : ['error', 'warn', 'log'],
   });
+  // The import endpoint accepts a bounded batch larger than Nest's default 100 KiB JSON body.
+  // Register this parser before Nest installs its default parser during listen/init.
+  app.use('/api/households/:householdId/recipe-imports', express.json({ limit: '512kb' }));
+  app.use(express.json({ limit: '100kb' }));
+  app.use(express.urlencoded({ extended: true, limit: '100kb' }));
   app.setGlobalPrefix('api');
   app.use(helmet());
   app.use((_request: Request, response: Response, next: NextFunction) => {

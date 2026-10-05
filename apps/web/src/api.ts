@@ -142,6 +142,29 @@ export interface RecipeContent {
 
 export type RecipeSource = 'manual' | 'preset' | 'ai';
 
+export interface ImportPreview {
+  stateHash: string;
+  remainingRecipes: number;
+  remainingCategories: number;
+  categories: { id: string; name: string }[];
+  rows: {
+    index: number;
+    name: string;
+    category: string | null;
+    recipe: (RecipeContent & { pricePoints: number }) | null;
+    errors: string[];
+    duplicate: 'existing' | 'archived' | 'batch' | null;
+    matchingCategoryId: string | null;
+  }[];
+}
+
+export interface ImportReceipt {
+  requestId: string;
+  imported: number;
+  createdCategories: number;
+  recipeIds: string[];
+}
+
 export interface AiDraft {
   id: string;
   status: 'queued' | 'running' | 'succeeded' | 'failed';

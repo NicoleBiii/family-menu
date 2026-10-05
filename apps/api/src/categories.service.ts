@@ -64,6 +64,12 @@ export class CategoriesService {
   async create(userId: string, householdId: string, name: string) {
     return this.database.db.transaction().execute(async (trx) => {
       await this.households.requireMember(userId, householdId, trx, true);
+      await trx
+        .selectFrom('app.households')
+        .select('id')
+        .where('id', '=', householdId)
+        .forUpdate()
+        .executeTakeFirstOrThrow();
       const key = categoryKey(name);
       const existing = await this.findByKey(trx, householdId, key);
       if (existing) return this.one(trx, householdId, existing.id);
@@ -99,6 +105,12 @@ export class CategoriesService {
   async rename(userId: string, householdId: string, categoryId: string, name: string) {
     return this.database.db.transaction().execute(async (trx) => {
       await this.households.requireMember(userId, householdId, trx, true);
+      await trx
+        .selectFrom('app.households')
+        .select('id')
+        .where('id', '=', householdId)
+        .forUpdate()
+        .executeTakeFirstOrThrow();
       await this.lock(trx, householdId, categoryId);
       const key = categoryKey(name);
       const clash = await this.findByKey(trx, householdId, key);
@@ -130,6 +142,12 @@ export class CategoriesService {
   async remove(userId: string, householdId: string, categoryId: string, moveTo: string | null) {
     return this.database.db.transaction().execute(async (trx) => {
       await this.households.requireMember(userId, householdId, trx, true);
+      await trx
+        .selectFrom('app.households')
+        .select('id')
+        .where('id', '=', householdId)
+        .forUpdate()
+        .executeTakeFirstOrThrow();
       await this.lock(trx, householdId, categoryId);
       if (moveTo !== null) {
         if (moveTo === categoryId) fail('moveTo must be a different category.');

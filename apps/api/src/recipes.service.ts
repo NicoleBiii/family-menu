@@ -154,8 +154,12 @@ export function parseRecipeInput(body: unknown): RecipeInput {
         unit = line.unit as Unit;
         if (quantity === null) fail(`${field}.unit needs a quantity.`);
       }
+      const name = text(line.name, `${field}.name`, 100)!;
+      if (ingredientKey(name).length > 100) {
+        fail(`${field}.name is too long after Unicode normalisation.`);
+      }
       return {
-        name: text(line.name, `${field}.name`, 100)!,
+        name,
         quantity,
         unit,
         form: text(line.form, `${field}.form`, 60, { optional: true }),
@@ -285,6 +289,14 @@ export class RecipesService {
     requestId: string,
     provenance: RecipeProvenance,
   ) {
+    // Shared by manual, preset, AI and bulk creation. Serialise capacity checks on the
+    // household row after the caller's membership lock, including idempotent retries.
+    await trx
+      .selectFrom('app.households')
+      .select('id')
+      .where('id', '=', householdId)
+      .forUpdate()
+      .executeTakeFirstOrThrow();
     const existing = await trx
       .selectFrom('app.recipes')
       .select('id')
