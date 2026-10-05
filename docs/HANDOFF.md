@@ -8,7 +8,7 @@ The owner asked to start development of the reviewed JSON bulk import. Branch `c
 
 Migration 010 was applied only to the isolated `family_menu_test` by the tests. The development database `family_menu`, staging and production were not migrated. No application server or other service was left running; the existing project PostgreSQL state was not changed intentionally. No new external credential is required. Staging deployment and owner review are still outstanding.
 
-The implementation checkpoint is `48592bf`; inspect Git HEAD for the subsequent documentation checkpoint and `git status` for dirty files. After the documentation checkpoint, the next exact action is to push this task branch, open a PR, wait for Quality checks, then arrange staging/owner review under the normal release process. Do not treat local checks as staging evidence. The REL-001 production setup and older staging gaps remain separate.
+The implementation checkpoint is `48592bf`; the branch was pushed and [PR #38](https://github.com/NicoleBiii/family-menu/pull/38) opened. Inspect Git HEAD for the subsequent documentation checkpoint and `git status` for dirty files. The next exact action is to wait for PR Quality checks, then arrange staging/owner review under the normal release process. Do not treat local checks as staging evidence. The REL-001 production setup and older staging gaps remain separate.
 
 The checkout is claimed by Codex for REC-002 until push/PR and closeout are finished; release the claim only when this work stops.
 
