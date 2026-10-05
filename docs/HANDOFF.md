@@ -2,12 +2,13 @@
 
 Updated: 2026-10-05 by Claude Code. Remote: private `github.com/NicoleBiii/family-menu`.
 
-## Latest session — REC-002 merged and on staging
+## Latest session — REC-002 merged, on staging and owner-approved
 
 Claude Code continued after Codex paused (Codex claim released with the owner's instruction). PR #38 Quality checks had passed; with owner approval it was squash-merged as `06c8ac3`. GitHub staging deployment `6861653591` succeeded, and staging readiness returned ready, which requires migration 010's tables ([verification](verification/2026-10-05-rec-002-import.md)). No application code changed in this session; the closeout docs are on branch `claude/rec-002-closeout` (inspect Git HEAD and its PR).
 
 - Services: none started or left running; local PostgreSQL state unchanged. Development database `family_menu` still lacks migrations 007–010; production untouched.
-- Next exact action: the owner tries `/recipes/import` on staging on a phone with JSON from a real external assistant (Chinese and English), and confirms or adjusts the provisional limits (50 recipes, 512 KiB, 20 previews/5 commits per minute). Then continue REL-001 (below).
+- Owner review: on 2026-10-05 the owner tested the import on staging and reports it works well; the provisional limits stand. REC-002 is Done.
+- Next exact action: REL-001 — guide the owner through DEPLOYMENT.md P1–P3 (Supabase Pro project and CA file, Railway `production` environment, UptimeRobot), commit `certs/supabase-ca.crt`, then create `release` from the verified `main` commit and run P4.
 
 ## REC-002 implementation (Codex)
 

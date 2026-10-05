@@ -454,3 +454,4 @@ Use dates in YYYY-MM-DD format, with America/Toronto as the reporting timezone. 
 - The owner asked Claude Code to continue where Codex paused. Confirmed the clean branch at `1536a29`, released Codex's claim and claimed REC-002. PR #38 Quality checks had passed. Reviewed the import service, controller, migration 010 and the shared household lock changes; found no merge blocker.
 - With the owner's approval, squash-merged PR #38 as `06c8ac3`. GitHub staging deployment `6861653591` succeeded; staging readiness (which requires the two new tables) returned ready. See [verification](verification/2026-10-05-rec-002-import.md).
 - Not done: owner phone trial with a real external assistant's JSON; Railway deployment ID/pre-deploy log; production. REL-001 remains separate.
+- Owner update: tested the import on staging and reports it works well; no limit changes requested. REC-002 marked Done. Next task: REL-001 owner setup (DEPLOYMENT.md P1–P3).
