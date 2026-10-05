@@ -67,12 +67,21 @@ interface Props {
   onGoHousehold: () => void;
   /** Adds the dish to the household's basket on the Meals page. */
   onOrder: (recipe: RecipeDetail) => void;
+  onBulkAdd?: () => void;
   searchRef: RefObject<HTMLInputElement | null>;
   /** Shown above the menu, hidden while the editor is open. */
   hero: ReactNode;
 }
 
-export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef, hero }: Props) {
+export function MenuPage({
+  session,
+  household,
+  onGoHousehold,
+  onOrder,
+  onBulkAdd,
+  searchRef,
+  hero,
+}: Props) {
   const { t, apiError } = useI18n();
   const [presets, setPresets] = useState<RecipePreset[] | null>(null);
   const [recipes, setRecipes] = useState<RecipeSummary[] | null>(null);
@@ -377,6 +386,11 @@ export function MenuPage({ session, household, onGoHousehold, onOrder, searchRef
               <button className="secondary-button" onClick={() => startEditor({ mode: 'create' })}>
                 <Plus size={17} aria-hidden="true" /> {t('menu.addRecipe')}
               </button>
+              {onBulkAdd && (
+                <button className="secondary-button" onClick={onBulkAdd}>
+                  <Plus size={17} aria-hidden="true" /> {t('import.entry')}
+                </button>
+              )}
             </div>
           )}
         </div>

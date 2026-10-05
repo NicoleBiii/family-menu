@@ -1253,6 +1253,174 @@
         ]
       }
     },
+    "/api/households/{householdId}/recipe-imports/preview": {
+      "post": {
+        "operationId": "RecipeImportsController_preview",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "text"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "description": "Version 1 JSON, containing 1–50 recipes. Maximum request size 524288 bytes."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validated rows, duplicates, categories and household capacity; no recipes or categories saved."
+          },
+          "400": {
+            "description": "Invalid JSON document or selection."
+          },
+          "404": {
+            "description": "Household not found or not a member."
+          },
+          "413": {
+            "description": "Import request exceeds 512 KiB."
+          },
+          "429": {
+            "description": "Per-household import request rate exceeded."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Recipe imports"
+        ]
+      }
+    },
+    "/api/households/{householdId}/recipe-imports": {
+      "post": {
+        "operationId": "RecipeImportsController_commit",
+        "parameters": [
+          {
+            "name": "householdId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-CSRF-Token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "text",
+                  "requestId",
+                  "selected",
+                  "categoryChoices",
+                  "stateHash"
+                ],
+                "properties": {
+                  "text": {
+                    "type": "string"
+                  },
+                  "requestId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "selected": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "minItems": 1,
+                    "maxItems": 50
+                  },
+                  "keepDuplicates": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  },
+                  "categoryChoices": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string",
+                      "description": "create, none or household category UUID"
+                    }
+                  },
+                  "stateHash": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Atomic import receipt. Retrying the same request ID and intent returns the receipt."
+          },
+          "400": {
+            "description": "Invalid JSON document or selection."
+          },
+          "404": {
+            "description": "Household not found or not a member."
+          },
+          "409": {
+            "description": "Preview became stale, capacity exceeded or request ID was reused."
+          },
+          "413": {
+            "description": "Import request exceeds 512 KiB."
+          },
+          "429": {
+            "description": "Per-household import request rate exceeded."
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ],
+        "tags": [
+          "Recipe imports"
+        ]
+      }
+    },
     "/api/households/{householdId}/photo-library/search": {
       "get": {
         "operationId": "PhotoLibraryController_search",

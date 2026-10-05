@@ -25,6 +25,7 @@ import { HouseholdPage } from './HouseholdPage';
 import { JoinPage } from './JoinPage';
 import { MenuPage } from './MenuPage';
 import { OrdersPage } from './OrdersPage';
+import { RecipeImportPage } from './RecipeImportPage';
 import { ShoppingPage } from './ShoppingPage';
 import { clearStoredBaskets, useBasket } from './basket';
 import { useI18n, type MessageKey } from './i18n';
@@ -35,9 +36,9 @@ const navigation = [
   { label: 'Shopping', text: 'nav.shopping', icon: ShoppingBasket },
   { label: 'Household', text: 'nav.household', icon: House },
 ] as const;
-type Page = (typeof navigation)[number]['label'] | 'Recipes' | 'Checkout' | 'Join';
+type Page = (typeof navigation)[number]['label'] | 'Recipes' | 'RecipeImport' | 'Checkout' | 'Join';
 /** Pages reached from Home; its tab stays marked while they are open. */
-const homeSection: Page[] = ['Home', 'Recipes', 'Checkout'];
+const homeSection: Page[] = ['Home', 'Recipes', 'RecipeImport', 'Checkout'];
 const ACTIVE_KEY = 'family-menu.active-household';
 
 function initialPage(): Page {
@@ -46,6 +47,7 @@ function initialPage(): Page {
   if (window.location.pathname === '/meals') return 'Meals';
   if (window.location.pathname === '/shopping') return 'Shopping';
   if (window.location.pathname === '/recipes') return 'Recipes';
+  if (window.location.pathname === '/recipes/import') return 'RecipeImport';
   if (window.location.pathname === '/checkout') return 'Checkout';
   return 'Home';
 }
@@ -79,6 +81,7 @@ export function App() {
   const signOutButton = useRef<HTMLButtonElement>(null);
   const [signingOut, setSigningOut] = useState(false);
   const search = useRef<HTMLInputElement>(null);
+  const importDirty = useRef(false);
   const [placedOrder, setPlacedOrder] = useState<MealOrderDetail | null>(null);
   /** A dish just added from the Recipes dialog, confirmed once on Home. */
   const [addedToBasket, setAddedToBasket] = useState<string | null>(null);
@@ -121,13 +124,22 @@ export function App() {
                 ? t('join.title')
                 : page === 'Recipes'
                   ? t('nav.menu')
-                  : page === 'Checkout'
-                    ? t('checkout.title')
-                    : t(pageKey!),
+                  : page === 'RecipeImport'
+                    ? t('import.title')
+                    : page === 'Checkout'
+                      ? t('checkout.title')
+                      : t(pageKey!),
           });
   }, [page, t]);
   useEffect(() => {
     const onPop = () => {
+      if (page === 'RecipeImport' && importDirty.current) {
+        if (!window.confirm(t('import.leave'))) {
+          history.pushState({ inApp: true }, '', '/recipes/import');
+          return;
+        }
+        importDirty.current = false;
+      }
       const next = initialPage();
       setPageState((current) => {
         // Back from the order confirmation lands on the dishes, not the top of Home.
@@ -139,7 +151,7 @@ export function App() {
     };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
-  }, []);
+  }, [page, t]);
   useEffect(() => {
     try {
       if (activeId) localStorage.setItem(ACTIVE_KEY, activeId);
@@ -150,6 +162,13 @@ export function App() {
 
   /** `replace`: the current page is finished (e.g. a placed order), so Back skips it. */
   function setPage(next: Page, replace = false) {
+    if (
+      page === 'RecipeImport' &&
+      next !== 'RecipeImport' &&
+      importDirty.current &&
+      !window.confirm(t('import.leave'))
+    )
+      return;
     setPageState(next);
     setAddedToBasket(null);
     const path =
@@ -159,19 +178,29 @@ export function App() {
           ? '/join'
           : next === 'Recipes'
             ? '/recipes'
-            : next === 'Checkout'
-              ? '/checkout'
-              : next === 'Meals'
-                ? '/meals'
-                : next === 'Shopping'
-                  ? '/shopping'
-                  : '/';
+            : next === 'RecipeImport'
+              ? '/recipes/import'
+              : next === 'Checkout'
+                ? '/checkout'
+                : next === 'Meals'
+                  ? '/meals'
+                  : next === 'Shopping'
+                    ? '/shopping'
+                    : '/';
     if (window.location.pathname === path) return;
     if (replace) history.replaceState({ inApp: true }, '', path);
     else history.pushState({ inApp: true }, '', path);
   }
   /** Returns to the previous in-app page, or to ordering when the page was opened directly. */
   function goBack() {
+    if (page === 'RecipeImport' && importDirty.current && !window.confirm(t('import.leave')))
+      return;
+    if (page === 'RecipeImport') importDirty.current = false;
+    if (page === 'RecipeImport' && !(history.state as { inApp?: boolean } | null)?.inApp) {
+      importDirty.current = false;
+      setPage('Recipes');
+      return;
+    }
     if ((history.state as { inApp?: boolean } | null)?.inApp) history.back();
     else goOrdering();
   }
@@ -335,6 +364,26 @@ export function App() {
                 setAddedToBasket(recipe.name);
               }}
               searchRef={search}
+              onBulkAdd={() => {
+                setPage('RecipeImport');
+                window.scrollTo({ top: 0 });
+              }}
+            />
+          </div>
+        ) : page === 'RecipeImport' && activeHousehold ? (
+          <div className="page-panel">
+            <button className="text-button back-button" onClick={goBack}>
+              <ArrowLeft size={17} aria-hidden="true" /> {t('app.back')}
+            </button>
+            <RecipeImportPage
+              householdId={activeHousehold.id}
+              onDirtyChange={(dirty) => {
+                importDirty.current = dirty;
+              }}
+              onDone={() => {
+                importDirty.current = false;
+                setPage('Recipes', true);
+              }}
             />
           </div>
         ) : page === 'Checkout' ? (

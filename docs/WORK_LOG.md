@@ -432,3 +432,19 @@ Use dates in YYYY-MM-DD format, with America/Toronto as the reporting timezone. 
   - placing an order replaces the confirmation page in history.
 
   Full `npm run check` passed (90 integration, 90 browser).
+
+## 2026-10-05 — REC-002 bulk recipe import planning (Codex)
+
+- Owner request: continue after Claude paused and plan a text-based bulk recipe entry page with a copyable format/prompt for external AI assistants, request limits and category handling. This authorizes planning; the feature has not been implemented.
+- Inspected README, HANDOFF, PLAN, shared handover rules, specification, architecture, budget, recipe/category ADRs and current API validation/transactions. Checkout was clean on `main` at `d7e90a7`. Actual history confirms PR #30 (`6641d02`) and #32 (`d7e90a7`) already merged, superseding stale handoff actions. Released the paused Claude claim and claimed REC-002.
+- Added [proposal](proposals/2026-10-05-bulk-recipe-import.md) on `codex/rec-002-bulk-import-plan`: versioned JSON, copyable AI instructions, preview and explicit category mapping/creation, duplicate decisions, 50-recipe/512-KiB provisional limits, atomic writes and durable retry receipts. No internal model call is needed. Existing 500-recipe and 30-category checks are soft; implementation must coordinate every creation path before claiming hard caps.
+- The proposal includes observable acceptance criteria, concurrency and household-isolation tests, a controlled additive migration plan and mobile/bilingual coverage. All new thresholds and policies remain proposed rather than owner-confirmed.
+- Verification: targeted Prettier passed for all four changed Markdown files; `git diff --check` passed. Full application checks, install, database/browser tests, migration and deployment were not run for this documentation-only change. No runtime dependency or application behavior changed; no service was started/stopped. Existing local service state was not rechecked.
+- Next: owner review, then a separately authorized implementation. Save a local documentation checkpoint and release the checkout claim; no remote publication in this session.
+
+## 2026-10-05 — REC-002 implementation (Codex)
+
+- The owner instructed development after reviewing the planning response. Implemented the JSON batch import at `/recipes/import` with copyable AI instructions, preview, duplicate decisions, explicit category mapping, an atomic commit and stable retry receipts. Added migration 010, household rate windows and shared household capacity locks across manual/preset/AI/import recipe creation and category changes. OpenAPI regenerated. Implementation checkpoint: `48592bf`.
+- `npm ci --offline` succeeded on Node 24.19.0. Final `npm run check` passed: format, lint, types, production builds, 97 real PostgreSQL integration tests and 92 desktop/mobile browser tests. The first full run exposed an English button-name ambiguity in existing browser selectors and a new test's premature label expectation; corrected both before the final pass. See [verification](verification/2026-10-05-rec-002-import.md).
+- Migration 010 was applied to loopback `family_menu_test` only. No development/staging/production migration, deployment or external AI call. Local app services started by the test harness stopped afterward. Project PostgreSQL's pre-existing state was not deliberately changed.
+- The branch was pushed to the private remote and [PR #38](https://github.com/NicoleBiii/family-menu/pull/38) opened. Next: wait for Quality checks, then staging and owner phone review. Preserve REL-001 production work as a separate task.

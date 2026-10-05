@@ -94,6 +94,20 @@ interface Database {
     form: string | null;
     note: string | null;
   };
+  'app.recipe_imports': {
+    household_id: string;
+    request_id: string;
+    created_by: string;
+    intent_hash: string;
+    result: string;
+    created_at: Generated<Date>;
+  };
+  'app.recipe_import_rate_windows': {
+    household_id: string;
+    kind: 'preview' | 'commit';
+    window_started_at: Date;
+    request_count: number;
+  };
   'app.recipe_images': {
     id: Generated<string>;
     household_id: string;
@@ -245,6 +259,8 @@ export class DatabaseService implements OnModuleDestroy {
         and to_regclass('app.audit_events') is not null
         and to_regclass('app.ai_draft_requests') is not null
         and to_regclass('app.recipe_categories') is not null
+        and to_regclass('app.recipe_imports') is not null
+        and to_regclass('app.recipe_import_rate_windows') is not null
         and to_regclass('app.shopping_purchases') is not null as ready
     `.execute(this.db);
     return result.rows[0]?.ready === true;
