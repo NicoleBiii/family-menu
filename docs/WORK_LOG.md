@@ -448,3 +448,9 @@ Use dates in YYYY-MM-DD format, with America/Toronto as the reporting timezone. 
 - `npm ci --offline` succeeded on Node 24.19.0. Final `npm run check` passed: format, lint, types, production builds, 97 real PostgreSQL integration tests and 92 desktop/mobile browser tests. The first full run exposed an English button-name ambiguity in existing browser selectors and a new test's premature label expectation; corrected both before the final pass. See [verification](verification/2026-10-05-rec-002-import.md).
 - Migration 010 was applied to loopback `family_menu_test` only. No development/staging/production migration, deployment or external AI call. Local app services started by the test harness stopped afterward. Project PostgreSQL's pre-existing state was not deliberately changed.
 - The branch was pushed to the private remote and [PR #38](https://github.com/NicoleBiii/family-menu/pull/38) opened. Next: wait for Quality checks, then staging and owner phone review. Preserve REL-001 production work as a separate task.
+
+## 2026-10-05 — REC-002 merge and staging (Claude Code)
+
+- The owner asked Claude Code to continue where Codex paused. Confirmed the clean branch at `1536a29`, released Codex's claim and claimed REC-002. PR #38 Quality checks had passed. Reviewed the import service, controller, migration 010 and the shared household lock changes; found no merge blocker.
+- With the owner's approval, squash-merged PR #38 as `06c8ac3`. GitHub staging deployment `6861653591` succeeded; staging readiness (which requires the two new tables) returned ready. See [verification](verification/2026-10-05-rec-002-import.md).
+- Not done: owner phone trial with a real external assistant's JSON; Railway deployment ID/pre-deploy log; production. REL-001 remains separate.

@@ -1,16 +1,17 @@
 # Current State and Handoff
 
-Updated: 2026-10-05 by Codex. Remote: private `github.com/NicoleBiii/family-menu`.
+Updated: 2026-10-05 by Claude Code. Remote: private `github.com/NicoleBiii/family-menu`.
 
-## Latest session — REC-002 implementation
+## Latest session — REC-002 merged and on staging
 
-The owner asked to start development of the reviewed JSON bulk import. Branch `codex/rec-002-bulk-import-plan` now contains the implementation commit `48592bf`. It adds `/recipes/import`, preview/commit APIs, migration 010 and tests; see [verification](verification/2026-10-05-rec-002-import.md). The final local `npm run check` passed (97 integration, 92 browser), and OpenAPI was regenerated. Earlier failed runs were resolved and are documented in the verification record. `npm ci --offline` passed on Node 24.19.0.
+Claude Code continued after Codex paused (Codex claim released with the owner's instruction). PR #38 Quality checks had passed; with owner approval it was squash-merged as `06c8ac3`. GitHub staging deployment `6861653591` succeeded, and staging readiness returned ready, which requires migration 010's tables ([verification](verification/2026-10-05-rec-002-import.md)). No application code changed in this session; the closeout docs are on branch `claude/rec-002-closeout` (inspect Git HEAD and its PR).
 
-Migration 010 was applied only to the isolated `family_menu_test` by the tests. The development database `family_menu`, staging and production were not migrated. No application server or other service was left running; the existing project PostgreSQL state was not changed intentionally. No new external credential is required. Staging deployment and owner review are still outstanding.
+- Services: none started or left running; local PostgreSQL state unchanged. Development database `family_menu` still lacks migrations 007–010; production untouched.
+- Next exact action: the owner tries `/recipes/import` on staging on a phone with JSON from a real external assistant (Chinese and English), and confirms or adjusts the provisional limits (50 recipes, 512 KiB, 20 previews/5 commits per minute). Then continue REL-001 (below).
 
-The implementation checkpoint is `48592bf`; the branch was pushed and [PR #38](https://github.com/NicoleBiii/family-menu/pull/38) opened. Inspect Git HEAD for the subsequent documentation checkpoint and `git status` for dirty files. The next exact action is to wait for PR Quality checks, then arrange staging/owner review under the normal release process. Do not treat local checks as staging evidence. The REL-001 production setup and older staging gaps remain separate.
+## REC-002 implementation (Codex)
 
-The checkout is claimed by Codex for REC-002 until push/PR and closeout are finished; release the claim only when this work stops.
+Implementation commit `48592bf` added `/recipes/import`, preview/commit APIs, migration 010 and tests. Local `npm run check` passed (97 integration, 92 browser); migration 010 was applied locally only to `family_menu_test`.
 
 ## Earlier REC-002 planning session
 
