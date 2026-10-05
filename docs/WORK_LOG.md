@@ -432,3 +432,12 @@ Use dates in YYYY-MM-DD format, with America/Toronto as the reporting timezone. 
   - placing an order replaces the confirmation page in history.
 
   Full `npm run check` passed (90 integration, 90 browser).
+
+## 2026-10-05 — REC-002 bulk recipe import planning (Codex)
+
+- Owner request: continue after Claude paused and plan a text-based bulk recipe entry page with a copyable format/prompt for external AI assistants, request limits and category handling. This authorizes planning; the feature has not been implemented.
+- Inspected README, HANDOFF, PLAN, shared handover rules, specification, architecture, budget, recipe/category ADRs and current API validation/transactions. Checkout was clean on `main` at `d7e90a7`. Actual history confirms PR #30 (`6641d02`) and #32 (`d7e90a7`) already merged, superseding stale handoff actions. Released the paused Claude claim and claimed REC-002.
+- Added [proposal](proposals/2026-10-05-bulk-recipe-import.md) on `codex/rec-002-bulk-import-plan`: versioned JSON, copyable AI instructions, preview and explicit category mapping/creation, duplicate decisions, 50-recipe/512-KiB provisional limits, atomic writes and durable retry receipts. No internal model call is needed. Existing 500-recipe and 30-category checks are soft; implementation must coordinate every creation path before claiming hard caps.
+- The proposal includes observable acceptance criteria, concurrency and household-isolation tests, a controlled additive migration plan and mobile/bilingual coverage. All new thresholds and policies remain proposed rather than owner-confirmed.
+- Verification: targeted Prettier passed for all four changed Markdown files; `git diff --check` passed. Full application checks, install, database/browser tests, migration and deployment were not run for this documentation-only change. No runtime dependency or application behavior changed; no service was started/stopped. Existing local service state was not rechecked.
+- Next: owner review, then a separately authorized implementation. Save a local documentation checkpoint and release the checkout claim; no remote publication in this session.
