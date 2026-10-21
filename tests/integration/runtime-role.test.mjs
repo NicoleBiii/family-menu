@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import pg from 'pg';
-import { applyRuntimeRole } from '../../scripts/runtime-role.mjs';
+import { applyBackupRole, applyRuntimeRole } from '../../scripts/runtime-role.mjs';
 import {
   api,
   databaseUrl,
@@ -79,4 +79,44 @@ test('the role script is repeatable, keeps the password unless given and rejects
     applyRuntimeRole({ databaseUrl, role: 'family_menu_missing_role' }),
     /required to create/,
   );
+});
+
+// ADR 0011: the scheduled backup's stored login can read household data but never write it.
+test('the backup role is created only with a password and can read but not write', async () => {
+  assert.equal(await applyBackupRole({ databaseUrl, role: 'family_menu_missing_backup' }), false);
+  await assert.rejects(
+    applyBackupRole({ databaseUrl, role: 'family_menu_backup_test', password: 'short' }),
+    /at least 24/,
+  );
+  const password = 'backup-test-only-not-a-real-secret';
+  const role = 'family_menu_backup_test';
+  assert.equal(await applyBackupRole({ databaseUrl, role, password }), true);
+  assert.equal(await applyBackupRole({ databaseUrl, role }), true);
+  const url = new URL(databaseUrl);
+  url.username = role;
+  url.password = password;
+  const backup = new pg.Client({ connectionString: url.href });
+  await backup.connect();
+  try {
+    const migrations = await backup.query('select count(*)::int as n from public.kysely_migration');
+    assert.ok(migrations.rows[0].n >= 10);
+    await backup.query('select count(*) from app.recipe_images');
+    await assert.rejects(
+      backup.query('delete from app.recipes'),
+      (error) => error.code === '25006',
+    );
+    await backup.query('begin read write');
+    for (const statement of [
+      'delete from app.recipes',
+      "insert into app.households (name) values ('x')",
+      'create table app.not_allowed (id int)',
+    ]) {
+      await backup.query('savepoint attempt');
+      await assert.rejects(backup.query(statement), (error) => error.code === '42501', statement);
+      await backup.query('rollback to savepoint attempt');
+    }
+    await backup.query('rollback');
+  } finally {
+    await backup.end();
+  }
 });

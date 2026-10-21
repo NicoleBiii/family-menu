@@ -1,8 +1,16 @@
 # Current State and Handoff
 
-Updated: 2026-10-20 by Claude Code. Remote: private `github.com/NicoleBiii/family-menu`.
+Updated: 2026-10-21 by Claude Code. Remote: private `github.com/NicoleBiii/family-menu`.
 
-## Latest session — REL-001 production setup in progress (paused by owner)
+## Latest session — REL-001 low-cost production (ADR 0011)
+
+- The owner asked for a cheaper operating plan (expected users: the owner and a few friends) and accepted option A of the [low-cost proposal](proposals/2026-10-21-low-cost-operations.md): [ADR 0011](decisions/0011-low-cost-production.md) moves production to Railway PostgreSQL, sign-in to a free Supabase project, and backups to a daily encrypted GitHub Actions artifact. It supersedes ADR 0010's Supabase Pro database.
+- Branch `claude/rel-001-low-cost` adds `scripts/backup.mjs` (snapshot-consistent dumps + manifest), a `BACKUP_DIR` mode for `restore-drill.mjs`, a read-only `family_menu_backup` login in `runtime-role.mjs`, `.github/workflows/backup.yml` (disabled until `BACKUP_ENABLED=true`), a CI backup → restore → compare step, and the rewritten DEPLOYMENT.md production runbook (P1–P5). Inspect Git HEAD and its PR.
+- Verified locally against PostgreSQL 14 (`family_menu_test`, 48,685 rows, 280 photos): backup as the read-only login, restore from the backup directory → `match`; tampered manifest → `mismatch`; live-source drill → `match`; writes as the backup login refused even in a read-write transaction. Full local `npm run check` passed (97 integration, 92 browser) before a new backup-role integration test was added; that test passed in a focused run (3/3 in `runtime-role.test.mjs`). Local PostgreSQL stopped afterwards. The GitHub workflows themselves are verified only by PR CI (the backup workflow cannot run until the owner configures it).
+- Railway had a platform-wide build outage on 2026-10-21; production was never working. Its environment still has Supabase-database variables to replace per DEPLOYMENT.md P2.
+- Next exact action: merge the PR after Quality checks; owner follows DEPLOYMENT.md P1–P4 (free Supabase sign-in project, Railway Postgres and variables, age key and backup secrets, UptimeRobot); point `release` at the merged commit; then P5 smoke, restore drill from a real backup, release record, and cancel Supabase Pro.
+
+## Earlier session — REL-001 production setup (paused by owner, 2026-10-20)
 
 - Done: P1 Supabase production project in a separate Pro organization (region `us-east-1`). Railway `production` environment exists in the existing project, with variables entered by the owner. PR #42 merged as `fdf0085` (public Supabase CA certificate committed, `scripts/migrate.mjs` logs only error codes, `sharp` 0.35.5 for GHSA-wq5f-xc86-pv6w; full local `npm run check` passed, 97 integration and 92 browser). Staging deployment `7215654238` of `fdf0085` succeeded and readiness returned ready.
 - The owner created `release` at `fdf0085` (the agent's push was blocked by the permission classifier as a production deploy). The production service had been on `main`; the owner was asked to switch it to `release` — not yet confirmed.

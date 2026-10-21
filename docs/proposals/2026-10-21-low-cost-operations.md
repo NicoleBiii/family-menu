@@ -1,6 +1,6 @@
 # REL-001 — Low-cost operations proposal
 
-Date: 2026-10-21. Status: **proposal, awaiting owner decision**. It would supersede the production-database part of [ADR 0010](../decisions/0010-production-environment.md) and the [BUDGET.md](../BUDGET.md) allocation if accepted.
+Date: 2026-10-21. Status: **option A accepted by the owner on 2026-10-21**; recorded in [ADR 0011](../decisions/0011-low-cost-production.md). It would supersede the production-database part of [ADR 0010](../decisions/0010-production-environment.md) and the [BUDGET.md](../BUDGET.md) allocation if accepted.
 
 ## Why
 

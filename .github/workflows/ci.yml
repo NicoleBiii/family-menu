@@ -57,6 +57,8 @@ jobs:
           docker run --rm --network host -e MIGRATION_DATABASE_URL="$url" \
             -e RUNTIME_DB_ROLE=family_menu_app_image \
             -e RUNTIME_DB_PASSWORD=image-test-only-not-a-real-secret \
+            -e BACKUP_DB_ROLE=family_menu_backup_image \
+            -e BACKUP_DB_PASSWORD=image-backup-test-only-not-a-secret \
             family-menu:${{ github.sha }} sh -c 'node scripts/migrate.mjs && node scripts/runtime-role.mjs'
           docker run -d --name app --network host -e DATABASE_URL="$runtime" -e PORT=3300 \
             -e APP_ORIGIN=https://preview.example.test family-menu:${{ github.sha }}
@@ -68,6 +70,17 @@ jobs:
           curl -fsS http://127.0.0.1:3300/ | grep -q '<div id="root">'
           docker logs app
           docker rm -f app
+      # Backs up the integration-test database (with its photos) as the read-only backup login,
+      # restores it on the same server and compares it with the backup's manifest.
+      - name: Backup and restore round trip
+        run: |
+          admin=postgresql://family_menu:local-development-only@127.0.0.1:5432
+          MIGRATION_DATABASE_URL="$admin/family_menu_test" RUNTIME_DB_ROLE=family_menu_app_image \
+            BACKUP_DB_ROLE=family_menu_backup_image node scripts/runtime-role.mjs
+          export BACKUP_DATABASE_URL=postgresql://family_menu_backup_image:image-backup-test-only-not-a-secret@127.0.0.1:5432/family_menu_test
+          export PG_BIN=$(scripts/install-pg-tools.sh "$(node scripts/backup.mjs --server-major)")
+          BACKUP_DIR="$RUNNER_TEMP/backup" node scripts/backup.mjs
+          BACKUP_DIR="$RUNNER_TEMP/backup" DRILL_SERVER_URL="$admin/postgres" node scripts/restore-drill.mjs
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure()
         with:
