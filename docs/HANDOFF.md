@@ -1,8 +1,14 @@
 # Current State and Handoff
 
-Updated: 2026-10-05 by Claude Code. Remote: private `github.com/NicoleBiii/family-menu`.
+Updated: 2026-10-20 by Claude Code. Remote: private `github.com/NicoleBiii/family-menu`.
 
-## Latest session — REC-002 merged, on staging and owner-approved
+## Latest session — REL-001 production setup in progress
+
+- Owner steps reported done: P1 Supabase production project in a separate Pro organization (region `us-east-1`); Railway `production` environment created in the existing project and variables entered. Not yet confirmed: Railway service branch, generated production domain, Supabase Site URL/redirect, UptimeRobot (P3).
+- First production deploy failed in pre-deploy with the generic migration error. Cause found: `certs/supabase-ca.crt` existed only as an untracked local file, so the image lacked the file named by `sslrootcert`. A missing path reproduces locally as `ENOENT`. Branch `claude/rel-001-ca-cert` commits the verified public root (Supabase Root 2021 CA, valid to 2031, no private key) and makes `scripts/migrate.mjs` print only the error code. It also bumps `sharp` to 0.35.5 for a new high advisory that failed the CI audit; full local `npm run check` passed (97 integration, 92 browser). Local PostgreSQL is stopped (as found).
+- Next exact action: merge that PR after Quality checks, confirm staging readiness, create `release` from the verified `main` commit, then check the production pre-deploy log for every migration and `Runtime database role is up to date.` Then P1.5 redirect URLs, P3 and P4.
+
+## Earlier session — REC-002 merged, on staging and owner-approved
 
 Claude Code continued after Codex paused (Codex claim released with the owner's instruction). PR #38 Quality checks had passed; with owner approval it was squash-merged as `06c8ac3`. GitHub staging deployment `6861653591` succeeded, and staging readiness returned ready, which requires migration 010's tables ([verification](verification/2026-10-05-rec-002-import.md)). No application code changed in this session; the closeout docs are on branch `claude/rec-002-closeout` (inspect Git HEAD and its PR).
 

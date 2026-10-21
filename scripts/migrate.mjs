@@ -36,9 +36,13 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     )) {
       console.log(`${result.migrationName}: ${result.status}`);
     }
-  } catch {
+  } catch (error) {
+    // Only the error code (e.g. ENOENT, ECONNREFUSED, 28P01) is printed; messages can echo
+    // connection details, so they are never logged.
+    const code =
+      error && typeof error === 'object' && typeof error.code === 'string' ? error.code : 'unknown';
     console.error(
-      'Migration failed. Check database access and the migration files; no credentials are logged.',
+      `Migration failed (code ${code}). Check database access and the migration files; no credentials are logged.`,
     );
     process.exitCode = 1;
   }
