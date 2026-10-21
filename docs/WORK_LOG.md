@@ -455,3 +455,8 @@ Use dates in YYYY-MM-DD format, with America/Toronto as the reporting timezone. 
 - With the owner's approval, squash-merged PR #38 as `06c8ac3`. GitHub staging deployment `6861653591` succeeded; staging readiness (which requires the two new tables) returned ready. See [verification](verification/2026-10-05-rec-002-import.md).
 - Not done: owner phone trial with a real external assistant's JSON; Railway deployment ID/pre-deploy log; production. REL-001 remains separate.
 - Owner update: tested the import on staging and reports it works well; no limit changes requested. REC-002 marked Done. Next task: REL-001 owner setup (DEPLOYMENT.md P1–P3).
+
+## 2026-10-20 — REL-001 production setup: CA certificate (Claude Code)
+
+- The owner set up the Supabase Pro production project (separate organization, after an initial project in the free organization was ruled out against ADR 0010) and a Railway `production` environment in the existing project. The first deploy failed with the generic pre-deploy migration error.
+- Cause: `certs/supabase-ca.crt` was never committed, so `sslrootcert` pointed to a missing file in the image. Committed the verified public root certificate and changed `scripts/migrate.mjs` to log only the error code. Local check: missing CA path prints `code ENOENT`; present CA reaches the network (`ECONNREFUSED` against a closed local port). Prettier and ESLint passed on the script. No credentials were seen or recorded by the agent.
