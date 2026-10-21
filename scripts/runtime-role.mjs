@@ -53,6 +53,56 @@ export async function applyRuntimeRole({ databaseUrl, role, password }) {
   }
 }
 
+/**
+ * Read-only backup login (REL-001, ADR 0011). The scheduled backup connects from outside the
+ * platform, so its stored URL may only read `app` and the migration bookkeeping, inside
+ * read-only transactions. It is created only when a password is given; once it exists, every
+ * run re-applies its grants. Returns whether the role exists afterwards.
+ */
+export async function applyBackupRole({ databaseUrl, role, password }) {
+  if (!databaseUrl) throw new Error('MIGRATION_DATABASE_URL (or DATABASE_URL) is required.');
+  if (!/^[a-z_][a-z0-9_]{2,62}$/.test(role))
+    throw new Error('BACKUP_DB_ROLE is not a safe role name.');
+  if (password !== undefined && password.length < 24) {
+    throw new Error('BACKUP_DB_PASSWORD must be at least 24 characters.');
+  }
+  const client = new pg.Client({ connectionString: databaseUrl, connectionTimeoutMillis: 5000 });
+  await client.connect();
+  try {
+    await client.query('begin');
+    const exists = await client.query('select 1 from pg_roles where rolname = $1', [role]);
+    const id = client.escapeIdentifier(role);
+    if (exists.rowCount === 0) {
+      if (password === undefined) {
+        await client.query('rollback');
+        return false;
+      }
+      await client.query(
+        `create role ${id} login nosuperuser nocreatedb nocreaterole noinherit password ${client.escapeLiteral(password)}`,
+      );
+    } else if (password !== undefined) {
+      await client.query(`alter role ${id} with login password ${client.escapeLiteral(password)}`);
+    }
+    await client.query(`alter role ${id} set default_transaction_read_only = on`);
+    await client.query(`revoke create on schema app from ${id}`);
+    await client.query(`grant usage on schema app to ${id}`);
+    await client.query(`grant select on all tables in schema app to ${id}`);
+    await client.query(`grant select on all sequences in schema app to ${id}`);
+    await client.query(
+      `grant select on public.kysely_migration, public.kysely_migration_lock to ${id}`,
+    );
+    await client.query(`alter default privileges in schema app grant select on tables to ${id}`);
+    await client.query(`alter default privileges in schema app grant select on sequences to ${id}`);
+    await client.query('commit');
+    return true;
+  } catch (error) {
+    await client.query('rollback').catch(() => {});
+    throw error;
+  } finally {
+    await client.end();
+  }
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     await applyRuntimeRole({
@@ -61,10 +111,16 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       password: process.env.RUNTIME_DB_PASSWORD || undefined,
     });
     console.log('Runtime database role is up to date.');
+    const backupRole = await applyBackupRole({
+      databaseUrl: process.env.MIGRATION_DATABASE_URL ?? process.env.DATABASE_URL,
+      role: process.env.BACKUP_DB_ROLE ?? 'family_menu_backup',
+      password: process.env.BACKUP_DB_PASSWORD || undefined,
+    });
+    if (backupRole) console.log('Backup database role is up to date.');
   } catch (error) {
     // Messages above never contain the password or connection string.
     console.error(
-      `Runtime role setup failed: ${error instanceof Error ? error.message : 'unknown error'}`,
+      `Database role setup failed: ${error instanceof Error ? error.message : 'unknown error'}`,
     );
     process.exitCode = 1;
   }

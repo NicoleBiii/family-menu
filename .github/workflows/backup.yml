@@ -1,0 +1,60 @@
+name: Backup
+
+# Daily encrypted production database backup (REL-001, ADR 0011). Runs only when the repository
+# variable BACKUP_ENABLED is "true". Needs the secret BACKUP_DATABASE_URL (the read-only backup
+# login through Railway's public TCP proxy, with ?sslmode=require) and the variable
+# BACKUP_AGE_RECIPIENT (the owner's age public key). Only the encrypted archive leaves the runner.
+# GitHub emails a failed scheduled run to the person who last changed the schedule.
+
+on:
+  schedule:
+    - cron: '17 9 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Encrypted database backup
+    if: vars.BACKUP_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+      BACKUP_AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Check configuration
+        run: |
+          [[ -n "$BACKUP_DATABASE_URL" ]] || { echo "BACKUP_DATABASE_URL secret is missing."; exit 1; }
+          [[ "$BACKUP_AGE_RECIPIENT" =~ ^age1[0-9a-z]{58}$ ]] || { echo "BACKUP_AGE_RECIPIENT is not an age public key."; exit 1; }
+      - name: Install matching PostgreSQL tools and age
+        run: |
+          major=$(node scripts/backup.mjs --server-major)
+          echo "PG_BIN=$(scripts/install-pg-tools.sh "$major" age)" >> "$GITHUB_ENV"
+      - name: Back up and encrypt
+        run: |
+          stamp=$(date -u +%Y%m%dT%H%MZ)
+          dir="$RUNNER_TEMP/backup"
+          BACKUP_DIR="$dir" node scripts/backup.mjs
+          mkdir -p "$RUNNER_TEMP/out"
+          tar -C "$dir" -cf - . | age -r "$BACKUP_AGE_RECIPIENT" -o "$RUNNER_TEMP/out/family-menu-$stamp.tar.age"
+          rm -rf "$dir"
+          echo "BACKUP_NAME=family-menu-$stamp" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.BACKUP_NAME }}
+          path: ${{ runner.temp }}/out/
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: error

@@ -1,43 +1,51 @@
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import pg from 'pg';
+import { client } from './pg-tools.mjs';
 
 /**
- * Restore drill check (REL-001, ADR 0010). Compares a restored database with its source: the
+ * Restore drill check (REL-001, ADR 0010/0011). Compares a restored database with its source: the
  * applied migrations, the row count of every table in `app`, and a digest of all recipe photo
  * bytes (photos live in PostgreSQL, ADR 0003). Prints counts only, never row contents.
  */
 export async function snapshot(databaseUrl) {
-  const client = new pg.Client({ connectionString: databaseUrl, connectionTimeoutMillis: 5000 });
-  await client.connect();
+  const connection = client(databaseUrl);
+  await connection.connect();
   try {
-    await client.query('begin isolation level repeatable read read only');
-    const tables = await client.query(
-      `select table_name from information_schema.tables
-        where table_schema = 'app' and table_type = 'BASE TABLE' order by table_name`,
-    );
-    const counts = {};
-    for (const { table_name: table } of tables.rows) {
-      const result = await client.query(
-        `select count(*)::bigint as n from app.${client.escapeIdentifier(table)}`,
-      );
-      counts[table] = Number(result.rows[0].n);
-    }
-    const migrations = await client.query('select name from public.kysely_migration order by name');
-    const photos = await client.query(
-      `select count(*)::int as n,
-              coalesce(md5(string_agg(md5(content), '' order by id)), '') as digest
-         from app.recipe_images`,
-    );
-    await client.query('commit');
-    return {
-      migrations: migrations.rows.map((row) => row.name),
-      counts,
-      photos: { count: photos.rows[0].n, digest: photos.rows[0].digest },
-    };
+    await connection.query('begin isolation level repeatable read read only');
+    const result = await readSnapshot(connection);
+    await connection.query('commit');
+    return result;
   } finally {
-    await client.end();
+    await connection.end();
   }
+}
+
+/** Reads the comparison facts inside the caller's (repeatable read) transaction. */
+export async function readSnapshot(connection) {
+  const tables = await connection.query(
+    `select table_name from information_schema.tables
+      where table_schema = 'app' and table_type = 'BASE TABLE' order by table_name`,
+  );
+  const counts = {};
+  for (const { table_name: table } of tables.rows) {
+    const result = await connection.query(
+      `select count(*)::bigint as n from app.${connection.escapeIdentifier(table)}`,
+    );
+    counts[table] = Number(result.rows[0].n);
+  }
+  const migrations = await connection.query(
+    'select name from public.kysely_migration order by name',
+  );
+  const photos = await connection.query(
+    `select count(*)::int as n,
+            coalesce(md5(string_agg(md5(content), '' order by id)), '') as digest
+       from app.recipe_images`,
+  );
+  return {
+    migrations: migrations.rows.map((row) => row.name),
+    counts,
+    photos: { count: photos.rows[0].n, digest: photos.rows[0].digest },
+  };
 }
 
 export function compare(source, restored) {
