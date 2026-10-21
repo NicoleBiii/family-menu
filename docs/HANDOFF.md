@@ -2,11 +2,14 @@
 
 Updated: 2026-10-20 by Claude Code. Remote: private `github.com/NicoleBiii/family-menu`.
 
-## Latest session — REL-001 production setup in progress
+## Latest session — REL-001 production setup in progress (paused by owner)
 
-- Owner steps reported done: P1 Supabase production project in a separate Pro organization (region `us-east-1`); Railway `production` environment created in the existing project and variables entered. Not yet confirmed: Railway service branch, generated production domain, Supabase Site URL/redirect, UptimeRobot (P3).
-- First production deploy failed in pre-deploy with the generic migration error. Cause found: `certs/supabase-ca.crt` existed only as an untracked local file, so the image lacked the file named by `sslrootcert`. A missing path reproduces locally as `ENOENT`. Branch `claude/rel-001-ca-cert` commits the verified public root (Supabase Root 2021 CA, valid to 2031, no private key) and makes `scripts/migrate.mjs` print only the error code. It also bumps `sharp` to 0.35.5 for a new high advisory that failed the CI audit; full local `npm run check` passed (97 integration, 92 browser). Local PostgreSQL is stopped (as found).
-- Next exact action: merge that PR after Quality checks, confirm staging readiness, create `release` from the verified `main` commit, then check the production pre-deploy log for every migration and `Runtime database role is up to date.` Then P1.5 redirect URLs, P3 and P4.
+- Done: P1 Supabase production project in a separate Pro organization (region `us-east-1`). Railway `production` environment exists in the existing project, with variables entered by the owner. PR #42 merged as `fdf0085` (public Supabase CA certificate committed, `scripts/migrate.mjs` logs only error codes, `sharp` 0.35.5 for GHSA-wq5f-xc86-pv6w; full local `npm run check` passed, 97 integration and 92 browser). Staging deployment `7215654238` of `fdf0085` succeeded and readiness returned ready.
+- The owner created `release` at `fdf0085` (the agent's push was blocked by the permission classifier as a production deploy). The production service had been on `main`; the owner was asked to switch it to `release` — not yet confirmed.
+- Production is **not working yet**. The latest runtime log the owner shared shows the container starting (so pre-deploy probably passed, unconfirmed) and then exiting repeatedly with `GEMINI_API_KEY is required when AI_PROVIDER=gemini.` Fix: add a sealed `GEMINI_API_KEY` (new `family-menu-production` key) or temporarily set `AI_PROVIDER=off`, then redeploy. The owner reports further, unspecified bugs/failures; get the exact log text first.
+- Not done: pre-deploy log evidence (each migration 001–010 and `Runtime database role is up to date.`), production domain, Supabase Site URL/redirect (P1.5), UptimeRobot (P3), smoke/restore drill/release record (P4).
+- Services: local PostgreSQL stopped (as found); no app server running. No secrets were seen or recorded by the agent.
+- Next exact action: ask the owner for the current production Deploy and Pre-Deploy logs and the Source branch setting; fix the missing variable; confirm readiness on the production domain; then continue P1.5, P3, P4.
 
 ## Earlier session — REC-002 merged, on staging and owner-approved
 
